@@ -3,13 +3,18 @@ Rutas de autenticación para GymManager
 """
 import logging
 from flask import Blueprint, request, jsonify
+from flask_cors import cross_origin
 from services.firebase_service import FirebaseService
 
 logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
-@auth_bp.route('/verify', methods=['POST'])
+@auth_bp.route('/verify', methods=['POST', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['POST', 'OPTIONS'])
 def verify_token():
     """
     Verifica un token de Firebase y retorna información del usuario

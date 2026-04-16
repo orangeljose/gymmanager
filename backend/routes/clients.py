@@ -3,6 +3,7 @@ Rutas de gestión de clientes para GymManager
 """
 import logging
 from flask import Blueprint, request, jsonify, g
+from flask_cors import cross_origin
 from middleware.auth_middleware import require_auth, require_role, validate_branch_access
 from services.firebase_service import FirebaseService
 from services.membership_service import MembershipService
@@ -13,7 +14,11 @@ logger = logging.getLogger(__name__)
 
 clients_bp = Blueprint('clients', __name__, url_prefix='/api/clients')
 
-@clients_bp.route('', methods=['GET'])
+@clients_bp.route('', methods=['GET', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['GET', 'OPTIONS'])
 @require_auth
 def get_clients():
     """
@@ -132,7 +137,11 @@ def get_clients():
             }
         }), 500
 
-@clients_bp.route('/<client_id>', methods=['GET'])
+@clients_bp.route('/<client_id>', methods=['GET', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['GET', 'OPTIONS'])
 @require_auth
 def get_client(client_id):
     """
@@ -206,7 +215,11 @@ def get_client(client_id):
             }
         }), 500
 
-@clients_bp.route('', methods=['POST'])
+@clients_bp.route('', methods=['POST', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['POST', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'branch_admin'])
 def create_client():
@@ -320,7 +333,11 @@ def create_client():
             }
         }), 500
 
-@clients_bp.route('/<client_id>', methods=['PUT'])
+@clients_bp.route('/<client_id>', methods=['PUT', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['PUT', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'branch_admin'])
 def update_client(client_id):
@@ -428,7 +445,11 @@ def update_client(client_id):
             }
         }), 500
 
-@clients_bp.route('/<client_id>/payments', methods=['GET'])
+@clients_bp.route('/<client_id>/payments', methods=['GET', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['GET', 'OPTIONS'])
 @require_auth
 def get_client_payments(client_id):
     """
