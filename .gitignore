@@ -9,6 +9,10 @@ serviceAccountKey.json
 # Node
 node_modules/
 
+# Vite
+frontend/.vite/
+frontend/dist/
+
 # IDE
 .vscode/
 .idea/
