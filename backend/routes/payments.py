@@ -3,6 +3,7 @@ Rutas de gestión de pagos para GymManager
 """
 import logging
 from flask import Blueprint, request, jsonify, g
+from flask_cors import cross_origin
 from middleware.auth_middleware import require_auth, require_role, validate_branch_access
 from services.firebase_service import FirebaseService
 from services.payment_service import PaymentService
@@ -13,7 +14,11 @@ logger = logging.getLogger(__name__)
 
 payments_bp = Blueprint('payments', __name__, url_prefix='/api/payments')
 
-@payments_bp.route('', methods=['POST'])
+@payments_bp.route('', methods=['POST', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['POST', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'branch_admin', 'cashier'])
 def register_payment():
@@ -131,7 +136,11 @@ def register_payment():
             }
         }), 500
 
-@payments_bp.route('/report', methods=['GET'])
+@payments_bp.route('/report', methods=['GET', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['GET', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'branch_admin'])
 def get_payment_report():
@@ -141,6 +150,7 @@ def get_payment_report():
     Query Parameters:
         startDate: string (required) - Fecha inicio (YYYY-MM-DD)
         endDate: string (required) - Fecha fin (YYYY-MM-DD)
+        businessId: string (optional) - Filtrar por negocio
         branchId: string (optional) - Filtrar por sede
         method: string (optional) - cash, card, transfer, other
     
@@ -166,6 +176,7 @@ def get_payment_report():
         # Obtener parámetros de query
         start_date = request.args.get('startDate')
         end_date = request.args.get('endDate')
+        business_id = request.args.get('businessId')
         branch_id = request.args.get('branchId')
         method = request.args.get('method')
         
@@ -220,7 +231,7 @@ def get_payment_report():
         # Generar reporte usando el servicio
         payment_service = PaymentService()
         report_data = payment_service.get_payment_report(
-            start_date, end_date, branch_id, method
+            start_date, end_date, business_id, branch_id, method
         )
         
         if report_data:
@@ -248,7 +259,11 @@ def get_payment_report():
             }
         }), 500
 
-@payments_bp.route('/sync', methods=['POST'])
+@payments_bp.route('/sync', methods=['POST', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['POST', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'branch_admin', 'cashier'])
 def sync_offline_payments():

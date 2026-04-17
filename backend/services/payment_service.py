@@ -296,6 +296,7 @@ class PaymentService:
         self, 
         start_date: str, 
         end_date: str, 
+        business_id: str = None,
         branch_id: str = None,
         method: str = None
     ) -> Optional[Dict[str, Any]]:
@@ -305,6 +306,7 @@ class PaymentService:
         Args:
             start_date: Fecha inicio (YYYY-MM-DD)
             end_date: Fecha fin (YYYY-MM-DD)
+            business_id: ID de negocio (opcional)
             branch_id: ID de sede (opcional)
             method: Método de pago (opcional)
             
@@ -317,6 +319,9 @@ class PaymentService:
                 {'field': 'createdAt', 'operator': '>=', 'value': start_date},
                 {'field': 'createdAt', 'operator': '<=', 'value': end_date + 'T23:59:59'}
             ]
+            
+            if business_id:
+                filters.append({'field': 'businessId', 'operator': '==', 'value': business_id})
             
             if branch_id:
                 filters.append({'field': 'branchId', 'operator': '==', 'value': branch_id})
