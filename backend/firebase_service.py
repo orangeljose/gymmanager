@@ -35,8 +35,10 @@ class FirebaseService:
             if not cred_path:
                 raise ValueError("FIREBASE_CREDENTIALS_PATH no está configurado")
             
+            with open(cred_path) as f:
+                data = json.load(f)
             # Cargar credenciales desde archivo JSON
-            cred = credentials.Certificate(cred_path)
+            cred = credentials.Certificate(data)
             
             # Inicializar Firebase Admin
             firebase_admin.initialize_app(cred)
