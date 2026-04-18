@@ -49,10 +49,11 @@ def create_app():
     logger = logging.getLogger(__name__)
     logger.info("Iniciando GymManager Backend")
     
-    # Configurar CORS mínima para evitar errores
-    logger.info("Configurando CORS con valores fijos")
+    # Configurar CORS con credentials explícito
+    logger.info("Configurando CORS con supports_credentials=true")
     
-    CORS(app)  # Configuración por defecto - sin parámetros que causen None
+    CORS(app, 
+         supports_credentials=True)  # Explicitamente permitir credenciales
     
     # Configurar rate limiting
     limiter = Limiter(
