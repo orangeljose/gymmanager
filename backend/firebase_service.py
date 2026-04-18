@@ -30,23 +30,15 @@ class FirebaseService:
             return  # Ya está inicializado
         
         try:
-            # Intentar cargar desde archivo JSON primero
-            cred_path = os.environ.get('FIREBASE_CREDENTIALS_PATH')
+            # Cargar credenciales desde variable de entorno
             cred_json = os.environ.get('FIREBASE_CREDENTIALS_JSON')
+            if not cred_json:
+                raise ValueError("FIREBASE_CREDENTIALS_JSON no está configurado")
             
-            if cred_path and os.path.exists(cred_path):
-                # Cargar credenciales desde archivo JSON
-                with open(cred_path) as f:
-                    data = json.load(f)
-                cred = credentials.Certificate(data)
-                logger.info(f"Credenciales cargadas desde archivo: {cred_path}")
-            elif cred_json:
-                # Cargar credenciales desde variable de entorno (fallback para Render/Vercel)
-                cred_dict = json.loads(cred_json)
-                cred = credentials.Certificate(cred_dict)
-                logger.info("Credenciales cargadas desde variable de entorno FIREBASE_CREDENTIALS_JSON")
-            else:
-                raise ValueError("FIREBASE_CREDENTIALS_PATH o FIREBASE_CREDENTIALS_JSON no está configurado")
+            # Convertir JSON string a diccionario
+            cred_dict = json.loads(cred_json)
+            cred = credentials.Certificate(cred_dict)
+            logger.info("Credenciales cargadas desde variable de entorno FIREBASE_CREDENTIALS_JSON")
             
             # Inicializar Firebase Admin
             firebase_admin.initialize_app(cred)
