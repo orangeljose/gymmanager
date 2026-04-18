@@ -49,19 +49,10 @@ def create_app():
     logger = logging.getLogger(__name__)
     logger.info("Iniciando GymManager Backend")
     
-    # Configurar CORS simplificado - evitar NoneType
-    cors_origins = app.config.get('CORS_ORIGINS', ['http://localhost:3000', 'http://localhost:5173'])
-    # Asegurar que cors_origins no sea None
-    if not cors_origins:
-        cors_origins = ['http://localhost:3000', 'http://localhost:5173']
+    # Configurar CORS mínima para evitar errores
+    logger.info("Configurando CORS con valores fijos")
     
-    logger.info(f"CORS Origins configurados: {cors_origins}")
-    
-    CORS(app, 
-         origins=["*"],  # Lista explícita para evitar None
-         supports_credentials=True,
-         allow_headers=["*"],  # Lista explícita para evitar None
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+    CORS(app)  # Configuración por defecto - sin parámetros que causen None
     
     # Configurar rate limiting
     limiter = Limiter(
