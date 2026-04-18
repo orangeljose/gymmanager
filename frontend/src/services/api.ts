@@ -34,13 +34,31 @@ class ApiService {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
     
+    // Debug logging
+    console.log('🚀 API Request:', {
+      url,
+      method: options.method || 'GET',
+      headers: {
+        ...this.defaultHeaders,
+        ...options.headers,
+      }
+    });
+    
     try {
       const response = await fetch(url, {
         ...options,
+        credentials: 'include', // Importante para CORS con credenciales
         headers: {
           ...this.defaultHeaders,
           ...options.headers,
         },
+      });
+      
+      // Debug response
+      console.log('📥 API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
       });
 
       const data = await response.json();
@@ -91,6 +109,7 @@ class ApiService {
       const response = await this.request<User>('/auth/verify', {
         method: 'POST',
         body: JSON.stringify({ token }),
+        credentials: 'include', // Importante para CORS
       });
       return response;
     } catch (error) {

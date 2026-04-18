@@ -104,7 +104,7 @@ services:
       - key: FLASK_ENV
         value: production
       - key: FIREBASE_CREDENTIALS_JSON
-        value: '{"type": "service_account", ...}'
+        value: '{"type":"service_account","project_id":"tu-proyecto","private_key":"-----BEGIN PRIVATE KEY-----\n...","client_email":"...","client_id":"...","auth_uri":"...","token_uri":"..."}'
       - key: CORS_ORIGINS
         value: https://tu-app.firebaseapp.com
 Paso 2: Subir a GitHub
@@ -393,7 +393,11 @@ Backend (.env en producción):
 
 env
 FLASK_ENV=production
+<<<<<<< HEAD
 FIREBASE_CREDENTIALS_JSON='{"type": "service_account", ...}'
+=======
+FIREBASE_CREDENTIALS_JSON={"type":"service_account","project_id":"tu-proyecto","private_key":"-----BEGIN PRIVATE KEY-----\n...","client_email":"...","client_id":"...","auth_uri":"...","token_uri":"..."}
+>>>>>>> a920d38ca4ace10988e7cc2a1fa164966c9eb881
 CORS_ORIGINS=https://tu-app.firebaseapp.com,https://tudominio.com
 RATE_LIMIT_PER_MINUTE=100
 LOG_LEVEL=WARNING

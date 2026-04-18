@@ -53,7 +53,7 @@ nano .env
 ```
 
 **Variables requeridas:**
-- `FIREBASE_CREDENTIALS_JSON` - JSON string de las credenciales de Firebase
+- `FIREBASE_CREDENTIALS_JSON` - JSON string de credenciales de Firebase
 - `FIREBASE_DATABASE_URL` - URL de tu proyecto Firebase
 - `FLASK_ENV` - `development` o `production`
 - `PORT` - Puerto del servidor (default: 5000)

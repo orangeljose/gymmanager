@@ -30,7 +30,7 @@ class FirebaseService:
             return  # Ya está inicializado
         
         try:
-            # Cargar credenciales desde variable de entorno JSON
+            # Cargar credenciales desde variable de entorno
             cred_json = os.environ.get('FIREBASE_CREDENTIALS_JSON')
             if not cred_json:
                 raise ValueError("FIREBASE_CREDENTIALS_JSON no está configurado")
@@ -38,6 +38,7 @@ class FirebaseService:
             # Convertir JSON string a diccionario
             cred_dict = json.loads(cred_json)
             cred = credentials.Certificate(cred_dict)
+            logger.info("Credenciales cargadas desde variable de entorno FIREBASE_CREDENTIALS_JSON")
             
             # Inicializar Firebase Admin
             database_url = os.environ.get('FIREBASE_DATABASE_URL')
@@ -165,7 +166,8 @@ class FirebaseService:
             
             # Ordenamiento
             if order_by:
-                direction = firestore.DESCENDING if direction.upper() == 'DESC' else firestore.ASCENDING
+                from firebase_admin.firestore import DESCENDING, ASCENDING
+                direction = DESCENDING if direction.upper() == 'DESC' else ASCENDING
                 query = query.order_by(order_by, direction=direction)
             
             # Paginación
