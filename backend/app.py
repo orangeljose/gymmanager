@@ -3,6 +3,7 @@ Aplicación principal de GymManager Backend
 """
 import os
 import logging
+from datetime import datetime
 from flask import Flask, jsonify, g
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -87,14 +88,27 @@ def create_app():
         g.pop('current_user', None)
     
     # Health check endpoint
-    @app.route('/health')
+    @app.route('/health', methods=['GET'])
     def health_check():
-        """Endpoint para verificar que el servidor está funcionando"""
+        """Endpoint para verificar salud del servicio"""
         return jsonify({
             'status': 'healthy',
-            'service': 'gymmanager-api',
+            'timestamp': datetime.utcnow().isoformat(),
             'version': '1.0.0'
         }), 200
+    
+    # Global OPTIONS handler for CORS preflight
+    @app.route('/<path:path>', methods=['OPTIONS'])
+    @app.route('/', methods=['OPTIONS'])
+    def handle_options(path=''):
+        """Handle OPTIONS requests for CORS preflight"""
+        from flask import request
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response, 200
     
     # Error handlers globales
     @app.errorhandler(404)
