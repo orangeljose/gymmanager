@@ -30,15 +30,23 @@ class FirebaseService:
             return  # Ya está inicializado
         
         try:
-            # Inicializar credenciales
+            # Intentar cargar desde archivo JSON primero
             cred_path = os.environ.get('FIREBASE_CREDENTIALS_PATH')
-            if not cred_path:
-                raise ValueError("FIREBASE_CREDENTIALS_PATH no está configurado")
+            cred_json = os.environ.get('FIREBASE_CREDENTIALS_JSON')
             
-            with open(cred_path) as f:
-                data = json.load(f)
-            # Cargar credenciales desde archivo JSON
-            cred = credentials.Certificate(data)
+            if cred_path and os.path.exists(cred_path):
+                # Cargar credenciales desde archivo JSON
+                with open(cred_path) as f:
+                    data = json.load(f)
+                cred = credentials.Certificate(data)
+                logger.info(f"Credenciales cargadas desde archivo: {cred_path}")
+            elif cred_json:
+                # Cargar credenciales desde variable de entorno (fallback para Render/Vercel)
+                cred_dict = json.loads(cred_json)
+                cred = credentials.Certificate(cred_dict)
+                logger.info("Credenciales cargadas desde variable de entorno FIREBASE_CREDENTIALS_JSON")
+            else:
+                raise ValueError("FIREBASE_CREDENTIALS_PATH o FIREBASE_CREDENTIALS_JSON no está configurado")
             
             # Inicializar Firebase Admin
             firebase_admin.initialize_app(cred)
@@ -162,7 +170,8 @@ class FirebaseService:
             
             # Ordenamiento
             if order_by:
-                direction = firestore.DESCENDING if direction.upper() == 'DESC' else firestore.ASCENDING
+                from firebase_admin.firestore import DESCENDING, ASCENDING
+                direction = DESCENDING if direction.upper() == 'DESC' else ASCENDING
                 query = query.order_by(order_by, direction=direction)
             
             # Paginación
