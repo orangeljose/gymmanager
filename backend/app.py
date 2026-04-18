@@ -48,20 +48,18 @@ def create_app():
     logger = logging.getLogger(__name__)
     logger.info("Iniciando GymManager Backend")
     
-    # Configurar CORS
+    # Configurar CORS robusto para producción
     cors_origins = app.config.get('CORS_ORIGINS', ['http://localhost:3000', 'http://localhost:5173'])
+    # Asegurar que cors_origins sea una lista válida
+    if isinstance(cors_origins, str):
+        cors_origins = [origin.strip() for origin in cors_origins.split(',')]
+    
+    logger.info(f"CORS Origins configurados: {cors_origins}")
+    
     CORS(app, 
          origins=cors_origins,
          supports_credentials=True,
-         allow_headers=[
-             'Content-Type', 
-             'Authorization', 
-             'X-Requested-With',
-             'Accept',
-             'Origin',
-             'Cache-Control',
-             'Pragma'
-         ],
+         allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
          methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
          expose_headers=['Content-Type'],
          max_age=600,
@@ -154,6 +152,6 @@ if __name__ == '__main__':
     
     print(f"🚀 Iniciando GymManager Backend en http://{host}:{port}")
     print(f"📝 Modo: {'Desarrollo' if debug else 'Producción'}")
-    print(f"🔥 Firebase: {os.environ.get('FIREBASE_DATABASE_URL', 'No configurado')}")
+    print(f"🔥 Firebase: {os.environ.get('FIREBASE_DATABASE_JSON', 'No configurado')}")
     
     app.run(host=host, port=port, debug=debug)
