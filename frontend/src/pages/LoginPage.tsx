@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, Dumbbell } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOffline } from '@/hooks/useOffline';
@@ -14,7 +14,7 @@ export const LoginPage: React.FC = () => {
   
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isLoading, error } = useAuth();
+  const { login, isLoading } = useAuth();
   const { isOnline } = useOffline();
 
   const from = location.state?.from?.pathname || '/dashboard';

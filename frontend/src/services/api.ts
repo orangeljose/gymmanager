@@ -1,7 +1,6 @@
 import { envConfig } from './firebase';
 import type { 
   ApiResponse, 
-  ApiError, 
   User, 
   Client, 
   ClientFilters, 

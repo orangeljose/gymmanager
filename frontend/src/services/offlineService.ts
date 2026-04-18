@@ -33,7 +33,6 @@ const db = new GymManagerDB();
 class OfflineService {
   private isOnline: boolean = navigator.onLine;
   private syncInProgress: boolean = false;
-  private syncQueue: PendingSync[] = [];
 
   constructor() {
     // Listen for online/offline events

@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOffline } from '@/hooks/useOffline';
-import type { UserRole, NavItem } from '@/types';
+import type { NavItem } from '@/types';
 
 const navigation: NavItem[] = [
   {
