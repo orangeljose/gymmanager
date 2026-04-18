@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 @auth_bp.route('/verify', methods=['POST', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
+@cross_origin(origins=None,  # Usará configuración global de CORS
              supports_credentials=True,
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['POST', 'OPTIONS'])
