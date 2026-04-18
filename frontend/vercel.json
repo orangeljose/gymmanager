@@ -4,6 +4,21 @@
   "outputDirectory": "dist",
   "routes": [
     {
+      "src": "/assets/(.*)",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" },
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/(.*)\\.(js|css|json|png|ico|svg|webmanifest)",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" },
+      "dest": "/$1.$2"
+    },
+    {
+      "src": "/registerSW.js",
+      "headers": { "Content-Type": "application/javascript" },
+      "dest": "/registerSW.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
