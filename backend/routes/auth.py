@@ -31,6 +31,11 @@ def verify_token():
         }
     }
     """
+    # Debug logging del request
+    logger.info(f"Request headers: {dict(request.headers)}")
+    logger.info(f"Request Content-Type: {request.headers.get('Content-Type')}")
+    logger.info(f"Request body length: {len(request.get_data())}")
+    
     try:
         # Obtener datos del request
         data = request.get_json()
