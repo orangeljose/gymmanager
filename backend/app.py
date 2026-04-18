@@ -49,8 +49,10 @@ def create_app():
     logger = logging.getLogger(__name__)
     logger.info("Iniciando GymManager Backend")
     
-    # Configurar CORS
+    # Configurar CORS con logging para debug
     cors_origins = app.config.get('CORS_ORIGINS', ['http://localhost:3000', 'http://localhost:5173'])
+    logger.info(f"CORS Origins configurados: {cors_origins}")
+    
     CORS(app, 
          origins=cors_origins,
          supports_credentials=True,
@@ -103,11 +105,16 @@ def create_app():
     def handle_options(path=''):
         """Handle OPTIONS requests for CORS preflight"""
         from flask import request
+        origin = request.headers.get('Origin', 'unknown')
+        logger.info(f"OPTIONS request recibida - Origin: {origin}, Path: {path}")
+        
         response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Origin', origin)
         response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
+        
+        logger.info(f"OPTIONS response enviada - Status: 200, Origin: {origin}")
         return response, 200
     
     # Error handlers globales

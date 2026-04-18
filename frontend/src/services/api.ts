@@ -34,6 +34,16 @@ class ApiService {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
     
+    // Debug logging
+    console.log('🚀 API Request:', {
+      url,
+      method: options.method || 'GET',
+      headers: {
+        ...this.defaultHeaders,
+        ...options.headers,
+      }
+    });
+    
     try {
       const response = await fetch(url, {
         ...options,
@@ -41,6 +51,13 @@ class ApiService {
           ...this.defaultHeaders,
           ...options.headers,
         },
+      });
+      
+      // Debug response
+      console.log('📥 API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
       });
 
       const data = await response.json();
