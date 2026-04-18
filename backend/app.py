@@ -49,26 +49,15 @@ def create_app():
     logger = logging.getLogger(__name__)
     logger.info("Iniciando GymManager Backend")
     
-    # Configurar CORS con logging para debug
+    # Configurar CORS simplificado
     cors_origins = app.config.get('CORS_ORIGINS', ['http://localhost:3000', 'http://localhost:5173'])
     logger.info(f"CORS Origins configurados: {cors_origins}")
     
     CORS(app, 
-         origins=cors_origins,
+         origins="*",  # Temporalmente permitir todos los orígenes
          supports_credentials=True,
-         allow_headers=[
-             'Content-Type', 
-             'Authorization', 
-             'X-Requested-With',
-             'Accept',
-             'Origin',
-             'Cache-Control',
-             'Pragma'
-         ],
-         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-         expose_headers=['Content-Type'],
-         max_age=600,
-         vary_header=True)
+         allow_headers="*",
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     
     # Configurar rate limiting
     limiter = Limiter(
