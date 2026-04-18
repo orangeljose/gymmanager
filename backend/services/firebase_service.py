@@ -30,13 +30,14 @@ class FirebaseService:
             return  # Ya está inicializado
         
         try:
-            # Inicializar credenciales
-            cred_path = os.environ.get('FIREBASE_CREDENTIALS_PATH')
-            if not cred_path:
-                raise ValueError("FIREBASE_CREDENTIALS_PATH no está configurado")
+            # Cargar credenciales desde variable de entorno JSON
+            cred_json = os.environ.get('FIREBASE_CREDENTIALS_JSON')
+            if not cred_json:
+                raise ValueError("FIREBASE_CREDENTIALS_JSON no está configurado")
             
-            # Cargar credenciales desde archivo JSON
-            cred = credentials.Certificate(cred_path)
+            # Convertir JSON string a diccionario
+            cred_dict = json.loads(cred_json)
+            cred = credentials.Certificate(cred_dict)
             
             # Inicializar Firebase Admin
             firebase_admin.initialize_app(cred)

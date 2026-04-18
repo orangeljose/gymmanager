@@ -15,7 +15,7 @@ class Config:
     DEBUG = os.environ.get('FLASK_ENV', 'development') == 'development'
     
     # Firebase
-    FIREBASE_CREDENTIALS_PATH = os.environ.get('FIREBASE_CREDENTIALS_PATH')
+    FIREBASE_CREDENTIALS_JSON = os.environ.get('FIREBASE_CREDENTIALS_JSON')
     FIREBASE_DATABASE_URL = os.environ.get('FIREBASE_DATABASE_URL')
     
     # Servidor
@@ -35,7 +35,7 @@ class Config:
     def validate_required():
         """Valida que las variables requeridas estén presentes"""
         required_vars = [
-            'FIREBASE_CREDENTIALS_PATH',
+            'FIREBASE_CREDENTIALS_JSON',
             'FIREBASE_DATABASE_URL'
         ]
         

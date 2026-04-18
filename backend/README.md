@@ -53,7 +53,7 @@ nano .env
 ```
 
 **Variables requeridas:**
-- `FIREBASE_CREDENTIALS_PATH` - Ruta al archivo serviceAccountKey.json
+- `FIREBASE_CREDENTIALS_JSON` - JSON string de credenciales de Firebase
 - `FIREBASE_DATABASE_URL` - URL de tu proyecto Firebase
 - `FLASK_ENV` - `development` o `production`
 - `PORT` - Puerto del servidor (default: 5000)
@@ -204,13 +204,13 @@ La API soporta sincronización de pagos registrados offline:
 
 ## 🐛 Solución de Problemas
 
-### Error: "FIREBASE_CREDENTIALS_PATH no está configurado"
+### Error: "FIREBASE_CREDENTIALS_JSON no está configurado"
 ```bash
 # Asegúrate de tener el archivo .env
 ls -la .env
 
 # Verifica que la variable esté configurada
-cat .env | grep FIREBASE_CREDENTIALS_PATH
+cat .env | grep FIREBASE_CREDENTIALS_JSON
 ```
 
 ### Error: "Token inválido o expirado"
