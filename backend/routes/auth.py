@@ -31,6 +31,11 @@ def verify_token():
         }
     }
     """
+    # Manejar OPTIONS request (preflight)
+    if request.method == 'OPTIONS':
+        logger.info("OPTIONS request recibida en /verify")
+        return '', 200
+    
     # Debug logging del request
     logger.info(f"Request headers: {dict(request.headers)}")
     logger.info(f"Request Content-Type: {request.headers.get('Content-Type')}")
