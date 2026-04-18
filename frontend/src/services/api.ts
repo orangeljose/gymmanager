@@ -47,6 +47,7 @@ class ApiService {
     try {
       const response = await fetch(url, {
         ...options,
+        credentials: 'include', // Importante para CORS con credenciales
         headers: {
           ...this.defaultHeaders,
           ...options.headers,
@@ -108,6 +109,7 @@ class ApiService {
       const response = await this.request<User>('/auth/verify', {
         method: 'POST',
         body: JSON.stringify({ token }),
+        credentials: 'include', // Importante para CORS
       });
       return response;
     } catch (error) {
