@@ -10,9 +10,9 @@ class PaymentModel:
     
     # Campos requeridos
     REQUIRED_FIELDS = ['clientId', 'amount', 'method', 'membershipPlanId', 'branchId']
-    
+
     # Métodos de pago válidos
-    VALID_METHODS = ['cash', 'card', 'transfer', 'other']
+    VALID_METHODS = ['cash', 'card', 'transfer', 'zelle', 'pago_movil', 'other']
     
     @staticmethod
     def validate_create_data(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -37,29 +37,38 @@ class PaymentModel:
                 errors.append(f"Método de pago debe ser uno de: {', '.join(PaymentModel.VALID_METHODS)}")
         
         # Validar methodDetails según método
-        if 'methodDetails' in data and data['methodDetails']:
+        if 'methodDetails' in data and data['methodDetails'] is not None:
             method_details = data['methodDetails']
             method = data.get('method', 'cash')
             
             if method == 'card':
-                # Para tarjeta: cardLast4, transactionId, authorizationCode
                 required_card_fields = ['cardLast4']
                 for field in required_card_fields:
                     if field not in method_details:
                         errors.append(f"Para pago con tarjeta se requiere '{field}'")
-                
-                # Validar cardLast4
+
                 if 'cardLast4' in method_details:
                     card_last4 = method_details['cardLast4']
                     if not re.match(r'^\d{4}$', card_last4):
                         errors.append("cardLast4 debe tener exactamente 4 dígitos")
-            
+
             elif method == 'transfer':
-                # Para transferencia: reference, bank
                 required_transfer_fields = ['reference']
                 for field in required_transfer_fields:
                     if field not in method_details:
                         errors.append(f"Para pago por transferencia se requiere '{field}'")
+
+            elif method == 'zelle':
+                required_zelle_fields = ['senderEmail']
+                for field in required_zelle_fields:
+                    if field not in method_details:
+                        errors.append(f"Para pago con Zelle se requiere '{field}'")
+
+            elif method == 'pago_movil':
+                required_pm_fields = ['phoneSender', 'paymentCode']
+                for field in required_pm_fields:
+                    if field not in method_details:
+                        errors.append(f"Para pago móvil se requiere '{field}'")
         
         # Validar monthsPaid si está presente
         if 'monthsPaid' in data:

@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Importar blueprints
-from routes import auth_bp, clients_bp, payments_bp, reports_bp, branches_bp
+from routes import auth_bp, clients_bp, payments_bp, reports_bp, branches_bp, plans_bp, payment_accounts_bp, exchange_bp, users_bp
 from config import get_config, Config
 
 def create_app():
@@ -49,11 +49,24 @@ def create_app():
     logger = logging.getLogger(__name__)
     logger.info("Iniciando GymManager Backend")
     
-    # Configurar CORS con credentials explícito
-    logger.info("Configurando CORS con supports_credentials=true")
-    
-    CORS(app, 
-         supports_credentials=True)  # Explicitamente permitir credenciales
+    # Configurar CORS
+    cors_origins = app.config.get('CORS_ORIGINS', ['http://localhost:3000', 'http://localhost:5173'])
+    CORS(app,
+         origins=cors_origins,
+         supports_credentials=True,
+         allow_headers=[
+             'Content-Type',
+             'Authorization',
+             'X-Requested-With',
+             'Accept',
+             'Origin',
+             'Cache-Control',
+             'Pragma'
+         ],
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+         expose_headers=['Content-Type'],
+         max_age=600,
+         vary_header=True)
     
     # Configurar rate limiting
     limiter = Limiter(
@@ -68,6 +81,10 @@ def create_app():
     app.register_blueprint(payments_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(branches_bp)
+    app.register_blueprint(plans_bp)
+    app.register_blueprint(payment_accounts_bp)
+    app.register_blueprint(exchange_bp)
+    app.register_blueprint(users_bp)
     
     # Middleware global para limpiar contexto
     @app.teardown_appcontext
@@ -83,24 +100,6 @@ def create_app():
             'timestamp': datetime.utcnow().isoformat(),
             'version': '1.0.0'
         }), 200
-    
-    # Global OPTIONS handler for CORS preflight
-    @app.route('/<path:path>', methods=['OPTIONS'])
-    @app.route('/', methods=['OPTIONS'])
-    def handle_options(path=''):
-        """Handle OPTIONS requests for CORS preflight"""
-        from flask import request
-        origin = request.headers.get('Origin', 'unknown')
-        logger.info(f"OPTIONS request recibida - Origin: {origin}, Path: {path}")
-        
-        response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', origin)
-        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        
-        logger.info(f"OPTIONS response enviada - Status: 200, Origin: {origin}")
-        return response, 200
     
     # Error handlers globales
     @app.errorhandler(404)

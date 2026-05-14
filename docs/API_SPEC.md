@@ -331,9 +331,16 @@ json
   "methodDetails": {
     "cardLast4": null,
     "transactionId": null,
-    "reference": "REF-12345"
+    "reference": null
   }
 }
+Métodos de pago válidos: cash, card, transfer, zelle, pago_movil, other
+methodDetails según método:
+- cash: { cashierName, receivedAmount, change }
+- card: { cardLast4, cardBrand, transactionId, authorizationCode }
+- transfer: { reference, bank, accountNumber }
+- zelle: { senderEmail, destinationAccountId }
+- pago_movil: { phoneSender, paymentCode, destinationAccountId }
 Validaciones automáticas:
 
 El monto debe coincidir con el precio del plan
@@ -579,6 +586,178 @@ json
       "percentage": 20.0,
       "count": 3
     }
+  }
+}
+💼 Planes de Membresía
+GET /api/plans
+Lista planes de membresía del negocio. Requiere autenticación.
+
+Query Parameters:
+
+Parámetro	Tipo	Requerido	Descripción
+businessId	string	No	ID del negocio (usa el del usuario si no se provee)
+isActive	boolean	No	false = todos, true = solo activos (default: false)
+Response (200):
+
+json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "plan-mensual",
+      "name": "Mensual",
+      "price": 35000,
+      "durationDays": 30,
+      "description": "Acceso completo por 30 días",
+      "benefits": ["Acceso todas las sedes", "Clases grupales"],
+      "isActive": true,
+      "businessId": "gimnasio-central"
+    }
+  ]
+}
+GET /api/plans/:id
+Obtiene un plan por ID.
+Response (200):
+
+json
+{
+  "success": true,
+  "data": {
+    "id": "plan-mensual",
+    "name": "Mensual",
+    "price": 35000,
+    "durationDays": 30,
+    ...
+  }
+}
+POST /api/plans
+Crea un nuevo plan. Requiere rol admin.
+
+Request Body:
+
+json
+{
+  "name": "Trimestral",
+  "price": 90000,
+  "durationDays": 90,
+  "businessId": "gimnasio-central",
+  "description": "Acceso por 3 meses",
+  "benefits": ["Acceso total", "Clases grupales", "Plan de nutrición"]
+}
+Response (201):
+
+json
+{
+  "success": true,
+  "data": {
+    "id": "plan-trimestral",
+    "name": "Trimestral",
+    "price": 90000,
+    "durationDays": 90,
+    "isActive": true,
+    "businessId": "gimnasio-central",
+    "createdAt": "2026-05-13T10:00:00Z"
+  }
+}
+PUT /api/plans/:id
+Actualiza un plan existente. Requiere rol admin.
+Request Body (todos opcionales):
+
+json
+{
+  "name": "Mensual Premium",
+  "price": 45000,
+  "isActive": false
+}
+DELETE /api/plans/:id
+Desactiva un plan (soft delete). Requiere super_admin.
+Response (200):
+
+json
+{
+  "success": true,
+  "data": { "id": "plan-mensual" }
+}
+💳 Cuentas de Pago Destino
+GET /api/payment-accounts
+Lista cuentas de pago destino del negocio.
+
+Query Parameters:
+
+Parámetro	Tipo	Requerido	Descripción
+businessId	string	No	ID del negocio
+type	string	No	zelle, pago_movil, bank
+isActive	boolean	No	true = solo activas (default: true)
+Response (200):
+
+json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "acc-001",
+      "type": "zelle",
+      "identifier": "gym@example.com",
+      "label": "Zelle principal",
+      "isActive": true,
+      "businessId": "gimnasio-central"
+    },
+    {
+      "id": "acc-002",
+      "type": "pago_movil",
+      "identifier": "+584121234567",
+      "label": "Pago móvil Banesco",
+      "isActive": true,
+      "businessId": "gimnasio-central"
+    }
+  ]
+}
+POST /api/payment-accounts
+Crea una cuenta de pago destino. Requiere rol admin.
+
+Request Body:
+
+json
+{
+  "type": "zelle",
+  "identifier": "gym@example.com",
+  "label": "Zelle principal",
+  "businessId": "gimnasio-central",
+  "description": "Cuenta del owner"
+}
+Response (201):
+
+json
+{
+  "success": true,
+  "data": {
+    "id": "acc-001",
+    "type": "zelle",
+    "identifier": "gym@example.com",
+    "label": "Zelle principal",
+    "isActive": true,
+    "businessId": "gimnasio-central",
+    "createdAt": "2026-05-13T10:00:00Z"
+  }
+}
+PUT /api/payment-accounts/:id
+Actualiza una cuenta. Requiere rol admin.
+DELETE /api/payment-accounts/:id
+Desactiva una cuenta. Requiere super_admin.
+🌐 Tipo de Cambio
+GET /api/exchange-rate
+Obtiene la tasa BCV del día (cacheada por 1 hora).
+
+Response (200):
+
+json
+{
+  "success": true,
+  "data": {
+    "rate": 45.20,
+    "currency": "Bs/USD",
+    "source": "BCV",
+    "cached": true
   }
 }
 🔄 Webhooks (opcional para futura implementación)

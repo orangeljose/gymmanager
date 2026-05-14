@@ -109,6 +109,44 @@ Campos	Tipo	Propósito
 businessId	Single	Listar sedes de un negocio
 businessId + isActive	Compuesto	Filtrar sedes activas
 managerId	Single	Buscar sede por administrador
+🗂️ Colección: payment_accounts
+Propósito: Cuentas de pago destino registradas por el owner (múltiples Zelle, pago móvil, cuentas bancarias)
+
+Campo	Tipo	Requerido	Descripción
+id	string (ID)	Sí	Auto-generado
+type	string	Sí	zelle, pago_movil, bank
+identifier	string	Sí	Email Zelle, teléfono pago móvil, o nro de cuenta bancaria
+label	string	Sí	Alias descriptivo (ej: "Zelle principal", "Pago móvil健身房")
+description	string | null	No	Notas adicionales
+businessId	string	Sí	ID del negocio padre
+isActive	boolean	Sí	Si está activa para recibir pagos
+createdAt	Timestamp	Sí	Fecha de creación
+Ejemplo de documento (zelle)
+json
+{
+  "type": "zelle",
+  "identifier": "gym@example.com",
+  "label": "Zelle principal del owner",
+  "description": "Correo registered con Zelle",
+  "businessId": "gimnasio-central",
+  "isActive": true,
+  "createdAt": "2026-01-15T11:00:00.000Z"
+}
+Ejemplo de documento (pago_movil)
+json
+{
+  "type": "pago_movil",
+  "identifier": "+584121234567",
+  "label": "Pago móvil Banesco",
+  "description": "Teléfono registrado para Pago Móvil",
+  "businessId": "gimnasio-central",
+  "isActive": true,
+  "createdAt": "2026-01-15T11:00:00.000Z"
+}
+Índices requeridos
+Campos	Tipo	Propósito
+businessId	Single	Listar cuentas de un negocio
+businessId + type	Compuesto	Filtrar por tipo
 🗂️ Colección: membership_plans
 Propósito: Planes/membresías disponibles en cada negocio
 
@@ -143,6 +181,10 @@ Campos	Tipo	Propósito
 businessId	Single	Listar planes de un negocio
 businessId + isActive	Compuesto	Filtrar planes activos
 price	Single	Ordenar por precio
+🗂️ payment_accounts Índices
+Campos	Tipo	Propósito
+businessId	Single	Listar cuentas de un negocio
+businessId + type	Compuesto	Filtrar por tipo
 🗂️ Colección: clients
 Propósito: Clientes del negocio (los que pagan membresía)
 
@@ -238,7 +280,7 @@ id	string (ID)	Sí	Auto-generado
 clientId	string	Sí	ID del cliente
 clientName	string	Sí	Denormalizado (nombre del cliente)
 amount	number	Sí	Monto en cents
-method	string	Sí	cash, card, transfer, other
+method	string	Sí	cash, card, transfer, zelle, pago_movil, other
 methodDetails	object	No	Detalles según método
 membershipPlanId	string	Sí	Plan que se pagó
 monthsPaid	number	Sí	Meses pagados (1, 3, 12)
@@ -273,6 +315,19 @@ json
   "reference": "REF-20260414-001",
   "bank": "BBVA",
   "accountNumber": "****1234"
+}
+Para method: "zelle"
+json
+{
+  "senderEmail": "cliente@gmail.com",
+  "destinationAccountId": "acc-001"
+}
+Para method: "pago_movil"
+json
+{
+  "phoneSender": "+584141234567",
+  "paymentCode": "PM-12345678",
+  "destinationAccountId": "acc-002"
 }
 Ejemplo de documento
 json

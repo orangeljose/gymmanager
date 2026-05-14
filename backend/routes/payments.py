@@ -74,7 +74,7 @@ def register_payment():
         
         # Validar método de pago
         method = payment_data.get('method')
-        valid_methods = ['cash', 'card', 'transfer', 'other']
+        valid_methods = ['cash', 'card', 'transfer', 'zelle', 'pago_movil', 'other']
         if method not in valid_methods:
             return jsonify({
                 'success': False,

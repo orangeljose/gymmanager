@@ -1,0 +1,436 @@
+"""
+Rutas de gestión de usuarios para GymManager
+"""
+import logging
+from flask import Blueprint, request, jsonify, g
+from flask_cors import cross_origin
+from middleware.auth_middleware import require_auth, require_role
+from services.firebase_service import FirebaseService
+from models.user import UserModel
+
+logger = logging.getLogger(__name__)
+
+users_bp = Blueprint('users', __name__, url_prefix='/api')
+
+@users_bp.route('/users', methods=['GET', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['GET', 'OPTIONS'])
+@require_auth
+@require_role(['super_admin'])
+def get_users():
+    """
+    Lista todos los usuarios del negocio
+    Solo super_admin puede listar usuarios
+
+    Query params:
+        - isActive (optional): filtrar por estado activo/inactivo
+
+    Response (200):
+    {
+        "success": true,
+        "data": [
+            {
+                "id": "user-uid-123",
+                "email": "user@example.com",
+                "name": "Juan Pérez",
+                "role": "cashier",
+                "branchId": "branch-123",
+                "businessId": "business-123",
+                "isActive": true,
+                "permissions": ["read_clients", "write_payments"],
+                "createdAt": "2026-01-15T10:00:00Z"
+            }
+        ]
+    }
+    """
+    try:
+        user_business_id = g.current_user.get('businessId')
+        user_role = g.current_user.get('role')
+
+        # Validar que solo super_admin puede listar usuarios
+        if user_role != 'super_admin':
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 403,
+                    'message': 'No tienes permisos para ver usuarios'
+                }
+            }), 403
+
+        # Obtener filtro de isActive si se proporciona
+        is_active_filter = request.args.get('isActive')
+        filters = [{'field': 'businessId', 'operator': '==', 'value': user_business_id}]
+
+        if is_active_filter is not None:
+            filters.append({
+                'field': 'isActive',
+                'operator': '==',
+                'value': is_active_filter.lower() == 'true'
+            })
+
+        firebase_service = FirebaseService()
+        users = firebase_service.query_firestore('users', filters=filters)
+
+        logger.info(f"Listados {len(users)} usuarios para negocio {user_business_id}")
+
+        return jsonify({
+            'success': True,
+            'data': users
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error listando usuarios: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 500,
+                'message': 'Error interno del servidor'
+            }
+        }), 500
+
+@users_bp.route('/users/<user_id>', methods=['GET', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['GET', 'OPTIONS'])
+@require_auth
+@require_role(['super_admin'])
+def get_user(user_id):
+    """
+    Obtiene un usuario específico por ID
+
+    Response (200):
+    {
+        "success": true,
+        "data": {
+            "id": "user-uid-123",
+            "email": "user@example.com",
+            "name": "Juan Pérez",
+            "role": "cashier",
+            "branchId": "branch-123",
+            "businessId": "business-123",
+            "isActive": true,
+            "permissions": ["read_clients", "write_payments"],
+            "createdAt": "2026-01-15T10:00:00Z"
+        }
+    }
+    """
+    try:
+        user_role = g.current_user.get('role')
+
+        if user_role != 'super_admin':
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 403,
+                    'message': 'No tienes permisos para ver usuarios'
+                }
+            }), 403
+
+        firebase_service = FirebaseService()
+        user_data = firebase_service.get_document('users', user_id)
+
+        if not user_data:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 404,
+                    'message': 'Usuario no encontrado'
+                }
+            }), 404
+
+        return jsonify({
+            'success': True,
+            'data': user_data
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error obteniendo usuario {user_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 500,
+                'message': 'Error interno del servidor'
+            }
+        }), 500
+
+@users_bp.route('/users', methods=['POST', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['POST', 'OPTIONS'])
+@require_auth
+@require_role(['super_admin'])
+def create_user():
+    """
+    Crea un nuevo usuario en Firestore
+    Nota: El usuario debe existir primero en Firebase Auth
+
+    Request Body:
+    {
+        "email": "user@example.com",
+        "name": "Juan Pérez",
+        "role": "cashier",
+        "branchId": "branch-123" (opcional, null para super_admin)
+    }
+
+    Response (201):
+    {
+        "success": true,
+        "data": {
+            "id": "new-user-uid",
+            "email": "user@example.com",
+            "name": "Juan Pérez",
+            "role": "cashier",
+            "branchId": "branch-123",
+            "businessId": "business-123",
+            "isActive": true,
+            "permissions": ["read_clients", "write_payments"],
+            "createdAt": "2026-04-14T10:00:00Z"
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 400,
+                    'message': 'Se requieren datos en el cuerpo del request'
+                }
+            }), 400
+
+        required_fields = ['email', 'name', 'role']
+        missing_fields = [field for field in required_fields if field not in data or not data[field]]
+
+        if missing_fields:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 400,
+                    'message': f'Campos requeridos faltantes: {", ".join(missing_fields)}'
+                }
+            }), 400
+
+        role = data.get('role')
+        if not UserModel.validate_role(role):
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 400,
+                    'message': f'Rol inválido: {role}. Roles válidos: {", ".join(UserModel.VALID_ROLES)}'
+                }
+            }), 400
+
+        user_business_id = g.current_user.get('businessId')
+
+        firebase_service = FirebaseService()
+
+        permissions = UserModel.get_permissions(role)
+
+        user_data = {
+            'email': data.get('email').strip().lower(),
+            'name': data.get('name').strip(),
+            'role': role,
+            'businessId': user_business_id,
+            'branchId': data.get('branchId') or None,
+            'isActive': True,
+            'permissions': permissions
+        }
+
+        created_user = firebase_service.create_document('users', user_data)
+
+        if created_user:
+            logger.info(f"Usuario creado exitosamente: {created_user.get('id')}")
+            return jsonify({
+                'success': True,
+                'data': created_user
+            }), 201
+        else:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 500,
+                    'message': 'Error al crear usuario'
+                }
+            }), 500
+
+    except Exception as e:
+        logger.error(f"Error creando usuario: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 500,
+                'message': 'Error interno del servidor'
+            }
+        }), 500
+
+@users_bp.route('/users/<user_id>', methods=['PUT', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['PUT', 'OPTIONS'])
+@require_auth
+@require_role(['super_admin'])
+def update_user(user_id):
+    """
+    Actualiza un usuario existente
+
+    Request Body (todos opcionales):
+    {
+        "name": "Juan Pérez Updated",
+        "role": "branch_admin",
+        "branchId": "branch-456",
+        "isActive": false
+    }
+
+    Response (200):
+    {
+        "success": true,
+        "data": {
+            "id": "user-uid-123",
+            "email": "user@example.com",
+            "name": "Juan Pérez Updated",
+            "role": "branch_admin",
+            ...
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 400,
+                    'message': 'Se requieren datos en el cuerpo del request'
+                }
+            }), 400
+
+        firebase_service = FirebaseService()
+
+        existing_user = firebase_service.get_document('users', user_id)
+        if not existing_user:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 404,
+                    'message': 'Usuario no encontrado'
+                }
+            }), 404
+
+        update_data = {}
+
+        if 'name' in data and data['name']:
+            update_data['name'] = data['name'].strip()
+
+        if 'role' in data and data['role']:
+            if not UserModel.validate_role(data['role']):
+                return jsonify({
+                    'success': False,
+                    'error': {
+                        'code': 400,
+                        'message': f'Rol inválido: {data["role"]}'
+                    }
+                }), 400
+            update_data['role'] = data['role']
+            update_data['permissions'] = UserModel.get_permissions(data['role'])
+
+        if 'branchId' in data:
+            update_data['branchId'] = data['branchId'] or None
+
+        if 'isActive' in data and isinstance(data['isActive'], bool):
+            update_data['isActive'] = data['isActive']
+
+        updated_user = firebase_service.update_document('users', user_id, update_data)
+
+        if updated_user:
+            logger.info(f"Usuario actualizado: {user_id}")
+            return jsonify({
+                'success': True,
+                'data': updated_user
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 500,
+                    'message': 'Error al actualizar usuario'
+                }
+            }), 500
+
+    except Exception as e:
+        logger.error(f"Error actualizando usuario {user_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 500,
+                'message': 'Error interno del servidor'
+            }
+        }), 500
+
+@users_bp.route('/users/<user_id>', methods=['DELETE', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['DELETE', 'OPTIONS'])
+@require_auth
+@require_role(['super_admin'])
+def delete_user(user_id):
+    """
+    Desactiva un usuario (soft delete - no se elimina de Firestore)
+
+    Response (200):
+    {
+        "success": true,
+        "data": {
+            "id": "user-uid-123",
+            "message": "Usuario desactivado correctamente"
+        }
+    }
+    """
+    try:
+        firebase_service = FirebaseService()
+
+        existing_user = firebase_service.get_document('users', user_id)
+        if not existing_user:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 404,
+                    'message': 'Usuario no encontrado'
+                }
+            }), 404
+
+        updated_user = firebase_service.update_document('users', user_id, {'isActive': False})
+
+        if updated_user:
+            logger.info(f"Usuario desactivado: {user_id}")
+            return jsonify({
+                'success': True,
+                'data': {
+                    'id': user_id,
+                    'message': 'Usuario desactivado correctamente'
+                }
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 500,
+                    'message': 'Error al desactivar usuario'
+                }
+            }), 500
+
+    except Exception as e:
+        logger.error(f"Error desactivando usuario {user_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 500,
+                'message': 'Error interno del servidor'
+            }
+        }), 500
