@@ -17,6 +17,8 @@ import { ReportsPage } from '@/pages/ReportsPage';
 import { SolvencyReportPage } from '@/pages/SolvencyReportPage';
 import { IncomeReportPage } from '@/pages/IncomeReportPage';
 import { AdministrationPage } from '@/pages/AdministrationPage';
+import { PlansPage } from '@/pages/PlansPage';
+import { PaymentAccountsPage } from '@/pages/PaymentAccountsPage';
 import { BranchesPage } from '@/pages/BranchesPage';
 import { UsersPage } from '@/pages/UsersPage';
 
@@ -87,18 +89,21 @@ const App: React.FC = () => {
                   <ReportsPage />
                 </Suspense>
               </ProtectedRoute>
-            }>
-              <Route path="solvency" element={
+            } />
+            <Route path="reports/solvency" element={
+              <ProtectedRoute requiredRoles={['branch_admin', 'super_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <SolvencyReportPage />
                 </Suspense>
-              } />
-              <Route path="income" element={
+              </ProtectedRoute>
+            } />
+            <Route path="reports/income" element={
+              <ProtectedRoute requiredRoles={['branch_admin', 'super_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <IncomeReportPage />
                 </Suspense>
-              } />
-            </Route>
+              </ProtectedRoute>
+            } />
             
             {/* Administration */}
             <Route path="admin" element={
@@ -107,18 +112,37 @@ const App: React.FC = () => {
                   <AdministrationPage />
                 </Suspense>
               </ProtectedRoute>
-            }>
-              <Route path="branches" element={
+            } />
+
+            {/* Admin sub-pages - top level routes for better mobile UX */}
+            <Route path="plans" element={
+              <ProtectedRoute requiredRoles={['branch_admin', 'super_admin']}>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <PlansPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="payment-accounts" element={
+              <ProtectedRoute requiredRoles={['branch_admin', 'super_admin']}>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <PaymentAccountsPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="branches" element={
+              <ProtectedRoute requiredRoles={['super_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <BranchesPage />
                 </Suspense>
-              } />
-              <Route path="users" element={
+              </ProtectedRoute>
+            } />
+            <Route path="users" element={
+              <ProtectedRoute requiredRoles={['super_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <UsersPage />
                 </Suspense>
-              } />
-            </Route>
+              </ProtectedRoute>
+            } />
             
             {/* Catch all */}
             <Route path="*" element={
