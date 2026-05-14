@@ -44,13 +44,43 @@ export interface Branch {
 export interface MembershipPlan {
   id: string;
   name: string;
-  price: number; // in cents
+  price: number;
   durationDays: number;
   description?: string;
   businessId: string;
   isActive: boolean;
   benefits?: string[];
   createdAt: string;
+}
+
+export type PaymentAccountType = 'zelle' | 'pago_movil' | 'bank';
+
+export interface PaymentAccount {
+  id: string;
+  type: PaymentAccountType;
+  identifier: string;
+  label: string;
+  description?: string;
+  businessId: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface PaymentAccountFormData {
+  type: PaymentAccountType;
+  identifier: string;
+  label?: string;
+  description?: string;
+  businessId: string;
+}
+
+export interface PlanFormData {
+  name: string;
+  price: number;
+  durationDays: number;
+  description?: string;
+  benefits: string[];
+  businessId: string;
 }
 
 // Client Types
@@ -95,7 +125,7 @@ export interface Payment {
   createdAt: string;
 }
 
-export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'other';
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'zelle' | 'pago_movil' | 'other';
 
 export interface PaymentMethodDetails {
   cash?: {
@@ -113,6 +143,15 @@ export interface PaymentMethodDetails {
     reference?: string;
     bank?: string;
     accountNumber?: string;
+  };
+  zelle?: {
+    senderEmail?: string;
+    destinationAccountId?: string;
+  };
+  pago_movil?: {
+    phoneSender?: string;
+    paymentCode?: string;
+    destinationAccountId?: string;
   };
   other?: {
     description?: string;
@@ -188,7 +227,30 @@ export interface PaymentFormData {
   method: PaymentMethod;
   membershipPlanId: string;
   branchId: string;
-  methodDetails?: PaymentMethodDetails;
+  methodDetails?: {
+    cardLast4?: string;
+    transactionId?: string;
+    reference?: string;
+    bank?: string;
+    accountNumber?: string;
+    senderEmail?: string;
+    phoneSender?: string;
+    paymentCode?: string;
+    destinationAccountId?: string;
+    cashierName?: string;
+    receivedAmount?: number;
+    change?: number;
+    description?: string;
+  };
+}
+
+export interface PaymentFormDataCreate {
+  clientId: string;
+  amount: number;
+  method: PaymentMethod;
+  membershipPlanId: string;
+  branchId: string;
+  methodDetails?: Record<string, any>;
 }
 
 export interface BranchFormData {

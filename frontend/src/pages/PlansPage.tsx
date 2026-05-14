@@ -1,0 +1,384 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { apiService } from '@/services/api';
+import type { MembershipPlan, PlanFormData } from '@/types';
+import toast from 'react-hot-toast';
+import { Plus, Edit2, Trash2, X, Check, AlertCircle } from 'lucide-react';
+
+export const PlansPage: React.FC = () => {
+  const { user } = useAuth();
+  const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<MembershipPlan | null>(null);
+  const [formData, setFormData] = useState<PlanFormData>({
+    name: '',
+    price: 0,
+    durationDays: 30,
+    description: '',
+    benefits: [],
+    businessId: ''
+  });
+  const [benefitInput, setBenefitInput] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadPlans();
+  }, [user?.businessId]);
+
+  const loadPlans = async () => {
+    if (!user?.businessId) return;
+    try {
+      setLoading(true);
+      const response = await apiService.getPlans({ businessId: user.businessId });
+      if (response.success && response.data) {
+        setPlans(response.data);
+      }
+    } catch (error) {
+      toast.error('Error cargando planes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openModal = (plan?: MembershipPlan) => {
+    if (plan) {
+      setEditingPlan(plan);
+      setFormData({
+        name: plan.name,
+        price: plan.price,
+        durationDays: plan.durationDays,
+        description: plan.description || '',
+        benefits: plan.benefits || [],
+        businessId: plan.businessId
+      });
+    } else {
+      setEditingPlan(null);
+      setFormData({
+        name: '',
+        price: 0,
+        durationDays: 30,
+        description: '',
+        benefits: [],
+        businessId: user?.businessId || ''
+      });
+    }
+    setBenefitInput('');
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingPlan(null);
+    setBenefitInput('');
+  };
+
+  const addBenefit = () => {
+    if (benefitInput.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        benefits: [...(prev.benefits || []), benefitInput.trim()]
+      }));
+      setBenefitInput('');
+    }
+  };
+
+  const removeBenefit = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      benefits: (prev.benefits || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.businessId) return;
+
+    try {
+      setSaving(true);
+      if (editingPlan) {
+        const response = await apiService.updatePlan(editingPlan.id, formData);
+        if (response.success) {
+          toast.success('Plan actualizado');
+          loadPlans();
+          closeModal();
+        }
+      } else {
+        const response = await apiService.createPlan({ ...formData, businessId: user.businessId });
+        if (response.success) {
+          toast.success('Plan creado');
+          loadPlans();
+          closeModal();
+        }
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Error guardando plan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (planId: string) => {
+    try {
+      const response = await apiService.deletePlan(planId);
+      if (response.success) {
+        toast.success('Plan eliminado');
+        loadPlans();
+        setConfirmDelete(null);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Error eliminando plan');
+    }
+  };
+
+  const formatPrice = (cents: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(cents / 100);
+  };
+
+  const formatDuration = (days: number) => {
+    if (days === 30) return '1 mes';
+    if (days === 90) return '3 meses';
+    if (days === 365) return '1 año';
+    if (days % 30 === 0) return `${days / 30} meses`;
+    return `${days} días`;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="loading-spinner h-10 w-10"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Planes de Membresía</h1>
+          <p className="text-gray-600 mt-1">Gestiona los planes disponibles para tus clientes</p>
+        </div>
+        <button onClick={() => openModal()} className="btn btn-primary">
+          <Plus className="h-4 w-4 mr-2" />
+          Nuevo Plan
+        </button>
+      </div>
+
+      {plans.length === 0 ? (
+        <div className="card text-center py-12">
+          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay planes</h3>
+          <p className="text-gray-600 mb-6">Comienza creando tu primer plan de membresía</p>
+          <button onClick={() => openModal()} className="btn btn-primary">
+            <Plus className="h-4 w-4 mr-2" />
+            Crear Plan
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {plans.map((plan) => (
+            <div key={plan.id} className="card">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
+                  <p className="text-2xl font-bold text-primary-600 mt-1">
+                    {formatPrice(plan.price)}
+                  </p>
+                </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  plan.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {plan.isActive ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
+
+              <div className="mb-4">
+                <span className="text-sm text-gray-600">Duración: </span>
+                <span className="text-sm font-medium text-gray-900">{formatDuration(plan.durationDays)}</span>
+              </div>
+
+              {plan.description && (
+                <p className="text-sm text-gray-600 mb-4">{plan.description}</p>
+              )}
+
+              {plan.benefits && plan.benefits.length > 0 && (
+                <ul className="space-y-1 mb-4">
+                  {plan.benefits.slice(0, 3).map((benefit, idx) => (
+                    <li key={idx} className="flex items-center text-sm text-gray-700">
+                      <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                      {benefit}
+                    </li>
+                  ))}
+                  {plan.benefits.length > 3 && (
+                    <li className="text-sm text-gray-500">
+                      +{plan.benefits.length - 3} más beneficios
+                    </li>
+                  )}
+                </ul>
+              )}
+
+              <div className="flex justify-end space-x-2 pt-4 border-t">
+                <button
+                  onClick={() => openModal(plan)}
+                  className="btn btn-ghost btn-sm"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </button>
+                {user?.role === 'super_admin' && (
+                  <button
+                    onClick={() => setConfirmDelete(plan.id)}
+                    className="btn btn-ghost btn-sm text-red-600 hover:text-red-800"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {confirmDelete === plan.id && (
+                <div className="absolute inset-0 bg-white/95 flex items-center justify-center rounded-lg">
+                  <div className="text-center p-4">
+                    <p className="text-sm text-gray-900 mb-4">¿Eliminar este plan?</p>
+                    <div className="flex space-x-2 justify-center">
+                      <button
+                        onClick={() => handleDelete(plan.id)}
+                        className="btn btn-danger btn-sm"
+                      >
+                        Eliminar
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(null)}
+                        className="btn btn-ghost btn-sm"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-lg font-semibold">
+                {editingPlan ? 'Editar Plan' : 'Nuevo Plan'}
+              </h3>
+              <button onClick={closeModal} className="btn btn-ghost btn-sm">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre del Plan *
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="input"
+                  placeholder="Ej: Mensual, Trimestral"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Precio (USD) *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.price / 100}
+                    onChange={(e) => setFormData(prev => ({ ...prev, price: Math.round(parseFloat(e.target.value || '0') * 100) }))}
+                    className="input"
+                    placeholder="35.00"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Duración (días) *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.durationDays}
+                    onChange={(e) => setFormData(prev => ({ ...prev, durationDays: parseInt(e.target.value) || 0 }))}
+                    className="input"
+                    placeholder="30"
+                    min="1"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Descripción
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  className="input"
+                  rows={2}
+                  placeholder="Descripción breve del plan..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Beneficios
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={benefitInput}
+                    onChange={(e) => setBenefitInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addBenefit())}
+                    className="input flex-1"
+                    placeholder="Agregar beneficio..."
+                  />
+                  <button type="button" onClick={addBenefit} className="btn btn-outline btn-sm">
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+                {formData.benefits.length > 0 && (
+                  <ul className="space-y-1">
+                    {formData.benefits.map((benefit, idx) => (
+                      <li key={idx} className="flex items-center justify-between bg-gray-50 px-3 py-1 rounded text-sm">
+                        <span>{benefit}</span>
+                        <button type="button" onClick={() => removeBenefit(idx)} className="text-gray-500 hover:text-red-600">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4 border-t">
+                <button type="button" onClick={closeModal} className="btn btn-outline">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={saving} className="btn btn-primary">
+                  {saving ? 'Guardando...' : editingPlan ? 'Actualizar' : 'Crear Plan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

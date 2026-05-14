@@ -1,23 +1,30 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Home, 
-  Users, 
-  CreditCard, 
-  FileText, 
-  Settings, 
+import {
+  Home,
+  Users,
+  CreditCard,
+  FileText,
+  Settings,
   LogOut,
   Menu,
   X,
   Wifi,
   WifiOff,
-  AlertCircle
+  AlertCircle,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOffline } from '@/hooks/useOffline';
 import type { NavItem } from '@/types';
 
-const navigation: NavItem[] = [
+interface SubMenuItem {
+  label: string;
+  href: string;
+}
+
+const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
   {
     label: 'Dashboard',
     href: '/dashboard',
@@ -29,26 +36,30 @@ const navigation: NavItem[] = [
     icon: 'Users'
   },
   {
-    label: 'Pagos',
-    href: '/payments',
-    icon: 'CreditCard',
-    roles: ['cashier', 'branch_admin', 'super_admin']
-  },
-  {
     label: 'Reportes',
     href: '/reports',
     icon: 'FileText',
-    roles: ['branch_admin', 'super_admin']
+    roles: ['branch_admin', 'super_admin'],
+    submenu: [
+      { label: 'Morosos', href: '/reports/solvency' },
+      { label: 'Ingresos', href: '/reports/income' }
+    ]
   },
   {
     label: 'Administración',
     href: '/admin',
     icon: 'Settings',
-    roles: ['super_admin']
+    roles: ['super_admin'],
+    submenu: [
+      { label: 'Planes', href: '/plans' },
+      { label: 'Cuentas de Pago', href: '/payment-accounts' },
+      { label: 'Sucursales', href: '/branches' },
+      { label: 'Usuarios', href: '/users' }
+    ]
   }
 ];
 
-const iconMap = {
+const iconMap: Record<string, React.ElementType> = {
   Home,
   Users,
   CreditCard,
@@ -58,6 +69,7 @@ const iconMap = {
 
 export const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, hasRole } = useAuth();
@@ -66,6 +78,14 @@ export const Layout: React.FC = () => {
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const toggleMenu = (href: string) => {
+    setExpandedMenus(prev =>
+      prev.includes(href)
+        ? prev.filter(h => h !== href)
+        : [...prev, href]
+    );
   };
 
   const filteredNavigation = navigation.filter(item => {
@@ -80,11 +100,15 @@ export const Layout: React.FC = () => {
     return location.pathname.startsWith(href);
   };
 
+  const isSubmenuActive = (submenu: SubMenuItem[]) => {
+    return submenu.some(item => location.pathname === item.href);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 lg:hidden bg-gray-600 bg-opacity-75"
           onClick={() => setSidebarOpen(false)}
         />
@@ -110,23 +134,70 @@ export const Layout: React.FC = () => {
             {filteredNavigation.map((item) => {
               const Icon = iconMap[item.icon as keyof typeof iconMap];
               const active = isActiveRoute(item.href);
-              
+              const hasSubmenu = item.submenu && item.submenu.length > 0;
+              const isExpanded = expandedMenus.includes(item.href);
+              const submenuActive = hasSubmenu && isSubmenuActive(item.submenu!);
+
               return (
                 <li key={item.href}>
-                  <Link
-                    to={item.href}
-                    className={`
-                      group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
-                      ${active 
-                        ? 'bg-primary-100 text-primary-700 border-r-2 border-primary-600' 
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      }
-                    `}
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <Icon className="mr-3 h-5 w-5" />
-                    {item.label}
-                  </Link>
+                  {hasSubmenu ? (
+                    <div>
+                      <button
+                        onClick={() => toggleMenu(item.href)}
+                        className={`
+                          w-full group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
+                          ${submenuActive
+                            ? 'bg-primary-100 text-primary-700'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          }
+                        `}
+                      >
+                        <Icon className="mr-3 h-5 w-5" />
+                        <span className="flex-1 text-left">{item.label}</span>
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
+                        )}
+                      </button>
+                      {isExpanded && item.submenu && (
+                        <ul className="ml-6 mt-1 space-y-1 border-l border-gray-200">
+                          {item.submenu.map((subItem) => (
+                            <li key={subItem.href}>
+                              <Link
+                                to={subItem.href}
+                                className={`
+                                  block px-3 py-2 text-sm rounded-md transition-colors
+                                  ${location.pathname === subItem.href
+                                    ? 'bg-primary-50 text-primary-700 font-medium'
+                                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                  }
+                                `}
+                                onClick={() => setSidebarOpen(false)}
+                              >
+                                {subItem.label}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ) : (
+                    <Link
+                      to={item.href}
+                      className={`
+                        group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
+                        ${active
+                          ? 'bg-primary-100 text-primary-700 border-r-2 border-primary-600'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        }
+                      `}
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      <Icon className="mr-3 h-5 w-5" />
+                      {item.label}
+                    </Link>
+                  )}
                 </li>
               );
             })}

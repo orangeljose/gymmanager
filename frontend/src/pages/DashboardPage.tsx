@@ -13,6 +13,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useOffline } from '@/hooks/useOffline';
 import { apiService } from '@/services/api';
+import { BCVWidget } from '@/components/BCVWidget';
 import type { DashboardMetrics, Client, Branch } from '@/types';
 
 export const DashboardPage: React.FC = () => {
@@ -181,6 +182,9 @@ export const DashboardPage: React.FC = () => {
               </select>
             </div>
           )}
+
+          {/* BCV Rate Widget */}
+          <BCVWidget />
         </div>
         
         {/* Offline Warning Message */}

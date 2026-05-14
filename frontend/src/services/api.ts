@@ -1,20 +1,24 @@
 import { envConfig } from './firebase';
-import type { 
-  ApiResponse, 
-  User, 
-  Client, 
-  ClientFilters, 
+import type {
+  ApiResponse,
+  User,
+  Client,
+  ClientFilters,
   ClientFormData,
-  Payment, 
-  PaymentFormData, 
+  Payment,
+  PaymentFormData,
   PaymentFilters,
-  Branch, 
+  Branch,
   BranchFormData,
   MembershipPlan,
   SolvencyReport,
   IncomeDailyReport,
   IncomeByMethodReport,
-  ReportFilters
+  ReportFilters,
+  PaymentAccount,
+  PaymentAccountFormData,
+  PlanFormData,
+  UserFormData
 } from '@/types';
 
 class ApiService {
@@ -240,6 +244,109 @@ class ApiService {
   // Membership Plans
   async getMembershipPlans(businessId: string): Promise<ApiResponse<MembershipPlan[]>> {
     return this.requestWithAuth<MembershipPlan[]>(`/membership-plans/${businessId}`);
+  }
+
+  async getPlans(params: { businessId?: string; isActive?: boolean }): Promise<ApiResponse<MembershipPlan[]>> {
+    const searchParams = new URLSearchParams();
+    if (params.businessId) searchParams.append('businessId', params.businessId);
+    if (params.isActive !== undefined) searchParams.append('isActive', String(params.isActive));
+    const endpoint = `/plans${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.requestWithAuth<MembershipPlan[]>(endpoint);
+  }
+
+  async getPlan(id: string): Promise<ApiResponse<MembershipPlan>> {
+    return this.requestWithAuth<MembershipPlan>(`/plans/${id}`);
+  }
+
+  async createPlan(data: PlanFormData): Promise<ApiResponse<MembershipPlan>> {
+    return this.requestWithAuth<MembershipPlan>('/plans', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePlan(id: string, data: Partial<PlanFormData>): Promise<ApiResponse<MembershipPlan>> {
+    return this.requestWithAuth<MembershipPlan>(`/plans/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePlan(id: string): Promise<ApiResponse<{ id: string }>> {
+    return this.requestWithAuth<{ id: string }>(`/plans/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Payment Accounts
+  async getPaymentAccounts(params: { businessId?: string; type?: string; isActive?: boolean }): Promise<ApiResponse<PaymentAccount[]>> {
+    const searchParams = new URLSearchParams();
+    if (params.businessId) searchParams.append('businessId', params.businessId);
+    if (params.type) searchParams.append('type', params.type);
+    if (params.isActive !== undefined) searchParams.append('isActive', String(params.isActive));
+    const endpoint = `/payment-accounts${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.requestWithAuth<PaymentAccount[]>(endpoint);
+  }
+
+  async getPaymentAccount(id: string): Promise<ApiResponse<PaymentAccount>> {
+    return this.requestWithAuth<PaymentAccount>(`/payment-accounts/${id}`);
+  }
+
+  async createPaymentAccount(data: PaymentAccountFormData): Promise<ApiResponse<PaymentAccount>> {
+    return this.requestWithAuth<PaymentAccount>('/payment-accounts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePaymentAccount(id: string, data: Partial<PaymentAccountFormData>): Promise<ApiResponse<PaymentAccount>> {
+    return this.requestWithAuth<PaymentAccount>(`/payment-accounts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePaymentAccount(id: string): Promise<ApiResponse<{ id: string }>> {
+    return this.requestWithAuth<{ id: string }>(`/payment-accounts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Users
+  async getUsers(isActive?: boolean): Promise<ApiResponse<User[]>> {
+    const params = new URLSearchParams();
+    if (isActive !== undefined) params.append('isActive', String(isActive));
+    const endpoint = `/users${params.toString() ? `?${params.toString()}` : ''}`;
+    return this.requestWithAuth<User[]>(endpoint);
+  }
+
+  async getUser(id: string): Promise<ApiResponse<User>> {
+    return this.requestWithAuth<User>(`/users/${id}`);
+  }
+
+  async createUser(data: UserFormData): Promise<ApiResponse<User>> {
+    return this.requestWithAuth<User>('/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateUser(id: string, data: Partial<UserFormData>): Promise<ApiResponse<User>> {
+    return this.requestWithAuth<User>(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteUser(id: string): Promise<ApiResponse<{ id: string; message: string }>> {
+    return this.requestWithAuth<{ id: string; message: string }>(`/users/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Exchange Rate
+  async getExchangeRate(): Promise<ApiResponse<{ rate: number; currency: string; source: string; cached: boolean }>> {
+    return this.request<{ rate: number; currency: string; source: string; cached: boolean }>('/exchange-rate');
   }
 }
 
