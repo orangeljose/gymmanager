@@ -65,6 +65,17 @@ def create_app():
              "expose_headers": ['Content-Type'],
              "max_age": 600
          }})
+
+    # Middleware forzoso de CORS - garantiza headers sin importar Cloudflare o cache
+    @app.after_request
+    def add_cors_headers(response):
+        # Solo aplicar a rutas API
+        if request.path.startswith('/api'):
+            response.headers['Access-Control-Allow-Origin'] = 'https://gymmanager-pink.vercel.app'
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept, Origin'
+        return response
     
     # Configurar rate limiting
     limiter = Limiter(
