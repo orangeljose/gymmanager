@@ -49,7 +49,7 @@ def create_app():
     logger = logging.getLogger(__name__)
     logger.info("Iniciando GymManager Backend")
     
-    # Configurar CORS para toda la app
+    # Configurar CORS global para toda la app
     # En producción, agregar los orígenes de frontend (Vercel, etc.)
     cors_origins = app.config.get('CORS_ORIGINS', [
         'http://localhost:3000',
@@ -64,7 +64,22 @@ def create_app():
              "methods": ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
              "expose_headers": ['Content-Type'],
              "max_age": 600
-         }})
+         }},
+         # CORS específico para /api/clients - incluir origin de producción
+         resources={
+             r"/api/clients/*": {
+                 "origins": [
+                     'http://localhost:3000',
+                     'http://localhost:5173',
+                     'https://gymmanager-pink.vercel.app'
+                 ],
+                 "supports_credentials": True,
+                 "allow_headers": ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control', 'Pragma'],
+                 "methods": ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+                 "expose_headers": ['Content-Type'],
+                 "max_age": 600
+             }
+         })
     
     # Configurar rate limiting
     limiter = Limiter(
