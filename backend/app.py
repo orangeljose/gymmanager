@@ -57,22 +57,17 @@ def create_app():
         'https://gymmanager-pink.vercel.app'
     ])
     CORS(app,
-         resources={r"/api/*": {
-             "origins": cors_origins,
-             "supports_credentials": True,
-             "allow_headers": ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             "methods": ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-             "expose_headers": ['Content-Type'],
-             "max_age": 600
-         }},
-         # CORS específico para /api/clients - incluir origin de producción
          resources={
+             r"/api/*": {
+                 "origins": cors_origins,
+                 "supports_credentials": True,
+                 "allow_headers": ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+                 "methods": ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+                 "expose_headers": ['Content-Type'],
+                 "max_age": 600
+             },
              r"/api/clients/*": {
-                 "origins": [
-                     'http://localhost:3000',
-                     'http://localhost:5173',
-                     'https://gymmanager-pink.vercel.app'
-                 ],
+                 "origins": cors_origins,
                  "supports_credentials": True,
                  "allow_headers": ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control', 'Pragma'],
                  "methods": ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
