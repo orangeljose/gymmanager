@@ -175,7 +175,9 @@ class MembershipService:
                 return {
                     'membershipStart': update_data.get('membershipStart'),
                     'membershipEnd': new_end,
-                    'status': 'active'
+                    'status': 'active',
+                    'planName': plan.get('name', 'Plan'),
+                    'planPrice': plan.get('price', 0)
                 }
             else:
                 logger.error(f"No se pudo extender membresía para cliente {client_id}")

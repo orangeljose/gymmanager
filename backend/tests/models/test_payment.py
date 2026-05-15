@@ -24,8 +24,8 @@ class TestPaymentModelValidateCreateData:
         }
         result = PaymentModel.validate_create_data(data.copy())
         assert result['method'] == 'cash'
-        assert result['monthsPaid'] == 1
-        assert result['methodDetails'] == {}
+        assert result['reference'] is None
+        assert result['paymentAccountId'] is None
 
     def test_valid_card_payment(self):
         """Pago con tarjeta válido"""
@@ -165,103 +165,82 @@ class TestPaymentModelValidateCreateData:
         errors = exc_info.value.args[0]['errors']
         assert any('positivo' in e.lower() for e in errors)
 
-    def test_zelle_missing_sender_email(self):
-        """Zelle requiere senderEmail"""
+    def test_zelle_without_method_details(self):
+        """Zelle sin methodDetails es válido (se guarda reference directamente)"""
         data = {
             'clientId': 'client-001',
             'amount': 35000,
             'method': 'zelle',
             'membershipPlanId': 'plan-mensual',
-            'branchId': 'sede-norte',
-            'methodDetails': {
-                'destinationAccountId': 'acc-001'
-            }
+            'branchId': 'sede-norte'
         }
-        with pytest.raises(ValueError) as exc_info:
-            PaymentModel.validate_create_data(data)
-        errors = exc_info.value.args[0]['errors']
-        assert any('zelle' in e.lower() or 'senderemail' in e.lower() for e in errors)
+        result = PaymentModel.validate_create_data(data)
+        assert result['method'] == 'zelle'
+        assert result['reference'] is None
 
-    def test_pago_movil_missing_phone_sender(self):
-        """Pago Móvil requiere phoneSender"""
+    def test_pago_movil_without_method_details(self):
+        """Pago Móvil sin methodDetails es válido (se guarda reference directamente)"""
         data = {
             'clientId': 'client-001',
             'amount': 35000,
             'method': 'pago_movil',
             'membershipPlanId': 'plan-mensual',
-            'branchId': 'sede-norte',
-            'methodDetails': {
-                'paymentCode': 'PM-12345678'
-            }
+            'branchId': 'sede-norte'
         }
-        with pytest.raises(ValueError) as exc_info:
-            PaymentModel.validate_create_data(data)
-        errors = exc_info.value.args[0]['errors']
-        assert any('pago' in e.lower() and 'móvil' in e.lower() or 'mobil' in e.lower() or 'phonesender' in e.lower() for e in errors)
+        result = PaymentModel.validate_create_data(data)
+        assert result['method'] == 'pago_movil'
+        assert result['reference'] is None
 
-    def test_pago_movil_missing_payment_code(self):
-        """Pago Móvil requiere paymentCode"""
+    def test_pago_movil_without_payment_code(self):
+        """Pago Móvil sin methodDetails es válido"""
         data = {
             'clientId': 'client-001',
             'amount': 35000,
             'method': 'pago_movil',
             'membershipPlanId': 'plan-mensual',
-            'branchId': 'sede-norte',
-            'methodDetails': {
-                'phoneSender': '+584141234567'
-            }
+            'branchId': 'sede-norte'
         }
-        with pytest.raises(ValueError) as exc_info:
-            PaymentModel.validate_create_data(data)
-        errors = exc_info.value.args[0]['errors']
-        assert any('pago' in e.lower() and ('móvil' in e.lower() or 'mobil' in e.lower()) or 'paymentcode' in e.lower() for e in errors)
+        result = PaymentModel.validate_create_data(data)
+        assert result['method'] == 'pago_movil'
 
-    def test_card_missing_card_last4(self):
-        """Tarjeta requiere cardLast4"""
+    def test_card_without_method_details(self):
+        """Tarjeta sin methodDetails es válido"""
         data = {
             'clientId': 'client-001',
             'amount': 35000,
             'method': 'card',
             'membershipPlanId': 'plan-mensual',
-            'branchId': 'sede-norte',
-            'methodDetails': {}
+            'branchId': 'sede-norte'
         }
-        with pytest.raises(ValueError) as exc_info:
-            PaymentModel.validate_create_data(data)
-        errors = exc_info.value.args[0]['errors']
-        assert any('tarjeta' in e.lower() for e in errors)
+        result = PaymentModel.validate_create_data(data)
+        assert result['method'] == 'card'
 
-    def test_card_invalid_card_last4_format(self):
-        """cardLast4 debe tener exactamente 4 dígitos"""
-        data = {
-            'clientId': 'client-001',
-            'amount': 35000,
-            'method': 'card',
-            'membershipPlanId': 'plan-mensual',
-            'branchId': 'sede-norte',
-            'methodDetails': {
-                'cardLast4': '12345'  # 5 dígitos
-            }
-        }
-        with pytest.raises(ValueError) as exc_info:
-            PaymentModel.validate_create_data(data)
-        errors = exc_info.value.args[0]['errors']
-        assert any('4 dígitos' in e for e in errors)
-
-    def test_transfer_missing_reference(self):
-        """Transferencia requiere reference"""
+    def test_transfer_with_reference_in_data(self):
+        """Transferencia con reference en el body (no methodDetails)"""
         data = {
             'clientId': 'client-001',
             'amount': 35000,
             'method': 'transfer',
             'membershipPlanId': 'plan-mensual',
             'branchId': 'sede-norte',
-            'methodDetails': {}
+            'reference': 'REF-123456'
         }
-        with pytest.raises(ValueError) as exc_info:
-            PaymentModel.validate_create_data(data)
-        errors = exc_info.value.args[0]['errors']
-        assert any('transferencia' in e.lower() for e in errors)
+        result = PaymentModel.validate_create_data(data)
+        assert result['method'] == 'transfer'
+        assert result['reference'] == 'REF-123456'
+
+    def test_transfer_without_reference(self):
+        """Transferencia sin reference es válido (se permite sin referencia)"""
+        data = {
+            'clientId': 'client-001',
+            'amount': 35000,
+            'method': 'transfer',
+            'membershipPlanId': 'plan-mensual',
+            'branchId': 'sede-norte'
+        }
+        result = PaymentModel.validate_create_data(data)
+        assert result['method'] == 'transfer'
+        assert result['reference'] is None
 
     def test_all_payment_methods_valid(self):
         """Todos los métodos de pago son válidos"""

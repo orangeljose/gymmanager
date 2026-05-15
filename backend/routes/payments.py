@@ -259,6 +259,141 @@ def get_payment_report():
             }
         }), 500
 
+@payments_bp.route('/receipts', methods=['GET', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
+             supports_credentials=True,
+             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+             methods=['GET', 'OPTIONS'])
+@require_auth
+@require_role(['super_admin', 'branch_admin'])
+def get_receipts():
+    """
+    Obtiene lista de recibos de pagos para administración
+    
+    Query Parameters:
+        limit: int (optional, default 100) - Límite de resultados
+        offset: int (optional, default 0) - Offset para paginación
+        branchId: string (optional) - Filtrar por sede (solo super_admin puede especificar)
+    
+    Response (200):
+    {
+        "success": true,
+        "data": {
+            "receipts": [
+                {
+                    "id": "payment-001",
+                    "receiptNumber": "P-20260414-001",
+                    "createdAt": "2026-04-14T10:30:00Z",
+                    "clientName": "Juan Pérez",
+                    "planName": "Mensual",
+                    "amount": 35000,
+                    "method": "cash",
+                    "reference": null,
+                    "paymentAccountId": "acc-001",
+                    "registeredByName": "Admin Principal"
+                },
+                ...
+            ],
+            "total": 45
+        }
+    }
+    """
+    try:
+        # Obtener parámetros
+        limit = request.args.get('limit', 100, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        branch_id = request.args.get('branchId')
+        
+        # Validar y ajustar límites
+        limit = min(max(1, limit), 500)  # Entre 1 y 500
+        offset = max(0, offset)
+        
+        # Determinar filtros según rol
+        user = g.current_user
+        user_role = user.get('role')
+        user_branch_id = user.get('branchId')
+        user_business_id = user.get('businessId')
+        
+        # Construir filtros
+        filters = []
+        
+        # Branch admin solo ve su sede
+        if user_role == 'branch_admin':
+            filters.append({'field': 'branchId', 'operator': '==', 'value': user_branch_id})
+        elif branch_id:
+            # Solo super_admin puede especificar branchId diferente
+            if user_role != 'super_admin':
+                return jsonify({
+                    'success': False,
+                    'error': {
+                        'code': 403,
+                        'message': 'No tienes acceso a esta sede'
+                    }
+                }), 403
+            filters.append({'field': 'branchId', 'operator': '==', 'value': branch_id})
+        
+        # Siempre filtrar por business del usuario
+        if user_business_id:
+            filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
+        
+        # Obtener pagos
+        firebase_service = FirebaseService()
+        all_receipts = firebase_service.query_firestore(
+            'payments',
+            filters=filters,
+            order_by='createdAt',
+            direction='DESC',
+            limit=limit,
+            offset=offset
+        )
+        
+        # Obtener total (sin limit/offset para saber si hay más)
+        total_filters = filters.copy()  # Sin offset/limit
+        all_for_count = firebase_service.query_firestore(
+            'payments',
+            filters=total_filters,
+            order_by='createdAt',
+            direction='DESC',
+            limit=1000  # Un número alto pero no excesivo
+        )
+        total = len(all_for_count)
+        
+        # Transformar al formato de tabla
+        receipts = []
+        for payment in all_receipts:
+            receipts.append({
+                'id': payment.get('id'),
+                'receiptNumber': payment.get('receiptNumber'),
+                'createdAt': payment.get('createdAt'),
+                'clientName': payment.get('clientName'),
+                'planName': payment.get('planName'),
+                'amount': payment.get('amount'),
+                'method': payment.get('method'),
+                'reference': payment.get('reference'),
+                'paymentAccountId': payment.get('paymentAccountId'),
+                'registeredByName': payment.get('registeredByName')
+            })
+        
+        logger.info(f"Obtenidos {len(receipts)} recibos para usuario {user.get('uid')}")
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'receipts': receipts,
+                'total': total
+            }
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo recibos: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 500,
+                'message': 'Error interno del servidor'
+            }
+        }), 500
+
 @payments_bp.route('/sync', methods=['POST', 'OPTIONS'])
 @cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
              supports_credentials=True,

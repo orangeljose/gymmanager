@@ -131,9 +131,11 @@ class PaymentService:
                 'clientName': client_name,
                 'amount': amount,
                 'method': data.get('method'),
-                'methodDetails': data.get('methodDetails', {}),
+                'reference': data.get('reference'),
+                'paymentAccountId': data.get('paymentAccountId'),
                 'membershipPlanId': plan_id,
-                'monthsPaid': months_paid,
+                'planName': membership_update.get('planName', 'Plan'),
+                'planPrice': membership_update.get('planPrice', amount),
                 'startDate': membership_update.get('membershipStart'),
                 'endDate': membership_update.get('membershipEnd'),
                 'branchId': branch_id,
@@ -141,7 +143,7 @@ class PaymentService:
                 'registeredBy': current_user.get('uid'),
                 'registeredByName': current_user.get('name', 'Usuario'),
                 'receiptNumber': receipt_number,
-                'syncedAt': None  # Para pagos online es null inicialmente
+                'syncedAt': datetime.now()  # Online = synced immediately
             }
             
             # Crear pago en Firestore
