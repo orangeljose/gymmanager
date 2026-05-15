@@ -18,6 +18,10 @@ def require_auth(f):
     """
     @functools.wraps(f)
     def decorated_function(*args, **kwargs):
+        # Allow preflight OPTIONS requests to pass through
+        if request.method == 'OPTIONS':
+            return f(*args, **kwargs)
+        
         try:
             # Obtener token del header
             auth_header = request.headers.get('Authorization')
