@@ -251,6 +251,28 @@ export interface UserFormData {
   branchId?: string;
 }
 
+// Invitation Types
+export interface Invitation {
+  id: string;
+  token: string;
+  email: string;
+  name?: string;
+  role: UserRole;
+  businessId?: string;
+  branchId?: string;
+  invitedBy: string;
+  invitedByName: string;
+  status: 'pending' | 'accepted' | 'expired';
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface InvitationFormData {
+  email: string;
+  name?: string;
+  role: UserRole;
+}
+
 // Filter and Search Types
 export interface ClientFilters {
   businessId?: string;

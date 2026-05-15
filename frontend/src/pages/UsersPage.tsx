@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
-import type { User, UserFormData, UserRole, Branch } from '@/types';
+import type { User, UserRole, Branch } from '@/types';
 import toast from 'react-hot-toast';
 import { Plus, Edit2, X, AlertCircle, Mail, Shield, Building, Users as UsersIcon } from 'lucide-react';
 
@@ -28,10 +28,10 @@ export const UsersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState<UserFormData>({
+  const [formData, setFormData] = useState({
     email: '',
     name: '',
-    role: 'cashier',
+    role: 'cashier' as UserRole,
     businessId: '',
     branchId: ''
   });
@@ -112,15 +112,16 @@ export const UsersPage: React.FC = () => {
           closeModal();
         }
       } else {
+        // Create user directly (for employees in existing business)
         const response = await apiService.createUser(formData);
         if (response.success) {
-          toast.success('Usuario creado');
+          toast.success('Usuario creado. Se envió email para crear contraseña.');
           loadUsers();
           closeModal();
         }
       }
     } catch (error: any) {
-      toast.error(error.message || 'Error guardando usuario');
+      toast.error(error.message || 'Error procesando solicitud');
     } finally {
       setSaving(false);
     }
@@ -162,8 +163,8 @@ export const UsersPage: React.FC = () => {
         </div>
         <button onClick={() => openModal()} className="btn btn-primary">
           <Plus className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">Nuevo Usuario</span>
-          <span className="sm:hidden">Agregar</span>
+          <span className="hidden sm:inline">Invitar Empleado</span>
+          <span className="sm:hidden">Invitar</span>
         </button>
       </div>
 
@@ -171,10 +172,10 @@ export const UsersPage: React.FC = () => {
         <div className="card text-center py-12">
           <UsersIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No hay usuarios</h3>
-          <p className="text-gray-600 mb-6">Comienza creando tu primer usuario</p>
+          <p className="text-gray-600 mb-6">Invita empleados para comenzar</p>
           <button onClick={() => openModal()} className="btn btn-primary">
             <Plus className="h-4 w-4 mr-2" />
-            Crear Usuario
+            Invitar Empleado
           </button>
         </div>
       ) : (
@@ -354,7 +355,7 @@ export const UsersPage: React.FC = () => {
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   className="input"
-                  placeholder="usuario@ejemplo.com"
+                  placeholder="empleado@ejemplo.com"
                   required
                   disabled={!!editingUser}
                 />
@@ -387,16 +388,18 @@ export const UsersPage: React.FC = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as UserRole }))}
                   className="input"
                   required
+                  disabled={!!editingUser}
                 >
+                  <option value="branch_admin">Encargado de Sucursal</option>
                   <option value="cashier">Cajero</option>
                   <option value="trainer">Entrenador</option>
-                  <option value="admin">Admin (Dueño)</option>
-                  <option value="branch_admin">Encargado de Sucursal</option>
-                  <option value="super_admin">Super Admin</option>
                 </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  El empleado recibirá un email para crear su contraseña
+                </p>
               </div>
 
-              {formData.role !== 'super_admin' && (
+              {user?.role !== 'super_admin' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     <Building className="h-4 w-4 inline mr-1" />
@@ -406,6 +409,7 @@ export const UsersPage: React.FC = () => {
                     value={formData.branchId || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, branchId: e.target.value }))}
                     className="input"
+                    disabled={!!editingUser}
                   >
                     <option value="">Sin asignar</option>
                     {branches.map((branch) => (

@@ -56,7 +56,8 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
       { label: 'Cuentas de Pago', href: '/payment-accounts', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Recibos', href: '/receipts', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Sucursales', href: '/branches', roles: ['super_admin'] },
-      { label: 'Usuarios', href: '/users', roles: ['super_admin', 'admin', 'branch_admin'] }
+      { label: 'Usuarios', href: '/users', roles: ['super_admin', 'admin', 'branch_admin'] },
+      { label: 'Agregar Admin', href: '/add-admin', roles: ['super_admin'] }
     ]
   }
 ];

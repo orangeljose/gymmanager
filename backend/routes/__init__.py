@@ -10,6 +10,7 @@ from .plans import plans_bp
 from .payment_accounts import payment_accounts_bp
 from .exchange_rate import exchange_bp
 from .users import users_bp
+from .invitations import invitations_bp
 
 __all__ = [
     'auth_bp',
@@ -20,5 +21,6 @@ __all__ = [
     'plans_bp',
     'payment_accounts_bp',
     'exchange_bp',
-    'users_bp'
+    'users_bp',
+    'invitations_bp'
 ]

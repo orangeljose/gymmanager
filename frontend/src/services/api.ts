@@ -18,8 +18,9 @@ import type {
   PaymentAccount,
   PaymentAccountFormData,
   PlanFormData,
-  UserFormData,
-  Receipt
+  UserRole,
+  Receipt,
+  UserFormData
 } from '@/types';
 
 class ApiService {
@@ -351,6 +352,60 @@ class ApiService {
   async deleteUser(id: string): Promise<ApiResponse<{ id: string; message: string }>> {
     return this.requestWithAuth<{ id: string; message: string }>(`/users/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  // Invitations
+  async createInvitation(data: { email: string; name?: string; role: UserRole }): Promise<ApiResponse<{
+    invitationId: string;
+    token: string;
+    email: string;
+    role: string;
+    name?: string;
+    expiresAt: string;
+    invitationLink: string;
+  }>> {
+    return this.requestWithAuth('/invitations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async validateInvitation(token: string): Promise<ApiResponse<{
+    valid: boolean;
+    email: string;
+    role: string;
+    name?: string;
+    businessId?: string;
+    branchId?: string;
+    businessName?: string;
+    invitedByName: string;
+    requiresOnboarding: boolean;
+  }>> {
+    return this.request<{
+    valid: boolean;
+    email: string;
+    role: string;
+    name?: string;
+    businessId?: string;
+    branchId?: string;
+    businessName?: string;
+    invitedByName: string;
+    requiresOnboarding: boolean;
+  }>(`/invitations/validate/${token}`);
+  }
+
+  async acceptInvitation(token: string, uid: string): Promise<ApiResponse<{
+    userId: string;
+    email: string;
+    role: string;
+    name?: string;
+    businessId?: string;
+    branchId?: string;
+  }>> {
+    return this.requestWithAuth('/invitations/accept', {
+      method: 'POST',
+      body: JSON.stringify({ token, uid }),
     });
   }
 

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword, signOut, User as FirebaseUser } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, signOut, User as FirebaseUser, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import type { EnvConfig } from '@/types';
@@ -79,6 +79,26 @@ export const firebaseAuth = {
 
   onAuthStateChanged: (callback: (user: FirebaseUser | null) => void) => {
     return auth.onAuthStateChanged(callback);
+  },
+
+  createUser: async (email: string, password: string) => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      return {
+        success: true,
+        user: userCredential.user,
+        token: await userCredential.user.getIdToken()
+      };
+    } catch (error: any) {
+      console.error('Firebase create user error:', error);
+      return {
+        success: false,
+        error: {
+          code: error.code,
+          message: getAuthErrorMessage(error.code)
+        }
+      };
+    }
   }
 };
 

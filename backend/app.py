@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Importar blueprints
-from routes import auth_bp, clients_bp, payments_bp, reports_bp, branches_bp, plans_bp, payment_accounts_bp, exchange_bp, users_bp
+from routes import auth_bp, clients_bp, payments_bp, reports_bp, branches_bp, plans_bp, payment_accounts_bp, exchange_bp, users_bp, invitations_bp
 from config import get_config, Config
 
 def create_app():
@@ -85,6 +85,7 @@ def create_app():
     app.register_blueprint(payment_accounts_bp)
     app.register_blueprint(exchange_bp)
     app.register_blueprint(users_bp)
+    app.register_blueprint(invitations_bp)
     
     # Middleware global para limpiar contexto
     @app.teardown_appcontext

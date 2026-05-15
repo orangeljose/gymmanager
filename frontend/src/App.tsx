@@ -22,6 +22,8 @@ import { PaymentAccountsPage } from '@/pages/PaymentAccountsPage';
 import { BranchesPage } from '@/pages/BranchesPage';
 import { UsersPage } from '@/pages/UsersPage';
 import { ReceiptsPage } from '@/pages/ReceiptsPage';
+import { InvitePage } from '@/pages/InvitePage';
+import { AddAdminPage } from '@/pages/AddAdminPage';
 
 // Loading component
 const LoadingSpinner = () => (
@@ -40,6 +42,8 @@ const App: React.FC = () => {
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/invite/:token" element={<InvitePage />} />
+          <Route path="/invite" element={<InvitePage />} />
           
           {/* Protected routes */}
           <Route path="/" element={
@@ -144,10 +148,17 @@ const App: React.FC = () => {
                 </Suspense>
               </ProtectedRoute>
             } />
-            <Route path="users" element={
-              <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+<Route path="users" element={
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <UsersPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="add-admin" element={
+              <ProtectedRoute requiredRoles={['super_admin']}>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AddAdminPage />
                 </Suspense>
               </ProtectedRoute>
             } />
