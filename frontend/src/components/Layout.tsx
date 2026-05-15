@@ -52,11 +52,11 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     icon: 'Settings',
     roles: ['super_admin', 'admin'],
     submenu: [
-      { label: 'Planes', href: '/plans' },
-      { label: 'Cuentas de Pago', href: '/payment-accounts' },
-      { label: 'Recibos', href: '/receipts' },
-      { label: 'Sucursales', href: '/branches' },
-      { label: 'Usuarios', href: '/users' }
+      { label: 'Planes', href: '/plans', roles: ['super_admin', 'admin', 'branch_admin'] },
+      { label: 'Cuentas de Pago', href: '/payment-accounts', roles: ['super_admin', 'admin', 'branch_admin'] },
+      { label: 'Recibos', href: '/receipts', roles: ['super_admin', 'admin', 'branch_admin'] },
+      { label: 'Sucursales', href: '/branches', roles: ['super_admin'] },
+      { label: 'Usuarios', href: '/users', roles: ['super_admin', 'admin', 'branch_admin'] }
     ]
   }
 ];

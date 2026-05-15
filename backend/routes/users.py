@@ -18,7 +18,7 @@ users_bp = Blueprint('users', __name__, url_prefix='/api')
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['GET', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin'])
+@require_role(['super_admin', 'admin'])
 def get_users():
     """
     Lista todos los usuarios del negocio
@@ -48,9 +48,22 @@ def get_users():
     try:
         user_business_id = g.current_user.get('businessId')
         user_role = g.current_user.get('role')
+        user_branch_id = g.current_user.get('branchId')
 
-        # Validar que solo super_admin puede listar usuarios
-        if user_role != 'super_admin':
+        # Jerarquía de roles para ver usuarios:
+        # super_admin > admin > branch_admin > cashier/trainer
+        ROLE_HIERARCHY = {
+            'super_admin': 4,
+            'admin': 3,
+            'branch_admin': 2,
+            'cashier': 1,
+            'trainer': 1
+        }
+
+        user_level = ROLE_HIERARCHY.get(user_role, 0)
+
+        # Cashier y trainer no pueden ver usuarios
+        if user_level <= 1:
             return jsonify({
                 'success': False,
                 'error': {
@@ -59,10 +72,23 @@ def get_users():
                 }
             }), 403
 
-        # Obtener filtro de isActive si se proporciona
-        is_active_filter = request.args.get('isActive')
-        filters = [{'field': 'businessId', 'operator': '==', 'value': user_business_id}]
+        # Construir filtros base
+        filters = []
 
+        # Super admin ve todos los negocios
+        if user_role == 'super_admin':
+            pass  # Sin filtro de negocio
+        elif user_role == 'admin':
+            # Admin ve solo empleados de su negocio
+            filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
+        else:
+            # branch_admin ve solo empleados de su sede
+            filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
+            if user_branch_id:
+                filters.append({'field': 'branchId', 'operator': '==', 'value': user_branch_id})
+
+        # Filtro opcional de isActive
+        is_active_filter = request.args.get('isActive')
         if is_active_filter is not None:
             filters.append({
                 'field': 'isActive',
@@ -72,6 +98,17 @@ def get_users():
 
         firebase_service = FirebaseService()
         users = firebase_service.query_firestore('users', filters=filters)
+
+        # Filtrar por rol: no puede ver roles de nivel superior o igual
+        # Primero determinamos qué roles puede ver este usuario
+        ROLES_CAN_SEE = {
+            'super_admin': ['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer'],  # ve todos
+            'admin': ['branch_admin', 'cashier', 'trainer'],  # no ve otros admins ni super_admin
+            'branch_admin': ['cashier', 'trainer']  # solo ve subordinados
+        }
+
+        can_see_roles = ROLES_CAN_SEE.get(user_role, [])
+        users = [u for u in users if u.get('role') in can_see_roles]
 
         logger.info(f"Listados {len(users)} usuarios para negocio {user_business_id}")
 
@@ -96,7 +133,7 @@ def get_users():
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['GET', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin'])
+@require_role(['super_admin', 'admin'])
 def get_user(user_id):
     """
     Obtiene un usuario específico por ID
@@ -162,7 +199,7 @@ def get_user(user_id):
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['POST', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin'])
+@require_role(['super_admin', 'admin'])
 def create_user():
     """
     Crea un nuevo usuario en Firestore
@@ -274,7 +311,7 @@ def create_user():
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['PUT', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin'])
+@require_role(['super_admin', 'admin'])
 def update_user(user_id):
     """
     Actualiza un usuario existente
@@ -378,7 +415,7 @@ def update_user(user_id):
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['DELETE', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin'])
+@require_role(['super_admin', 'admin'])
 def delete_user(user_id):
     """
     Desactiva un usuario (soft delete - no se elimina de Firestore)

@@ -145,7 +145,7 @@ const App: React.FC = () => {
               </ProtectedRoute>
             } />
             <Route path="users" element={
-              <ProtectedRoute requiredRoles={['super_admin']}>
+              <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <UsersPage />
                 </Suspense>
