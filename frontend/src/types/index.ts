@@ -11,7 +11,7 @@ export interface User {
   createdAt: string;
 }
 
-export type UserRole = 'super_admin' | 'branch_admin' | 'cashier' | 'trainer';
+export type UserRole = 'super_admin' | 'admin' | 'branch_admin' | 'cashier' | 'trainer';
 
 export interface AuthState {
   user: User | null;
@@ -111,9 +111,11 @@ export interface Payment {
   clientName: string;
   amount: number; // in cents
   method: PaymentMethod;
-  methodDetails?: PaymentMethodDetails;
+  reference?: string | null;
+  paymentAccountId?: string | null;
   membershipPlanId: string;
-  monthsPaid: number;
+  planName?: string;
+  planPrice?: number;
   startDate: string;
   endDate: string;
   branchId: string;
@@ -127,36 +129,17 @@ export interface Payment {
 
 export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'zelle' | 'pago_movil' | 'other';
 
-export interface PaymentMethodDetails {
-  cash?: {
-    cashierName?: string;
-    receivedAmount?: number;
-    change?: number;
-  };
-  card?: {
-    cardLast4?: string;
-    cardBrand?: string;
-    transactionId?: string;
-    authorizationCode?: string;
-  };
-  transfer?: {
-    reference?: string;
-    bank?: string;
-    accountNumber?: string;
-  };
-  zelle?: {
-    senderEmail?: string;
-    destinationAccountId?: string;
-  };
-  pago_movil?: {
-    phoneSender?: string;
-    paymentCode?: string;
-    destinationAccountId?: string;
-  };
-  other?: {
-    description?: string;
-    reference?: string;
-  };
+export interface Receipt {
+  id: string;
+  receiptNumber: string;
+  createdAt: string;
+  clientName: string;
+  planName: string;
+  amount: number;
+  method: PaymentMethod;
+  reference?: string | null;
+  paymentAccountId?: string | null;
+  registeredByName: string;
 }
 
 // API Response Types

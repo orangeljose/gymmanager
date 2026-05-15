@@ -157,7 +157,7 @@ export const ClientDetailPage: React.FC = () => {
               </span>
             </div>
           </div>
-          {(user?.role === 'super_admin' || user?.role === 'branch_admin') && (
+          {(user?.role === 'super_admin' || user?.role === 'admin') && (
             <Link to={`/clients/${client.id}/edit`} className="btn btn-outline">
               <Edit2 className="h-4 w-4 mr-2" /> Editar
             </Link>

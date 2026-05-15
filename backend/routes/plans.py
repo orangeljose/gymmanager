@@ -102,7 +102,7 @@ def get_plan(plan_id):
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['POST', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin', 'branch_admin'])
+@require_role(['super_admin', 'admin', 'branch_admin'])
 def create_plan():
     """
     Crea un nuevo plan de membresía
@@ -168,7 +168,7 @@ def create_plan():
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['PUT', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin', 'branch_admin'])
+@require_role(['super_admin', 'admin', 'branch_admin'])
 def update_plan(plan_id):
     """
     Actualiza un plan existente

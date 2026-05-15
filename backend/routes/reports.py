@@ -19,7 +19,7 @@ reports_bp = Blueprint('reports', __name__, url_prefix='/api/reports')
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['GET', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin', 'branch_admin'])
+@require_role(['super_admin', 'admin', 'branch_admin', 'cashier'])
 def get_solvency_report():
     """
     Lista clientes morosos (membresía vencida)
@@ -164,7 +164,7 @@ def get_solvency_report():
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['GET', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin', 'branch_admin'])
+@require_role(['super_admin', 'admin', 'branch_admin'])
 def get_daily_income_report():
     """
     Ingresos diarios en un rango de fechas
@@ -316,7 +316,7 @@ def get_daily_income_report():
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['GET', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin', 'branch_admin'])
+@require_role(['super_admin', 'admin', 'branch_admin'])
 def get_income_by_method_report():
     """
     Ingresos agrupados por método de pago

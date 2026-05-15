@@ -21,6 +21,7 @@ import { PlansPage } from '@/pages/PlansPage';
 import { PaymentAccountsPage } from '@/pages/PaymentAccountsPage';
 import { BranchesPage } from '@/pages/BranchesPage';
 import { UsersPage } from '@/pages/UsersPage';
+import { ReceiptsPage } from '@/pages/ReceiptsPage';
 
 // Loading component
 const LoadingSpinner = () => (
@@ -68,14 +69,14 @@ const App: React.FC = () => {
               </Suspense>
             } />
             <Route path="clients/new" element={
-              <ProtectedRoute requiredRoles={['branch_admin', 'super_admin']}>
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <ClientFormPage />
                 </Suspense>
               </ProtectedRoute>
             } />
             <Route path="clients/:id/edit" element={
-              <ProtectedRoute requiredRoles={['branch_admin', 'super_admin']}>
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <ClientFormPage />
                 </Suspense>
@@ -84,21 +85,21 @@ const App: React.FC = () => {
             
             {/* Reports */}
             <Route path="reports" element={
-              <ProtectedRoute requiredRoles={['branch_admin', 'super_admin']}>
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <ReportsPage />
                 </Suspense>
               </ProtectedRoute>
             } />
             <Route path="reports/solvency" element={
-              <ProtectedRoute requiredRoles={['branch_admin', 'super_admin']}>
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin', 'cashier']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <SolvencyReportPage />
                 </Suspense>
               </ProtectedRoute>
             } />
             <Route path="reports/income" element={
-              <ProtectedRoute requiredRoles={['branch_admin', 'super_admin']}>
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <IncomeReportPage />
                 </Suspense>
@@ -116,16 +117,23 @@ const App: React.FC = () => {
 
             {/* Admin sub-pages - top level routes for better mobile UX */}
             <Route path="plans" element={
-              <ProtectedRoute requiredRoles={['branch_admin', 'super_admin']}>
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <PlansPage />
                 </Suspense>
               </ProtectedRoute>
             } />
             <Route path="payment-accounts" element={
-              <ProtectedRoute requiredRoles={['branch_admin', 'super_admin']}>
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <PaymentAccountsPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="receipts" element={
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <ReceiptsPage />
                 </Suspense>
               </ProtectedRoute>
             } />

@@ -282,7 +282,7 @@ def update_user(user_id):
     Request Body (todos opcionales):
     {
         "name": "Juan Pérez Updated",
-        "role": "branch_admin",
+        "role": "admin",
         "branchId": "branch-456",
         "isActive": false
     }
@@ -294,7 +294,7 @@ def update_user(user_id):
             "id": "user-uid-123",
             "email": "user@example.com",
             "name": "Juan Pérez Updated",
-            "role": "branch_admin",
+            "role": "admin",
             ...
         }
     }

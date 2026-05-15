@@ -7,14 +7,16 @@ import { Plus, Edit2, X, AlertCircle, Mail, Shield, Building, Users as UsersIcon
 
 const ROLE_LABELS: Record<UserRole, string> = {
   super_admin: 'Super Admin',
-  branch_admin: 'Admin de Sucursal',
+  admin: 'Admin',
+    branch_admin: 'Encargado de Sucursal',
   cashier: 'Cajero',
   trainer: 'Entrenador'
 };
 
 const ROLE_COLORS: Record<UserRole, string> = {
   super_admin: 'bg-purple-100 text-purple-800',
-  branch_admin: 'bg-blue-100 text-blue-800',
+admin: 'bg-purple-100 text-purple-800',
+    branch_admin: 'bg-blue-100 text-blue-800',
   cashier: 'bg-green-100 text-green-800',
   trainer: 'bg-orange-100 text-orange-800'
 };
@@ -388,7 +390,8 @@ export const UsersPage: React.FC = () => {
                 >
                   <option value="cashier">Cajero</option>
                   <option value="trainer">Entrenador</option>
-                  <option value="branch_admin">Admin de Sucursal</option>
+                  <option value="admin">Admin (Dueño)</option>
+                  <option value="branch_admin">Encargado de Sucursal</option>
                   <option value="super_admin">Super Admin</option>
                 </select>
               </div>

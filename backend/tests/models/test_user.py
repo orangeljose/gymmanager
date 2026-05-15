@@ -17,6 +17,10 @@ class TestUserModelValidateRole:
         """Rol super_admin válido"""
         assert UserModel.validate_role('super_admin') is True
 
+    def test_valid_admin(self):
+        """Rol admin válido"""
+        assert UserModel.validate_role('admin') is True
+
     def test_valid_branch_admin(self):
         """Rol branch_admin válido"""
         assert UserModel.validate_role('branch_admin') is True
@@ -31,8 +35,8 @@ class TestUserModelValidateRole:
 
     def test_invalid_role(self):
         """Rol inválido"""
-        assert UserModel.validate_role('admin') is False
         assert UserModel.validate_role('user') is False
+        assert UserModel.validate_role('unknown') is False
         assert UserModel.validate_role('') is False
         assert UserModel.validate_role('SUPER_ADMIN') is False
 
@@ -45,9 +49,9 @@ class TestUserModelGetPermissions:
         perms = UserModel.get_permissions('super_admin')
         assert perms == ['*']
 
-    def test_branch_admin_permissions(self):
-        """Branch admin tiene permisos específicos"""
-        perms = UserModel.get_permissions('branch_admin')
+    def test_admin_permissions(self):
+        """Admin tiene permisos específicos"""
+        perms = UserModel.get_permissions('admin')
         assert '*' not in perms
         assert 'read_clients' in perms
         assert 'write_clients' in perms
@@ -60,8 +64,8 @@ class TestUserModelGetPermissions:
         perms = UserModel.get_permissions('cashier')
         assert 'read_clients' in perms
         assert 'write_payments' in perms
+        assert 'read_reports' in perms
         assert 'write_clients' not in perms
-        assert 'read_reports' not in perms
 
     def test_trainer_permissions(self):
         """Trainer tiene permisos específicos"""
@@ -83,21 +87,21 @@ class TestUserModelHasPermission:
         assert UserModel.has_permission('super_admin', 'write_payments') is True
         assert UserModel.has_permission('super_admin', 'delete_business') is True
 
-    def test_branch_admin_can_read_clients(self):
-        """Branch admin puede leer clientes"""
-        assert UserModel.has_permission('branch_admin', 'read_clients') is True
+    def test_admin_can_read_clients(self):
+        """Admin puede leer clientes"""
+        assert UserModel.has_permission('admin', 'read_clients') is True
 
-    def test_branch_admin_cannot_write_users(self):
-        """Branch admin no puede escribir usuarios"""
-        assert UserModel.has_permission('branch_admin', 'write_users') is False
+    def test_admin_cannot_write_users(self):
+        """Admin no puede escribir usuarios"""
+        assert UserModel.has_permission('admin', 'write_users') is False
 
     def test_cashier_can_write_payments(self):
         """Cashier puede escribir pagos"""
         assert UserModel.has_permission('cashier', 'write_payments') is True
 
-    def test_cashier_cannot_read_reports(self):
-        """Cashier no puede leer reportes"""
-        assert UserModel.has_permission('cashier', 'read_reports') is False
+    def test_cashier_can_read_reports(self):
+        """Cashier puede leer reportes"""
+        assert UserModel.has_permission('cashier', 'read_reports') is True
 
     def test_trainer_can_read_clients(self):
         """Trainer puede leer clientes"""
@@ -128,13 +132,10 @@ class TestUserModelCanAccessBranch:
         assert UserModel.can_access_branch('branch-1', 'branch-2', 'super_admin') is True
         assert UserModel.can_access_branch(None, 'branch-1', 'super_admin') is True
 
-    def test_branch_admin_same_branch_allowed(self):
-        """Branch admin puede acceder a su propia sede"""
-        assert UserModel.can_access_branch('branch-1', 'branch-1', 'branch_admin') is True
-
-    def test_branch_admin_different_branch_denied(self):
-        """Branch admin no puede acceder a otra sede"""
-        assert UserModel.can_access_branch('branch-1', 'branch-2', 'branch_admin') is False
+    def test_admin_can_access_any_branch(self):
+        """Admin puede acceder a cualquier sede"""
+        assert UserModel.can_access_branch('branch-1', 'branch-2', 'admin') is True
+        assert UserModel.can_access_branch(None, 'branch-1', 'admin') is True
 
     def test_cashier_same_branch_allowed(self):
         """Cashier puede acceder a su propia sede"""

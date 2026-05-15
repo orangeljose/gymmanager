@@ -149,7 +149,7 @@ def get_branches(business_id):
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['POST', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin', 'branch_admin'])
+@require_role(['super_admin', 'admin', 'branch_admin'])
 def create_branch():
     """
     Crea una nueva sede
@@ -236,8 +236,8 @@ def create_branch():
             'isActive': True
         }
         
-        # Para branch_admin, asignarlo como manager
-        if user_role == 'branch_admin':
+        # Para admin, asignarlo como manager
+        if user_role == 'admin':
             branch_data['managerId'] = g.current_user.get('uid')
         
         # Crear sede

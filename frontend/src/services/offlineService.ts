@@ -235,7 +235,8 @@ class OfflineService {
         method: payment.method,
         membershipPlanId: payment.membershipPlanId,
         branchId: payment.branchId,
-        methodDetails: payment.methodDetails,
+        reference: payment.reference,
+        paymentAccountId: payment.paymentAccountId,
         registeredAt: payment.registeredAt,
         localId: payment.localId
       }));

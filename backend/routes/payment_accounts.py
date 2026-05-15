@@ -97,7 +97,7 @@ def get_payment_account(account_id):
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['POST', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin', 'branch_admin'])
+@require_role(['super_admin', 'admin', 'branch_admin'])
 def create_payment_account():
     """
     Crea una nueva cuenta de pago destino
@@ -162,7 +162,7 @@ def create_payment_account():
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['PUT', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin', 'branch_admin'])
+@require_role(['super_admin', 'admin', 'branch_admin'])
 def update_payment_account(account_id):
     """
     Actualiza una cuenta de pago existente

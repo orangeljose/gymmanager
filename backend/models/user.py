@@ -7,17 +7,22 @@ class UserModel:
     """Modelo de usuario para Firestore"""
     
     # Roles válidos
-    VALID_ROLES = ['super_admin', 'branch_admin', 'cashier', 'trainer']
+    VALID_ROLES = ['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer']
     
     # Permisos por rol
     ROLE_PERMISSIONS = {
-        'super_admin': ['*'],  # Todos los permisos
-        'branch_admin': [
+        'super_admin': ['*'],  # Dev/vendedor - todos los permisos
+        'admin': [  # Dueño del negocio - puede invitar empleados y crear negocios
+            'read_clients', 'write_clients', 
+            'read_payments', 'write_payments', 
+            'read_reports', 'manage_business'
+        ],
+        'branch_admin': [  # Encargado de sucursal - contratado por admin
             'read_clients', 'write_clients', 
             'read_payments', 'write_payments', 
             'read_reports'
         ],
-        'cashier': ['read_clients', 'write_payments'],
+        'cashier': ['read_clients', 'write_payments', 'read_reports'],
         'trainer': ['read_clients']
     }
     
@@ -49,7 +54,15 @@ class UserModel:
         if user_role == 'super_admin':
             return True
         
-        # Otros roles solo pueden acceder a su sede
+        # Admin (dueño) puede acceder a cualquier sede de su negocio
+        if user_role == 'admin':
+            return True
+        
+        # Branch admin (encargado) solo puede acceder a su sede
+        if user_role == 'branch_admin':
+            return user_branch_id == target_branch_id
+        
+        # Cashier y trainer solo pueden acceder a su sede
         return user_branch_id == target_branch_id
     
     @staticmethod

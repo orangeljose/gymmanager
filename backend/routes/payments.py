@@ -20,7 +20,7 @@ payments_bp = Blueprint('payments', __name__, url_prefix='/api/payments')
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['POST', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin', 'branch_admin', 'cashier'])
+@require_role(['super_admin', 'admin', 'branch_admin', 'cashier'])
 def register_payment():
     """
     Registra un nuevo pago y actualiza automáticamente la membresía del cliente
@@ -142,7 +142,7 @@ def register_payment():
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['GET', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin', 'branch_admin'])
+@require_role(['super_admin', 'admin', 'branch_admin'])
 def get_payment_report():
     """
     Reporte de pagos con filtros
@@ -265,7 +265,7 @@ def get_payment_report():
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['GET', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin', 'branch_admin'])
+@require_role(['super_admin', 'admin', 'branch_admin'])
 def get_receipts():
     """
     Obtiene lista de recibos de pagos para administración
@@ -317,8 +317,8 @@ def get_receipts():
         # Construir filtros
         filters = []
         
-        # Branch admin solo ve su sede
-        if user_role == 'branch_admin':
+        # Admin (dueño) y branch_admin (encargado) solo ven su sede
+        if user_role in ['admin', 'branch_admin']:
             filters.append({'field': 'branchId', 'operator': '==', 'value': user_branch_id})
         elif branch_id:
             # Solo super_admin puede especificar branchId diferente
@@ -400,7 +400,7 @@ def get_receipts():
              allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
              methods=['POST', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin', 'branch_admin', 'cashier'])
+@require_role(['super_admin', 'admin', 'branch_admin', 'cashier'])
 def sync_offline_payments():
     """
     Sincroniza múltiples pagos registrados offline

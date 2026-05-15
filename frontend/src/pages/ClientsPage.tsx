@@ -76,7 +76,7 @@ export const ClientsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
           <p className="text-gray-600 mt-1">{pagination.total} clientes registrados</p>
         </div>
-        {(user?.role === 'super_admin' || user?.role === 'branch_admin') && (
+        {(user?.role === 'super_admin' || user?.role === 'admin') && (
           <Link to="/clients/new" className="btn btn-primary">
             <Plus className="h-4 w-4 mr-2" />
             Nuevo Cliente
@@ -175,7 +175,7 @@ export const ClientsPage: React.FC = () => {
         ) : clients.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-gray-500">No se encontraron clientes</p>
-            {(user?.role === 'super_admin' || user?.role === 'branch_admin') && (
+            {(user?.role === 'super_admin' || user?.role === 'admin') && (
               <Link to="/clients/new" className="btn btn-primary mt-4">
                 <Plus className="h-4 w-4 mr-2" />
                 Registrar primer cliente

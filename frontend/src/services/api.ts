@@ -18,7 +18,8 @@ import type {
   PaymentAccount,
   PaymentAccountFormData,
   PlanFormData,
-  UserFormData
+  UserFormData,
+  Receipt
 } from '@/types';
 
 class ApiService {
@@ -164,6 +165,15 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  async getReceipts(params: { limit?: number; offset?: number; branchId?: string }): Promise<ApiResponse<{ receipts: Receipt[]; total: number }>> {
+    const searchParams = new URLSearchParams();
+    if (params.limit) searchParams.append('limit', params.limit.toString());
+    if (params.offset) searchParams.append('offset', params.offset.toString());
+    if (params.branchId) searchParams.append('branchId', params.branchId);
+    const endpoint = `/payments/receipts${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.requestWithAuth<{ receipts: Receipt[]; total: number }>(endpoint);
   }
 
   async syncOfflinePayments(payments: any[]): Promise<ApiResponse<any>> {

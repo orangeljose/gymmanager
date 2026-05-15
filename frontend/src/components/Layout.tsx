@@ -17,11 +17,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOffline } from '@/hooks/useOffline';
-import type { NavItem } from '@/types';
+import type { NavItem, UserRole } from '@/types';
 
 interface SubMenuItem {
   label: string;
   href: string;
+  roles?: UserRole[];
 }
 
 const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
@@ -39,20 +40,21 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     label: 'Reportes',
     href: '/reports',
     icon: 'FileText',
-    roles: ['branch_admin', 'super_admin'],
+    roles: ['super_admin', 'admin', 'branch_admin', 'cashier'],
     submenu: [
-      { label: 'Morosos', href: '/reports/solvency' },
-      { label: 'Ingresos', href: '/reports/income' }
+      { label: 'Morosos', href: '/reports/solvency', roles: ['super_admin', 'admin', 'branch_admin', 'cashier'] },
+      { label: 'Ingresos', href: '/reports/income', roles: ['super_admin', 'admin', 'branch_admin'] }
     ]
   },
   {
     label: 'Administración',
     href: '/admin',
     icon: 'Settings',
-    roles: ['super_admin'],
+    roles: ['super_admin', 'admin'],
     submenu: [
       { label: 'Planes', href: '/plans' },
       { label: 'Cuentas de Pago', href: '/payment-accounts' },
+      { label: 'Recibos', href: '/receipts' },
       { label: 'Sucursales', href: '/branches' },
       { label: 'Usuarios', href: '/users' }
     ]
@@ -162,7 +164,9 @@ export const Layout: React.FC = () => {
                       </button>
                       {isExpanded && item.submenu && (
                         <ul className="ml-6 mt-1 space-y-1 border-l border-gray-200">
-                          {item.submenu.map((subItem) => (
+                          {item.submenu
+                            .filter(subItem => !subItem.roles || hasRole(subItem.roles))
+                            .map((subItem) => (
                             <li key={subItem.href}>
                               <Link
                                 to={subItem.href}
