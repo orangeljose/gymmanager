@@ -14,11 +14,18 @@ logger = logging.getLogger(__name__)
 
 class FirebaseService:
     """Servicio principal para interactuar con Firebase"""
-    
+
     _instance = None
     _db = None
     _auth = None
-    
+
+    @classmethod
+    def _reset(cls):
+        """Reset singleton state - for testing only"""
+        cls._instance = None
+        cls._db = None
+        cls._auth = None
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(FirebaseService, cls).__new__(cls)
