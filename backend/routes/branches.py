@@ -3,7 +3,6 @@ Rutas de gestión de sedes y negocios para GymManager
 """
 import logging
 from flask import Blueprint, request, jsonify, g
-from flask_cors import cross_origin
 from middleware.auth_middleware import require_auth, require_role
 from services.firebase_service import FirebaseService
 
@@ -12,10 +11,6 @@ logger = logging.getLogger(__name__)
 branches_bp = Blueprint('branches', __name__, url_prefix='/api')
 
 @branches_bp.route('/businesses', methods=['GET', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['GET', 'OPTIONS'])
 @require_auth
 def get_businesses():
     """
@@ -71,10 +66,6 @@ def get_businesses():
         }), 500
 
 @branches_bp.route('/branches/<business_id>', methods=['GET', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['GET', 'OPTIONS'])
 @require_auth
 def get_branches(business_id):
     """
@@ -144,10 +135,6 @@ def get_branches(business_id):
         }), 500
 
 @branches_bp.route('/branches', methods=['POST', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['POST', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin', 'branch_admin'])
 def create_branch():

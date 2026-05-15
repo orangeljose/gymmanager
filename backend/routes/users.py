@@ -3,7 +3,6 @@ Rutas de gestión de usuarios para GymManager
 """
 import logging
 from flask import Blueprint, request, jsonify, g
-from flask_cors import cross_origin
 from middleware.auth_middleware import require_auth, require_role
 from services.firebase_service import FirebaseService
 from models.user import UserModel
@@ -13,10 +12,6 @@ logger = logging.getLogger(__name__)
 users_bp = Blueprint('users', __name__, url_prefix='/api')
 
 @users_bp.route('/users', methods=['GET', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['GET', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin'])
 def get_users():
@@ -128,10 +123,6 @@ def get_users():
         }), 500
 
 @users_bp.route('/users/<user_id>', methods=['GET', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['GET', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin'])
 def get_user(user_id):
@@ -194,10 +185,6 @@ def get_user(user_id):
         }), 500
 
 @users_bp.route('/users', methods=['POST', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['POST', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin'])
 def create_user():
@@ -306,10 +293,6 @@ def create_user():
         }), 500
 
 @users_bp.route('/users/<user_id>', methods=['PUT', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['PUT', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin'])
 def update_user(user_id):
@@ -410,10 +393,6 @@ def update_user(user_id):
         }), 500
 
 @users_bp.route('/users/<user_id>', methods=['DELETE', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['DELETE', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin'])
 def delete_user(user_id):

@@ -3,7 +3,6 @@ Rutas de gestión de Cuentas de Pago Destino para GymManager
 """
 import logging
 from flask import Blueprint, request, jsonify, g
-from flask_cors import cross_origin
 from middleware.auth_middleware import require_auth, require_role
 from services.firebase_service import FirebaseService
 from models.payment_account import PaymentAccountCreateSchema, PaymentAccountUpdateSchema
@@ -14,10 +13,6 @@ payment_accounts_bp = Blueprint('payment_accounts', __name__, url_prefix='/api/p
 
 
 @payment_accounts_bp.route('', methods=['GET', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['GET', 'OPTIONS'])
 @require_auth
 def get_payment_accounts():
     """
@@ -55,10 +50,6 @@ def get_payment_accounts():
 
 
 @payment_accounts_bp.route('/<account_id>', methods=['GET', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['GET', 'OPTIONS'])
 @require_auth
 def get_payment_account(account_id):
     """
@@ -92,10 +83,6 @@ def get_payment_account(account_id):
 
 
 @payment_accounts_bp.route('', methods=['POST', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['POST', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin', 'branch_admin'])
 def create_payment_account():
@@ -157,10 +144,6 @@ def create_payment_account():
 
 
 @payment_accounts_bp.route('/<account_id>', methods=['PUT', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['PUT', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin', 'branch_admin'])
 def update_payment_account(account_id):
@@ -224,10 +207,6 @@ def update_payment_account(account_id):
 
 
 @payment_accounts_bp.route('/<account_id>', methods=['DELETE', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['DELETE', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin'])
 def delete_payment_account(account_id):

@@ -3,7 +3,6 @@ Rutas de gestión de pagos para GymManager
 """
 import logging
 from flask import Blueprint, request, jsonify, g
-from flask_cors import cross_origin
 from middleware.auth_middleware import require_auth, require_role, validate_branch_access
 from services.firebase_service import FirebaseService
 from services.payment_service import PaymentService
@@ -15,10 +14,6 @@ logger = logging.getLogger(__name__)
 payments_bp = Blueprint('payments', __name__, url_prefix='/api/payments')
 
 @payments_bp.route('', methods=['POST', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['POST', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin', 'branch_admin', 'cashier'])
 def register_payment():
@@ -137,10 +132,6 @@ def register_payment():
         }), 500
 
 @payments_bp.route('/report', methods=['GET', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['GET', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin', 'branch_admin'])
 def get_payment_report():
@@ -260,10 +251,6 @@ def get_payment_report():
         }), 500
 
 @payments_bp.route('/receipts', methods=['GET', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['GET', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin', 'branch_admin'])
 def get_receipts():
@@ -395,10 +382,6 @@ def get_receipts():
         }), 500
 
 @payments_bp.route('/sync', methods=['POST', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['POST', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin', 'branch_admin', 'cashier'])
 def sync_offline_payments():

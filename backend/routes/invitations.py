@@ -3,7 +3,6 @@ Rutas de gestión de invitaciones para GymManager
 """
 import logging
 from flask import Blueprint, request, jsonify, g
-from flask_cors import cross_origin
 from middleware.auth_middleware import require_auth, require_role
 from services.firebase_service import FirebaseService
 from models.invitation import InvitationModel
@@ -14,10 +13,6 @@ invitations_bp = Blueprint('invitations', __name__, url_prefix='/api/invitations
 
 
 @invitations_bp.route('', methods=['POST', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['POST', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin'])
 def create_invitation():
@@ -177,10 +172,6 @@ def create_invitation():
 
 
 @invitations_bp.route('/validate/<token>', methods=['GET', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['GET', 'OPTIONS'])
 def validate_invitation(token):
     """
     Valida un token de invitación y devuelve los datos del invitado
@@ -274,10 +265,6 @@ def validate_invitation(token):
 
 
 @invitations_bp.route('/accept', methods=['POST', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['POST', 'OPTIONS'])
 def accept_invitation():
     """
     Registra un usuario desde una invitación ( después de crear Firebase Auth )

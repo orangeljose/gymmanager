@@ -6,7 +6,6 @@ import os
 import time
 import re
 from flask import Blueprint, jsonify
-from flask_cors import cross_origin
 import requests
 
 logger = logging.getLogger(__name__)
@@ -54,10 +53,6 @@ def _fetch_bcv_rate():
 
 
 @exchange_bp.route('', methods=['GET', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'],
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['GET', 'OPTIONS'])
 def get_exchange_rate():
     """
     Obtiene la tasa BCV del día

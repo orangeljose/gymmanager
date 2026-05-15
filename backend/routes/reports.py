@@ -3,7 +3,6 @@ Rutas de reportes para GymManager
 """
 import logging
 from flask import Blueprint, request, jsonify, g
-from flask_cors import cross_origin
 from middleware.auth_middleware import require_auth, require_role, validate_branch_access
 from services.firebase_service import FirebaseService
 from services.membership_service import MembershipService
@@ -14,10 +13,6 @@ logger = logging.getLogger(__name__)
 reports_bp = Blueprint('reports', __name__, url_prefix='/api/reports')
 
 @reports_bp.route('/solvency', methods=['GET', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['GET', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin', 'branch_admin', 'cashier'])
 def get_solvency_report():
@@ -159,10 +154,6 @@ def get_solvency_report():
         }), 500
 
 @reports_bp.route('/income/daily', methods=['GET', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['GET', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin', 'branch_admin'])
 def get_daily_income_report():
@@ -311,10 +302,6 @@ def get_daily_income_report():
         }), 500
 
 @reports_bp.route('/income/by-method', methods=['GET', 'OPTIONS'])
-@cross_origin(origins=['http://localhost:3000', 'http://localhost:5173'], 
-             supports_credentials=True,
-             allow_headers=['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-             methods=['GET', 'OPTIONS'])
 @require_auth
 @require_role(['super_admin', 'admin', 'branch_admin'])
 def get_income_by_method_report():
