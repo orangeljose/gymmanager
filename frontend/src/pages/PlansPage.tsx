@@ -299,8 +299,14 @@ export const PlansPage: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    value={formData.price / 100}
-                    onChange={(e) => setFormData(prev => ({ ...prev, price: Math.round(parseFloat(e.target.value || '0') * 100) }))}
+                    value={formData.price ? formData.price / 100 : ''}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        price: raw === '' ? 0 : Math.round(parseFloat(raw) * 100)
+                      }));
+                    }}
                     className="input"
                     placeholder="35.00"
                     min="0"
