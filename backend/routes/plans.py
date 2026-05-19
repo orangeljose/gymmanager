@@ -28,11 +28,22 @@ def get_plans():
     GET /api/plans?businessId=xxx&isActive=true
     """
     try:
-        business_id = request.args.get('businessId') or g.current_user.get('businessId')
+        business_id = request.args.get('businessId')
         active_only = request.args.get('isActive', 'false').lower() == 'true'
 
         firebase_service = FirebaseService()
-        filters = _get_plan_filters(business_id, active_only)
+        filters = []
+
+        # Si hay businessId en query o el usuario no es super_admin, filtrar
+        if business_id:
+            filters.append({'field': 'businessId', 'operator': '==', 'value': business_id})
+        elif g.current_user.get('role') != 'super_admin':
+            user_business_id = g.current_user.get('businessId')
+            if user_business_id:
+                filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
+
+        if active_only:
+            filters.append({'field': 'isActive', 'operator': '==', 'value': True})
 
         plans = firebase_service.query_firestore(
             'membership_plans',
