@@ -123,8 +123,8 @@ def create_business():
             }), 500
 
     except Exception as e:
-        logger.error(f"Error creando negocio: {str(e)}")
+        logger.error(f"Error creando negocio: {str(e)}", exc_info=True)
         return jsonify({
             'success': False,
-            'error': {'code': 500, 'message': 'Error interno del servidor'}
+            'error': {'code': 500, 'message': f'Error interno al crear negocio: {str(e)}'}
         }), 500
