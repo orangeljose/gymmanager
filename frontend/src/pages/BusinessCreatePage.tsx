@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building, ArrowLeft, CheckCircle } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 
 export const BusinessCreatePage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);

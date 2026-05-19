@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
-import type { User, UserRole, Branch, Business } from '@/types';
+import type { User, UserRole, Branch } from '@/types';
 import toast from 'react-hot-toast';
 import { Plus, Edit2, X, AlertCircle, Mail, Shield, Building, Users as UsersIcon } from 'lucide-react';
 
@@ -22,7 +22,7 @@ admin: 'bg-purple-100 text-purple-800',
 };
 
 export const UsersPage: React.FC = () => {
-  const { user, selectedBusinessId, businesses, switchBusiness } = useAuth();
+  const { user, selectedBusinessId, businesses } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);

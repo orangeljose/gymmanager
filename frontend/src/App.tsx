@@ -227,5 +227,6 @@ const App: React.FC = () => {
     </Router>
     </AuthProvider>
   );
+};
 
 export default App;

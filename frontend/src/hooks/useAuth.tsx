@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         businesses: []
       }));
     }
-  }, [authState.user?.uid, authState.user?.role]);
+  }, [authState.user?.id, authState.user?.role]);
 
   const switchBusiness = useCallback((businessId: string) => {
     setAuthState(prev => ({ ...prev, selectedBusinessId: businessId }));

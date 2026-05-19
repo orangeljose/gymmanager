@@ -229,11 +229,6 @@ class ApiService {
     });
   }
 
-  // Businesses
-  async getBusinesses(): Promise<ApiResponse<any[]>> {
-    return this.requestWithAuth<any[]>('/businesses');
-  }
-
   // Reports
   async getSolvencyReport(filters: ReportFilters): Promise<ApiResponse<SolvencyReport[]>> {
     const params = new URLSearchParams();

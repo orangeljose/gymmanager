@@ -57,14 +57,14 @@ export const DashboardPage: React.FC = () => {
         setLoading(true);
         
         // Determinar el filtro a usar
-        const paymentFilter = user.role === 'super_admin' 
+        const paymentFilter = user?.role === 'super_admin' 
           ? {
               ...(selectedBranchId !== 'all' ? { branchId: selectedBranchId } : { businessId: effectiveBusinessId }),
               startDate: new Date().toISOString().split('T')[0],
               endDate: new Date().toISOString().split('T')[0]
             }
           : {
-              ...(user.branchId ? { branchId: user.branchId } : { businessId: effectiveBusinessId }),
+              ...(user?.branchId ? { branchId: user.branchId } : { businessId: effectiveBusinessId }),
               startDate: new Date().toISOString().split('T')[0],
               endDate: new Date().toISOString().split('T')[0]
             };

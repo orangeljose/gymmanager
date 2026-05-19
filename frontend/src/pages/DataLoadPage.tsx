@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 export const DataLoadPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, selectedBusinessId, businesses } = useAuth();
+  const { selectedBusinessId, businesses } = useAuth();
   const [selectedBizId, setSelectedBizId] = useState(selectedBusinessId || '');
 
   const currentBusiness = businesses.find(b => b.id === selectedBizId);
