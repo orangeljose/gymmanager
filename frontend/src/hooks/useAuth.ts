@@ -1,9 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { firebaseAuth } from '@/services/firebase';
 import { apiService } from '@/services/api';
 import type { AuthState } from '@/types';
 
-export const useAuth = () => {
+interface AuthContextType extends AuthState {
+  error: string | null;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<{ success: boolean; error?: string }>;
+  clearError: () => void;
+  hasRole: (role: string | string[]) => boolean;
+  hasPermission: (permission: string) => boolean;
+  canAccessResource: (businessId?: string, branchId?: string) => boolean;
+  switchBusiness: (businessId: string) => void;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     isLoading: true,
@@ -30,13 +43,11 @@ export const useAuth = () => {
           setAuthState(prev => ({
             ...prev,
             businesses: res.data,
-            // Si no hay selectedBusinessId, tomar el primero
             selectedBusinessId: prev.selectedBusinessId || res.data[0]?.id || null
           }));
         }
       }).catch(console.error);
     } else if (authState.user) {
-      // Para no-super_admin, selectedBusinessId = user.businessId
       setAuthState(prev => ({
         ...prev,
         selectedBusinessId: authState.user?.businessId || null,
@@ -55,18 +66,11 @@ export const useAuth = () => {
     const unsubscribe = firebaseAuth.onAuthStateChanged(async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          
-          // Add small delay to avoid "Token used too early" error
           await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          // Get ID token
           const token = await firebaseAuth.getIdToken();
           
-          // Only verify token if we have a valid token
           if (token) {
-            // Verify token with backend and get user data
             const response = await apiService.verifyToken(token);
-          
             if (response.success && response.data) {
               setAuthState(prev => ({
                 ...prev,
@@ -84,7 +88,6 @@ export const useAuth = () => {
               setError(response.error?.message || 'Error de verificación');
             }
           } else {
-            // No token available, set as unauthenticated
             setAuthState(prev => ({
               ...prev,
               user: null,
@@ -118,20 +121,14 @@ export const useAuth = () => {
   const login = useCallback(async (email: string, password: string) => {
     setError(null);
     setAuthState(prev => ({ ...prev, isLoading: true }));
-
     try {
       const result = await firebaseAuth.signIn(email, password);
-      
       if (result.success) {
-        // The onAuthStateChanged listener will handle updating the state
         return { success: true };
       } else {
         setError(result.error?.message || 'Error al iniciar sesión');
         setAuthState(prev => ({ ...prev, isLoading: false }));
-        return { 
-          success: false, 
-          error: result.error?.message || 'Error al iniciar sesión' 
-        };
+        return { success: false, error: result.error?.message };
       }
     } catch (error: any) {
       const errorMessage = error.message || 'Error al iniciar sesión';
@@ -144,20 +141,14 @@ export const useAuth = () => {
   const logout = useCallback(async () => {
     setError(null);
     setAuthState(prev => ({ ...prev, isLoading: true }));
-
     try {
       const result = await firebaseAuth.signOut();
-      
       if (result.success) {
-        // The onAuthStateChanged listener will handle updating the state
         return { success: true };
       } else {
         setError(result.error?.message || 'Error al cerrar sesión');
         setAuthState(prev => ({ ...prev, isLoading: false }));
-        return { 
-          success: false, 
-          error: result.error?.message || 'Error al cerrar sesión' 
-        };
+        return { success: false, error: result.error?.message };
       }
     } catch (error: any) {
       const errorMessage = error.message || 'Error al cerrar sesión';
@@ -167,50 +158,29 @@ export const useAuth = () => {
     }
   }, []);
 
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+  const clearError = useCallback(() => setError(null), []);
 
-  // Helper function to check if user has specific role
   const hasRole = useCallback((role: string | string[]): boolean => {
     if (!authState.user) return false;
-    
-    if (Array.isArray(role)) {
-      return role.includes(authState.user.role);
-    }
-    
+    if (Array.isArray(role)) return role.includes(authState.user.role);
     return authState.user.role === role;
   }, [authState.user]);
 
-  // Helper function to check if user has specific permission
   const hasPermission = useCallback((permission: string): boolean => {
     if (!authState.user) return false;
-    
-    // Super admin has all permissions
     if (authState.user.role === 'super_admin') return true;
-    
     return authState.user.permissions.includes(permission);
   }, [authState.user]);
 
-  // Helper function to check if user can access resource based on business/branch
   const canAccessResource = useCallback((businessId?: string, branchId?: string): boolean => {
     if (!authState.user) return false;
-    
-    // Super admin can access everything
     if (authState.user.role === 'super_admin') return true;
-    
-    // Check business access
     if (businessId && authState.user.businessId !== businessId) return false;
-    
-    // Check branch access for non-super admins
-    if (branchId && authState.user.branchId && authState.user.branchId !== branchId) {
-      return false;
-    }
-    
+    if (branchId && authState.user.branchId && authState.user.branchId !== branchId) return false;
     return true;
   }, [authState.user]);
 
-  return {
+  const value: AuthContextType = {
     ...authState,
     error,
     login,
@@ -221,4 +191,18 @@ export const useAuth = () => {
     canAccessResource,
     switchBusiness
   };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

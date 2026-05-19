@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast';
 import { Layout } from '@/components/Layout';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
+import { AuthProvider } from '@/hooks/useAuth';
 
 // Pages
 import { LoginPage } from '@/pages/LoginPage';
@@ -39,8 +40,9 @@ const LoadingSpinner = () => (
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <div className="App">
+    <AuthProvider>
+      <Router>
+        <div className="App">
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
@@ -223,7 +225,7 @@ const App: React.FC = () => {
         />
       </div>
     </Router>
+    </AuthProvider>
   );
-};
 
 export default App;
