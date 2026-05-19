@@ -1,9 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { CreditCard, Tag, Building, Users } from 'lucide-react';
+import { CreditCard, Tag, Building, Users, PlusCircle } from 'lucide-react';
 
 export const AdministrationPage: React.FC = () => {
   const adminSections = [
+    {
+      title: 'Crear Negocio',
+      description: 'Crea un nuevo negocio con su configuración inicial',
+      href: '/admin/businesses/create',
+      icon: PlusCircle,
+      color: 'bg-indigo-100 text-indigo-600'
+    },
     {
       title: 'Planes de Membresía',
       description: 'Crea y gestiona los planes disponibles para tus clientes',

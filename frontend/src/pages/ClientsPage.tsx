@@ -7,8 +7,9 @@ import type { ClientStatus, Branch } from '@/types';
 import { apiService } from '@/services/api';
 
 export const ClientsPage: React.FC = () => {
-  const { user } = useAuth();
-  const { clients, loading, error, pagination, fetchClients, searchClients } = useClients(user?.businessId || '');
+  const { user, selectedBusinessId } = useAuth();
+  const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
+  const { clients, loading, error, pagination, fetchClients, searchClients } = useClients(effectiveBusinessId || '');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ClientStatus | ''>('');
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -16,12 +17,12 @@ export const ClientsPage: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    if (user?.businessId) {
-      apiService.getBranches(user.businessId).then(res => {
+    if (effectiveBusinessId) {
+      apiService.getBranches(effectiveBusinessId).then(res => {
         if (res.success && res.data) setBranches(res.data);
       });
     }
-  }, [user?.businessId]);
+  }, [effectiveBusinessId]);
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {

@@ -6,7 +6,8 @@ import toast from 'react-hot-toast';
 import { Plus, Edit2, X, MapPin, Phone, Building } from 'lucide-react';
 
 export const BranchesPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, selectedBusinessId } = useAuth();
+  const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -21,13 +22,13 @@ export const BranchesPage: React.FC = () => {
 
   useEffect(() => {
     loadBranches();
-  }, [user?.businessId]);
+  }, [effectiveBusinessId]);
 
   const loadBranches = async () => {
-    if (!user?.businessId) return;
+    if (!effectiveBusinessId) return;
     try {
       setLoading(true);
-      const response = await apiService.getBranches(user.businessId);
+      const response = await apiService.getBranches(effectiveBusinessId);
       if (response.success && response.data) {
         setBranches(response.data);
       }
@@ -53,7 +54,7 @@ export const BranchesPage: React.FC = () => {
         name: '',
         address: '',
         phone: '',
-        businessId: user?.businessId || ''
+        businessId: effectiveBusinessId || ''
       });
     }
     setShowModal(true);
@@ -66,7 +67,7 @@ export const BranchesPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.businessId) return;
+    if (!effectiveBusinessId) return;
 
     try {
       setSaving(true);
@@ -78,7 +79,7 @@ export const BranchesPage: React.FC = () => {
           closeModal();
         }
       } else {
-        const response = await apiService.createBranch({ ...formData, businessId: user.businessId });
+        const response = await apiService.createBranch({ ...formData, businessId: effectiveBusinessId });
         if (response.success) {
           toast.success('Sucursal creada');
           loadBranches();

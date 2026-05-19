@@ -11,10 +11,11 @@ import toast from 'react-hot-toast';
 
 export const ClientDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
-  const { getClient, getClientPayments } = useClients(user?.businessId || '');
-  const { plans } = usePlans(user?.businessId || '');
-  const { accounts } = usePaymentAccounts(user?.businessId || '');
+  const { user, selectedBusinessId } = useAuth();
+  const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
+  const { getClient, getClientPayments } = useClients(effectiveBusinessId || '');
+  const { plans } = usePlans(effectiveBusinessId || '');
+  const { accounts } = usePaymentAccounts(effectiveBusinessId || '');
   const [client, setClient] = useState<Client | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);

@@ -6,7 +6,8 @@ import toast from 'react-hot-toast';
 import { Plus, Edit2, Trash2, X, Check, AlertCircle } from 'lucide-react';
 
 export const PlansPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, selectedBusinessId } = useAuth();
+  const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -25,13 +26,13 @@ export const PlansPage: React.FC = () => {
 
   useEffect(() => {
     loadPlans();
-  }, [user?.businessId]);
+  }, [effectiveBusinessId]);
 
   const loadPlans = async () => {
-    if (!user?.businessId) return;
+    if (!effectiveBusinessId) return;
     try {
       setLoading(true);
-      const response = await apiService.getPlans({ businessId: user.businessId });
+      const response = await apiService.getPlans({ businessId: effectiveBusinessId });
       if (response.success && response.data) {
         setPlans(response.data);
       }
@@ -61,7 +62,7 @@ export const PlansPage: React.FC = () => {
         durationDays: 30,
         description: '',
         benefits: [],
-        businessId: user?.businessId || ''
+        businessId: effectiveBusinessId || ''
       });
     }
     setBenefitInput('');
@@ -93,7 +94,7 @@ export const PlansPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.businessId) return;
+    if (!effectiveBusinessId) return;
 
     try {
       setSaving(true);
@@ -105,7 +106,7 @@ export const PlansPage: React.FC = () => {
           closeModal();
         }
       } else {
-        const response = await apiService.createPlan({ ...formData, businessId: user.businessId });
+        const response = await apiService.createPlan({ ...formData, businessId: effectiveBusinessId });
         if (response.success) {
           toast.success('Plan creado');
           loadPlans();

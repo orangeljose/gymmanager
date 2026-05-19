@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
-import type { User, UserRole, Branch } from '@/types';
+import type { User, UserRole, Branch, Business } from '@/types';
 import toast from 'react-hot-toast';
 import { Plus, Edit2, X, AlertCircle, Mail, Shield, Building, Users as UsersIcon } from 'lucide-react';
 
@@ -22,7 +22,7 @@ admin: 'bg-purple-100 text-purple-800',
 };
 
 export const UsersPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, selectedBusinessId, businesses, switchBusiness } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,15 +38,18 @@ export const UsersPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
+  // Effective business ID based on context
+  const effectiveBusinessId = selectedBusinessId || user?.businessId || '';
+
   useEffect(() => {
     loadBranches();
     loadUsers();
-  }, [user?.businessId]);
+  }, [effectiveBusinessId]);
 
   const loadBranches = async () => {
-    if (!user?.businessId) return;
+    if (!effectiveBusinessId) return;
     try {
-      const response = await apiService.getBranches(user.businessId);
+      const response = await apiService.getBranches(effectiveBusinessId);
       if (response.success && response.data) {
         setBranches(response.data);
       }
@@ -56,7 +59,7 @@ export const UsersPage: React.FC = () => {
   };
 
   const loadUsers = async () => {
-    if (!user?.businessId) return;
+    if (!effectiveBusinessId) return;
     try {
       setLoading(true);
       const response = await apiService.getUsers();
@@ -82,12 +85,24 @@ export const UsersPage: React.FC = () => {
       });
     } else {
       setEditingUser(null);
+      // Determinar businessId según el rol
+      let defaultBusinessId = '';
+      if (user?.role === 'super_admin') {
+        defaultBusinessId = effectiveBusinessId;
+      } else {
+        defaultBusinessId = effectiveBusinessId || '';
+      }
+      // branch_admin auto-setear branchId
+      let defaultBranchId = '';
+      if (user?.role === 'branch_admin') {
+        defaultBranchId = user?.branchId || '';
+      }
       setFormData({
         email: '',
         name: '',
         role: 'cashier',
-        businessId: user?.businessId || '',
-        branchId: ''
+        businessId: defaultBusinessId,
+        branchId: defaultBranchId
       });
     }
     setShowModal(true);
@@ -100,7 +115,6 @@ export const UsersPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.businessId) return;
 
     try {
       setSaving(true);
@@ -112,7 +126,6 @@ export const UsersPage: React.FC = () => {
           closeModal();
         }
       } else {
-        // Create user directly (for employees in existing business)
         const response = await apiService.createUser(formData);
         if (response.success) {
           toast.success('Usuario creado. Se envió email para crear contraseña.');
@@ -399,7 +412,37 @@ export const UsersPage: React.FC = () => {
                 </p>
               </div>
 
-              {user?.role !== 'super_admin' && (
+              {/* Selector de Negocio — solo super_admin */}
+              {user?.role === 'super_admin' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <Building className="h-4 w-4 inline mr-1" />
+                    Negocio *
+                  </label>
+                  <select
+                    value={formData.businessId || ''}
+                    onChange={(e) => {
+                      const newBusinessId = e.target.value;
+                      setFormData(prev => ({ ...prev, businessId: newBusinessId, branchId: '' }));
+                      // Recargar sucursales del nuevo negocio
+                      apiService.getBranches(newBusinessId).then(res => {
+                        if (res.success && res.data) setBranches(res.data);
+                      });
+                    }}
+                    className="input"
+                    required
+                    disabled={!!editingUser}
+                  >
+                    <option value="">Seleccionar negocio...</option>
+                    {businesses.map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Selector de Sucursal — super_admin y admin */}
+              {user?.role !== 'branch_admin' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     <Building className="h-4 w-4 inline mr-1" />
@@ -418,6 +461,8 @@ export const UsersPage: React.FC = () => {
                   </select>
                 </div>
               )}
+
+              {/* branch_admin no ve campos de negocio/sucursal — se setean solos */}
 
               <div className="flex justify-end space-x-2 pt-4 border-t flex-shrink-0">
                 <button type="button" onClick={closeModal} className="btn btn-outline">

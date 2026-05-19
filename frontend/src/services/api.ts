@@ -10,6 +10,7 @@ import type {
   PaymentFilters,
   Branch,
   BranchFormData,
+  Business,
   MembershipPlan,
   SolvencyReport,
   IncomeDailyReport,
@@ -195,6 +196,18 @@ class ApiService {
 
     const endpoint = `/payments/report${params.toString() ? `?${params.toString()}` : ''}`;
     return this.requestWithAuth<any>(endpoint);
+  }
+
+  // Businesses
+  async getBusinesses(): Promise<ApiResponse<Business[]>> {
+    return this.requestWithAuth<Business[]>('/businesses');
+  }
+
+  async createBusiness(data: { name: string; rubro: string }): Promise<ApiResponse<Business>> {
+    return this.requestWithAuth<Business>('/businesses', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   // Branches

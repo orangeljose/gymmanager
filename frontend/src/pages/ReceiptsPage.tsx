@@ -8,7 +8,8 @@ import { ReceiptIcon, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 
 
 export const ReceiptsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, selectedBusinessId } = useAuth();
+  const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -17,10 +18,10 @@ export const ReceiptsPage: React.FC = () => {
 
   useEffect(() => {
     loadReceipts();
-  }, [user?.businessId, page]);
+  }, [effectiveBusinessId, page]);
 
   const loadReceipts = async () => {
-    if (!user?.businessId) return;
+    if (!effectiveBusinessId) return;
     try {
       setLoading(true);
       const response = await apiService.getReceipts({

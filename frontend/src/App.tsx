@@ -24,6 +24,8 @@ import { UsersPage } from '@/pages/UsersPage';
 import { ReceiptsPage } from '@/pages/ReceiptsPage';
 import { InvitePage } from '@/pages/InvitePage';
 import { AddAdminPage } from '@/pages/AddAdminPage';
+import { BusinessCreatePage } from '@/pages/BusinessCreatePage';
+import { DataLoadPage } from '@/pages/DataLoadPage';
 
 // Loading component
 const LoadingSpinner = () => (
@@ -112,9 +114,23 @@ const App: React.FC = () => {
             
             {/* Administration */}
             <Route path="admin" element={
-              <ProtectedRoute requiredRoles={['super_admin']}>
+              <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <AdministrationPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="admin/businesses/create" element={
+              <ProtectedRoute requiredRoles={['super_admin', 'admin']}>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <BusinessCreatePage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="admin/data-load" element={
+              <ProtectedRoute requiredRoles={['super_admin']}>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <DataLoadPage />
                 </Suspense>
               </ProtectedRoute>
             } />

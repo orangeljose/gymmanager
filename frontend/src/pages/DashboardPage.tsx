@@ -17,8 +17,9 @@ import { BCVWidget } from '@/components/BCVWidget';
 import type { DashboardMetrics, Client, Branch } from '@/types';
 
 export const DashboardPage: React.FC = () => {
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, selectedBusinessId } = useAuth();
   const { isOnline } = useOffline();
+  const effectiveBusinessId = selectedBusinessId || user?.businessId || '';
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     activeClients: 0,
     todayIncome: 0,
@@ -33,10 +34,10 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     const loadBranches = async () => {
-      if (!user?.businessId) return;
+      if (!effectiveBusinessId) return;
       
       try {
-        const branchesResponse = await apiService.getBranches(user.businessId);
+        const branchesResponse = await apiService.getBranches(effectiveBusinessId);
         if (branchesResponse.success && branchesResponse.data) {
           setBranches(branchesResponse.data);
         }
@@ -46,11 +47,11 @@ export const DashboardPage: React.FC = () => {
     };
 
     loadBranches();
-  }, [user?.businessId]);
+  }, [effectiveBusinessId]);
 
   useEffect(() => {
     const loadDashboardData = async () => {
-      if (!user?.businessId) return;
+      if (!effectiveBusinessId) return;
 
       try {
         setLoading(true);
@@ -58,12 +59,12 @@ export const DashboardPage: React.FC = () => {
         // Determinar el filtro a usar
         const paymentFilter = user.role === 'super_admin' 
           ? {
-              ...(selectedBranchId !== 'all' ? { branchId: selectedBranchId } : { businessId: user.businessId }),
+              ...(selectedBranchId !== 'all' ? { branchId: selectedBranchId } : { businessId: effectiveBusinessId }),
               startDate: new Date().toISOString().split('T')[0],
               endDate: new Date().toISOString().split('T')[0]
             }
           : {
-              ...(user.branchId ? { branchId: user.branchId } : { businessId: user.businessId }),
+              ...(user.branchId ? { branchId: user.branchId } : { businessId: effectiveBusinessId }),
               startDate: new Date().toISOString().split('T')[0],
               endDate: new Date().toISOString().split('T')[0]
             };
@@ -71,7 +72,7 @@ export const DashboardPage: React.FC = () => {
         // Load metrics (you would need to create these endpoints)
         const [clientsResponse, paymentsResponse] = await Promise.all([
           apiService.getClients({ 
-            businessId: user.businessId, 
+            businessId: effectiveBusinessId, 
             status: 'active', 
             limit: 100 
           }),
@@ -119,7 +120,7 @@ export const DashboardPage: React.FC = () => {
     };
 
     loadDashboardData();
-  }, [user?.businessId, selectedBranchId]);
+  }, [effectiveBusinessId, selectedBranchId]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-MX', {

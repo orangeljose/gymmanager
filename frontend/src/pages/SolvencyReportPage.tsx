@@ -7,7 +7,8 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, AlertTriangle, Phone, Calendar, DollarSign, Filter } from 'lucide-react';
 
 export const SolvencyReportPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, selectedBusinessId } = useAuth();
+  const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
   const [reportData, setReportData] = useState<SolvencyReport[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,16 +17,16 @@ export const SolvencyReportPage: React.FC = () => {
 
   useEffect(() => {
     loadBranches();
-  }, [user?.businessId]);
+  }, [effectiveBusinessId]);
 
   useEffect(() => {
     loadReport();
-  }, [user?.businessId, filterBranch, daysOverdue]);
+  }, [effectiveBusinessId, filterBranch, daysOverdue]);
 
   const loadBranches = async () => {
-    if (!user?.businessId) return;
+    if (!effectiveBusinessId) return;
     try {
-      const response = await apiService.getBranches(user.businessId);
+      const response = await apiService.getBranches(effectiveBusinessId);
       if (response.success && response.data) {
         setBranches(response.data);
       }
@@ -35,7 +36,7 @@ export const SolvencyReportPage: React.FC = () => {
   };
 
   const loadReport = async () => {
-    if (!user?.businessId) return;
+    if (!effectiveBusinessId) return;
     try {
       setLoading(true);
       const filters: any = { daysOverdue };

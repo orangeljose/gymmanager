@@ -7,10 +7,48 @@ export const useAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     isLoading: true,
-    isAuthenticated: false
+    isAuthenticated: false,
+    selectedBusinessId: null,
+    businesses: []
   });
 
   const [error, setError] = useState<string | null>(null);
+
+  // Restaurar selectedBusinessId desde localStorage al iniciar
+  useEffect(() => {
+    const saved = localStorage.getItem('gm_selectedBusinessId');
+    if (saved) {
+      setAuthState(prev => ({ ...prev, selectedBusinessId: saved }));
+    }
+  }, []);
+
+  // Fetch businesses solo para super_admin cuando el usuario cambia
+  useEffect(() => {
+    if (authState.user?.role === 'super_admin') {
+      apiService.getBusinesses().then(res => {
+        if (res.success && res.data) {
+          setAuthState(prev => ({
+            ...prev,
+            businesses: res.data,
+            // Si no hay selectedBusinessId, tomar el primero
+            selectedBusinessId: prev.selectedBusinessId || res.data[0]?.id || null
+          }));
+        }
+      }).catch(console.error);
+    } else if (authState.user) {
+      // Para no-super_admin, selectedBusinessId = user.businessId
+      setAuthState(prev => ({
+        ...prev,
+        selectedBusinessId: authState.user?.businessId || null,
+        businesses: []
+      }));
+    }
+  }, [authState.user?.uid, authState.user?.role]);
+
+  const switchBusiness = useCallback((businessId: string) => {
+    setAuthState(prev => ({ ...prev, selectedBusinessId: businessId }));
+    localStorage.setItem('gm_selectedBusinessId', businessId);
+  }, []);
 
   // Initialize auth state
   useEffect(() => {
@@ -175,6 +213,7 @@ export const useAuth = () => {
     clearError,
     hasRole,
     hasPermission,
-    canAccessResource
+    canAccessResource,
+    switchBusiness
   };
 };

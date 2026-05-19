@@ -17,7 +17,8 @@ const METHOD_COLORS: Record<string, string> = {
 };
 
 export const IncomeReportPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, selectedBusinessId } = useAuth();
+  const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
   const [branches, setBranches] = useState<Branch[]>([]);
   const [filterBranch, setFilterBranch] = useState<string>('');
   const [dateRange, setDateRange] = useState<'7' | '30' | '90' | 'custom'>('30');
@@ -30,16 +31,16 @@ export const IncomeReportPage: React.FC = () => {
 
   useEffect(() => {
     loadBranches();
-  }, [user?.businessId]);
+  }, [effectiveBusinessId]);
 
   useEffect(() => {
     loadReports();
-  }, [user?.businessId, filterBranch, dateRange, startDate, endDate]);
+  }, [effectiveBusinessId, filterBranch, dateRange, startDate, endDate]);
 
   const loadBranches = async () => {
-    if (!user?.businessId) return;
+    if (!effectiveBusinessId) return;
     try {
-      const response = await apiService.getBranches(user.businessId);
+      const response = await apiService.getBranches(effectiveBusinessId);
       if (response.success && response.data) {
         setBranches(response.data);
       }
@@ -73,7 +74,7 @@ export const IncomeReportPage: React.FC = () => {
   };
 
   const loadReports = async () => {
-    if (!user?.businessId) return;
+    if (!effectiveBusinessId) return;
     try {
       setLoading(true);
       const { startDate: sDate, endDate: eDate } = getDateRange();

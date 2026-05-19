@@ -52,12 +52,14 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     icon: 'Settings',
     roles: ['super_admin', 'admin'],
     submenu: [
+      { label: 'Crear Negocio', href: '/admin/businesses/create', roles: ['super_admin', 'admin'] },
       { label: 'Planes', href: '/plans', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Cuentas de Pago', href: '/payment-accounts', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Recibos', href: '/receipts', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Sucursales', href: '/branches', roles: ['super_admin'] },
       { label: 'Usuarios', href: '/users', roles: ['super_admin', 'admin', 'branch_admin'] },
-      { label: 'Agregar Admin', href: '/add-admin', roles: ['super_admin'] }
+      { label: 'Agregar Admin', href: '/add-admin', roles: ['super_admin'] },
+      { label: 'Cargar Datos', href: '/admin/data-load', roles: ['super_admin'] }
     ]
   }
 ];
@@ -75,7 +77,7 @@ export const Layout: React.FC = () => {
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, hasRole } = useAuth();
+  const { user, logout, hasRole, selectedBusinessId, businesses, switchBusiness } = useAuth();
   const { isOnline, hasPendingData } = useOffline();
 
   const handleLogout = async () => {
@@ -248,6 +250,19 @@ export const Layout: React.FC = () => {
             </button>
 
             <div className="flex items-center space-x-4">
+              {/* Business selector - solo super_admin */}
+              {user?.role === 'super_admin' && businesses.length > 0 && (
+                <select
+                  value={selectedBusinessId || ''}
+                  onChange={(e) => switchBusiness(e.target.value)}
+                  className="text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 max-w-[200px] truncate"
+                >
+                  {businesses.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              )}
+
               {/* Connection status */}
               <div className="flex items-center space-x-2">
                 {isOnline ? (

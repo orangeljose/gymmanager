@@ -6,7 +6,8 @@ import toast from 'react-hot-toast';
 import { Plus, Edit2, Trash2, X, AlertCircle, Mail, Phone, Building } from 'lucide-react';
 
 export const PaymentAccountsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, selectedBusinessId } = useAuth();
+  const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
   const [accounts, setAccounts] = useState<PaymentAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -23,13 +24,13 @@ export const PaymentAccountsPage: React.FC = () => {
 
   useEffect(() => {
     loadAccounts();
-  }, [user?.businessId]);
+  }, [effectiveBusinessId]);
 
   const loadAccounts = async () => {
-    if (!user?.businessId) return;
+    if (!effectiveBusinessId) return;
     try {
       setLoading(true);
-      const response = await apiService.getPaymentAccounts({ businessId: user.businessId });
+      const response = await apiService.getPaymentAccounts({ businessId: effectiveBusinessId });
       if (response.success && response.data) {
         setAccounts(response.data);
       }
@@ -57,7 +58,7 @@ export const PaymentAccountsPage: React.FC = () => {
         identifier: '',
         label: '',
         description: '',
-        businessId: user?.businessId || ''
+        businessId: effectiveBusinessId || ''
       });
     }
     setShowModal(true);
@@ -70,7 +71,7 @@ export const PaymentAccountsPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.businessId) return;
+    if (!effectiveBusinessId) return;
 
     try {
       setSaving(true);
@@ -82,7 +83,7 @@ export const PaymentAccountsPage: React.FC = () => {
           closeModal();
         }
       } else {
-        const response = await apiService.createPaymentAccount({ ...formData, businessId: user.businessId });
+        const response = await apiService.createPaymentAccount({ ...formData, businessId: effectiveBusinessId });
         if (response.success) {
           toast.success('Cuenta creada');
           loadAccounts();

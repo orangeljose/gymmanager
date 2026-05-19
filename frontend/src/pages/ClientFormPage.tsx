@@ -13,10 +13,11 @@ export const ClientFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { createClient, updateClient, getClient } = useClients(user?.businessId || '');
-  const { plans, fetchPlans } = usePlans(user?.businessId || '');
-  const { accounts } = usePaymentAccounts(user?.businessId || '');
+  const { user, selectedBusinessId } = useAuth();
+  const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
+  const { createClient, updateClient, getClient } = useClients(effectiveBusinessId || '');
+  const { plans, fetchPlans } = usePlans(effectiveBusinessId || '');
+  const { accounts } = usePaymentAccounts(effectiveBusinessId || '');
   const [branches, setBranches] = useState<Branch[]>([]);
 
   const [step, setStep] = useState<1 | 2>(1);
@@ -31,7 +32,7 @@ export const ClientFormPage: React.FC = () => {
     branchId: user?.branchId || '',
     membershipPlanId: '',
     notes: '',
-    businessId: user?.businessId || ''
+    businessId: effectiveBusinessId || ''
   });
 
   const [paymentData, setPaymentData] = useState<{
@@ -49,13 +50,13 @@ export const ClientFormPage: React.FC = () => {
   const [skipPayment, setSkipPayment] = useState(false);
 
   useEffect(() => {
-    if (user?.businessId) {
+    if (effectiveBusinessId) {
       fetchPlans();
-      apiService.getBranches(user.businessId).then(res => {
+      apiService.getBranches(effectiveBusinessId).then(res => {
         if (res.success && res.data) setBranches(res.data);
       });
     }
-  }, [user?.businessId]);
+  }, [effectiveBusinessId]);
 
   useEffect(() => {
     if (isEdit && id) {
