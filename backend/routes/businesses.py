@@ -96,6 +96,19 @@ def create_business():
                 'error': {'code': 400, 'message': 'El nombre del negocio es requerido'}
             }), 400
 
+        firebase_service = FirebaseService()
+
+        # Validar que no exista un negocio con el mismo nombre
+        existing = firebase_service.query_firestore(
+            'businesses',
+            filters=[{'field': 'name', 'operator': '==', 'value': name}]
+        )
+        if existing:
+            return jsonify({
+                'success': False,
+                'error': {'code': 409, 'message': f'Ya existe un negocio con el nombre "{name}"'}
+            }), 409
+
         user_uid = g.current_user.get('uid')
         user_role = g.current_user.get('role')
 
@@ -107,7 +120,6 @@ def create_business():
             'createdByRole': user_role
         }
 
-        firebase_service = FirebaseService()
         created_business = firebase_service.create_document('businesses', business_data)
 
         if created_business:
