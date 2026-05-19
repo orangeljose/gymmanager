@@ -243,6 +243,8 @@ class FirebaseService:
             doc_ref = self.db.collection(collection).add(data)
             doc_data = data.copy()
             doc_data['id'] = doc_ref[1].id
+            # Quitar SERVER_TIMESTAMP del retorno — no es JSON serializable
+            doc_data.pop('createdAt', None)
             
             logger.info(f"Documento creado: {collection}/{doc_ref[1].id}")
             return doc_data
