@@ -59,7 +59,7 @@ export const PlansPage: React.FC = () => {
       setFormData({
         name: '',
         price: 0,
-        durationDays: 30,
+    durationDays: 0,
         description: '',
         benefits: [],
         businessId: effectiveBusinessId || ''
@@ -320,8 +320,14 @@ export const PlansPage: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    value={formData.durationDays}
-                    onChange={(e) => setFormData(prev => ({ ...prev, durationDays: parseInt(e.target.value) || 0 }))}
+                    value={formData.durationDays || ''}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        durationDays: raw === '' ? 0 : parseInt(raw)
+                      }));
+                    }}
                     className="input"
                     placeholder="30"
                     min="1"
