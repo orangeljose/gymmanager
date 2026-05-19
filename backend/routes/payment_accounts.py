@@ -66,7 +66,7 @@ def get_payment_account(account_id):
             }), 404
 
         user_business_id = g.current_user.get('businessId')
-        if account.get('businessId') != user_business_id:
+        if account.get('businessId') != user_business_id and g.current_user.get('role') != 'super_admin':
             return jsonify({
                 'success': False,
                 'error': {'code': 403, 'message': 'No tienes acceso a esta cuenta'}
@@ -111,7 +111,7 @@ def create_payment_account():
         user_business_id = g.current_user.get('businessId')
         acct_business_id = account_data.get('businessId')
 
-        if acct_business_id != user_business_id:
+        if acct_business_id != user_business_id and g.current_user.get('role') != 'super_admin':
             return jsonify({
                 'success': False,
                 'error': {'code': 403, 'message': 'No tienes acceso a este negocio'}
@@ -162,7 +162,7 @@ def update_payment_account(account_id):
             }), 404
 
         user_business_id = g.current_user.get('businessId')
-        if account.get('businessId') != user_business_id:
+        if account.get('businessId') != user_business_id and g.current_user.get('role') != 'super_admin':
             return jsonify({
                 'success': False,
                 'error': {'code': 403, 'message': 'No tienes acceso a esta cuenta'}
@@ -225,7 +225,7 @@ def delete_payment_account(account_id):
             }), 404
 
         user_business_id = g.current_user.get('businessId')
-        if account.get('businessId') != user_business_id:
+        if account.get('businessId') != user_business_id and g.current_user.get('role') != 'super_admin':
             return jsonify({
                 'success': False,
                 'error': {'code': 403, 'message': 'No tienes acceso a esta cuenta'}

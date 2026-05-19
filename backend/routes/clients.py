@@ -167,7 +167,7 @@ def get_client(client_id):
         client_business_id = client.get('businessId')
         user_business_id = g.current_user.get('businessId')
         
-        if client_business_id != user_business_id:
+        if client_business_id != user_business_id and g.current_user.get('role') != 'super_admin':
             return jsonify({
                 'success': False,
                 'error': {
@@ -354,7 +354,7 @@ def update_client(client_id):
         user_business_id = g.current_user.get('businessId')
         user_branch_id = g.current_user.get('branchId')
         
-        if client_business_id != user_business_id:
+        if client_business_id != user_business_id and g.current_user.get('role') != 'super_admin':
             return jsonify({
                 'success': False,
                 'error': {
@@ -467,7 +467,7 @@ def get_client_payments(client_id):
         user_business_id = g.current_user.get('businessId')
         user_branch_id = g.current_user.get('branchId')
         
-        if client_business_id != user_business_id:
+        if client_business_id != user_business_id and g.current_user.get('role') != 'super_admin':
             return jsonify({
                 'success': False,
                 'error': {

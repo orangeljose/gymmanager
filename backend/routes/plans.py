@@ -71,7 +71,7 @@ def get_plan(plan_id):
             }), 404
 
         user_business_id = g.current_user.get('businessId')
-        if plan.get('businessId') != user_business_id:
+        if plan.get('businessId') != user_business_id and g.current_user.get('role') != 'super_admin':
             return jsonify({
                 'success': False,
                 'error': {'code': 403, 'message': 'No tienes acceso a este plan'}
@@ -117,7 +117,7 @@ def create_plan():
         user_business_id = g.current_user.get('businessId')
         plan_business_id = plan_data.get('businessId')
 
-        if plan_business_id != user_business_id:
+        if plan_business_id != user_business_id and g.current_user.get('role') != 'super_admin':
             return jsonify({
                 'success': False,
                 'error': {'code': 403, 'message': 'No tienes acceso a este negocio'}
@@ -168,7 +168,7 @@ def update_plan(plan_id):
             }), 404
 
         user_business_id = g.current_user.get('businessId')
-        if plan.get('businessId') != user_business_id:
+        if plan.get('businessId') != user_business_id and g.current_user.get('role') != 'super_admin':
             return jsonify({
                 'success': False,
                 'error': {'code': 403, 'message': 'No tienes acceso a este plan'}
@@ -231,7 +231,7 @@ def delete_plan(plan_id):
             }), 404
 
         user_business_id = g.current_user.get('businessId')
-        if plan.get('businessId') != user_business_id:
+        if plan.get('businessId') != user_business_id and g.current_user.get('role') != 'super_admin':
             return jsonify({
                 'success': False,
                 'error': {'code': 403, 'message': 'No tienes acceso a este plan'}
