@@ -68,42 +68,47 @@ export const useAuth = () => {
             const response = await apiService.verifyToken(token);
           
             if (response.success && response.data) {
-              setAuthState({
+              setAuthState(prev => ({
+                ...prev,
                 user: response.data,
                 isLoading: false,
                 isAuthenticated: true
-              });
+              }));
             } else {
-              setAuthState({
+              setAuthState(prev => ({
+                ...prev,
                 user: null,
                 isLoading: false,
                 isAuthenticated: false
-              });
+              }));
               setError(response.error?.message || 'Error de verificación');
             }
           } else {
             // No token available, set as unauthenticated
-            setAuthState({
+            setAuthState(prev => ({
+              ...prev,
               user: null,
               isLoading: false,
               isAuthenticated: false
-            });
+            }));
           }
         } catch (error) {
           console.error('Error verifying token:', error);
-          setAuthState({
+          setAuthState(prev => ({
+            ...prev,
             user: null,
             isLoading: false,
             isAuthenticated: false
-          });
+          }));
           setError('Error de autenticación');
         }
       } else {
-        setAuthState({
+        setAuthState(prev => ({
+          ...prev,
           user: null,
           isLoading: false,
           isAuthenticated: false
-        });
+        }));
       }
     });
 
