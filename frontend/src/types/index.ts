@@ -28,7 +28,7 @@ export interface Business {
   rubro: string;
   logo?: string | null;
   ownerId: string;
-  createdAt: string;
+  createdAt: string | { seconds: number };
 }
 
 export interface Branch {

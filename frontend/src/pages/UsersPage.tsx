@@ -85,6 +85,7 @@ export const UsersPage: React.FC = () => {
         email: userToEdit.email,
         name: userToEdit.name,
         role: userToEdit.role,
+        businessId: userToEdit.businessId || '',
         branchId: userToEdit.branchId || ''
       });
     } else {
