@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building, ArrowLeft, CheckCircle, Edit2, Save, X } from 'lucide-react';
+import { Building, ArrowLeft, CheckCircle, Edit2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
-import toast from 'react-hot-toast';
 
 export const BusinessCreatePage: React.FC = () => {
   const navigate = useNavigate();

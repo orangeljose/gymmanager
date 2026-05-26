@@ -155,7 +155,13 @@ export const BusinessesPage: React.FC = () => {
 
               <div className="mt-4 pt-4 border-t flex justify-between items-center">
                 <span className="text-xs text-gray-500">
-                  Creado: {new Date(business.createdAt?.seconds * 1000 || Date.now()).toLocaleDateString()}
+                  Creado: {(() => {
+                    const created = business.createdAt;
+                    if (!created) return 'N/A';
+                    if (typeof created === 'string') return new Date(created).toLocaleDateString();
+                    if ('seconds' in created) return new Date(created.seconds * 1000).toLocaleDateString();
+                    return 'N/A';
+                  })()}
                 </span>
                 {isSuperAdmin && (
                   <button

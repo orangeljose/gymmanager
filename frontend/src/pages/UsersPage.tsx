@@ -103,8 +103,8 @@ export const UsersPage: React.FC = () => {
         email: '',
         name: '',
         role: 'cashier',
-        branchId: defaultBranchId,
-        businessId: defaultBusinessId
+        businessId: defaultBusinessId,
+        branchId: defaultBranchId
       });
     }
     setShowModal(true);
