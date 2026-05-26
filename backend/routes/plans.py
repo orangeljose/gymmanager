@@ -34,7 +34,6 @@ def get_plans():
         firebase_service = FirebaseService()
         filters = []
 
-        # Si hay businessId en query o el usuario no es super_admin, filtrar
         if business_id:
             filters.append({'field': 'businessId', 'operator': '==', 'value': business_id})
         elif g.current_user.get('role') != 'super_admin':

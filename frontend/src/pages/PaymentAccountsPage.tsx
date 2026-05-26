@@ -48,8 +48,7 @@ export const PaymentAccountsPage: React.FC = () => {
         type: account.type,
         identifier: account.identifier,
         label: account.label || '',
-        description: account.description || '',
-        businessId: account.businessId
+        description: account.description || ''
       });
     } else {
       setEditingAccount(null);
@@ -57,8 +56,7 @@ export const PaymentAccountsPage: React.FC = () => {
         type: 'zelle',
         identifier: '',
         label: '',
-        description: '',
-        businessId: effectiveBusinessId || ''
+        description: ''
       });
     }
     setShowModal(true);
@@ -76,7 +74,8 @@ export const PaymentAccountsPage: React.FC = () => {
     try {
       setSaving(true);
       if (editingAccount) {
-        const response = await apiService.updatePaymentAccount(editingAccount.id, formData);
+        const { type, ...updateData } = formData;
+        const response = await apiService.updatePaymentAccount(editingAccount.id, updateData);
         if (response.success) {
           toast.success('Cuenta actualizada');
           loadAccounts();

@@ -25,15 +25,20 @@ export const BranchesPage: React.FC = () => {
   }, [effectiveBusinessId]);
 
   const loadBranches = async () => {
-    if (!effectiveBusinessId) return;
+    if (!effectiveBusinessId) {
+      setBranches([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const response = await apiService.getBranches(effectiveBusinessId);
-      if (response.success && response.data) {
-        setBranches(response.data);
+      if (response.success) {
+        setBranches(response.data || []);
       }
     } catch (error) {
-      toast.error('Error cargando sucursales');
+      console.error('Error cargando sucursales:', error);
+      setBranches([]);
     } finally {
       setLoading(false);
     }
@@ -45,16 +50,14 @@ export const BranchesPage: React.FC = () => {
       setFormData({
         name: branch.name,
         address: branch.address,
-        phone: branch.phone,
-        businessId: branch.businessId
+        phone: branch.phone
       });
     } else {
       setEditingBranch(null);
       setFormData({
         name: '',
         address: '',
-        phone: '',
-        businessId: effectiveBusinessId || ''
+        phone: ''
       });
     }
     setShowModal(true);

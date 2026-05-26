@@ -210,9 +210,22 @@ class ApiService {
     });
   }
 
+  async deleteBusiness(id: string): Promise<ApiResponse<{ id: string }>> {
+    return this.requestWithAuth<{ id: string }>(`/businesses/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async updateBusiness(id: string, data: { name: string }): Promise<ApiResponse<{ id: string; name: string }>> {
+    return this.requestWithAuth<{ id: string; name: string }>(`/businesses/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Branches
   async getBranches(businessId: string): Promise<ApiResponse<Branch[]>> {
-    return this.requestWithAuth<Branch[]>(`/branches/${businessId}`);
+    return this.requestWithAuth<Branch[]>(`/branches?businessId=${businessId}`);
   }
 
   async createBranch(data: BranchFormData): Promise<ApiResponse<Branch>> {
@@ -332,10 +345,11 @@ class ApiService {
   }
 
   // Users
-  async getUsers(isActive?: boolean): Promise<ApiResponse<User[]>> {
-    const params = new URLSearchParams();
-    if (isActive !== undefined) params.append('isActive', String(isActive));
-    const endpoint = `/users${params.toString() ? `?${params.toString()}` : ''}`;
+  async getUsers(params: { businessId?: string; isActive?: boolean } = {}): Promise<ApiResponse<User[]>> {
+    const searchParams = new URLSearchParams();
+    if (params.businessId) searchParams.append('businessId', params.businessId);
+    if (params.isActive !== undefined) searchParams.append('isActive', String(params.isActive));
+    const endpoint = `/users${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
     return this.requestWithAuth<User[]>(endpoint);
   }
 

@@ -43,7 +43,7 @@ export const PlansPage: React.FC = () => {
     }
   };
 
-  const openModal = (plan?: MembershipPlan) => {
+const openModal = (plan?: MembershipPlan) => {
     if (plan) {
       setEditingPlan(plan);
       setFormData({
@@ -51,18 +51,16 @@ export const PlansPage: React.FC = () => {
         price: plan.price,
         durationDays: plan.durationDays,
         description: plan.description || '',
-        benefits: plan.benefits || [],
-        businessId: plan.businessId
+        benefits: plan.benefits || []
       });
     } else {
       setEditingPlan(null);
       setFormData({
         name: '',
         price: 0,
-    durationDays: 0,
+        durationDays: 0,
         description: '',
-        benefits: [],
-        businessId: effectiveBusinessId || ''
+        benefits: []
       });
     }
     setBenefitInput('');

@@ -59,15 +59,20 @@ export const UsersPage: React.FC = () => {
   };
 
   const loadUsers = async () => {
-    if (!effectiveBusinessId) return;
+    if (!effectiveBusinessId) {
+      setUsers([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      const response = await apiService.getUsers();
-      if (response.success && response.data) {
-        setUsers(response.data);
+      const response = await apiService.getUsers({ businessId: effectiveBusinessId });
+      if (response.success) {
+        setUsers(response.data || []);
       }
     } catch (error) {
-      toast.error('Error cargando usuarios');
+      console.error('Error loading users:', error);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -80,29 +85,26 @@ export const UsersPage: React.FC = () => {
         email: userToEdit.email,
         name: userToEdit.name,
         role: userToEdit.role,
-        businessId: userToEdit.businessId,
         branchId: userToEdit.branchId || ''
       });
     } else {
       setEditingUser(null);
-      // Determinar businessId según el rol
-      let defaultBusinessId = '';
-      if (user?.role === 'super_admin') {
-        defaultBusinessId = effectiveBusinessId;
-      } else {
-        defaultBusinessId = effectiveBusinessId || '';
-      }
       // branch_admin auto-setear branchId
       let defaultBranchId = '';
       if (user?.role === 'branch_admin') {
         defaultBranchId = user?.branchId || '';
       }
+      // Super admin debe especificar businessId del selector
+      let defaultBusinessId = '';
+      if (user?.role === 'super_admin') {
+        defaultBusinessId = effectiveBusinessId;
+      }
       setFormData({
         email: '',
         name: '',
         role: 'cashier',
-        businessId: defaultBusinessId,
-        branchId: defaultBranchId
+        branchId: defaultBranchId,
+        businessId: defaultBusinessId
       });
     }
     setShowModal(true);

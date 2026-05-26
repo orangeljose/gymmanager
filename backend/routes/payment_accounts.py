@@ -20,12 +20,21 @@ def get_payment_accounts():
     GET /api/payment-accounts?businessId=xxx&type=zelle&isActive=true
     """
     try:
-        business_id = request.args.get('businessId') or g.current_user.get('businessId')
+        business_id = request.args.get('businessId')
         acct_type = request.args.get('type')
         active_only = request.args.get('isActive', 'true').lower() == 'true'
+        user_role = g.current_user.get('role')
 
         firebase_service = FirebaseService()
-        filters = [{'field': 'businessId', 'operator': '==', 'value': business_id}]
+        filters = []
+
+        # Si hay businessId en query o el usuario no es super_admin, filtrar
+        if business_id:
+            filters.append({'field': 'businessId', 'operator': '==', 'value': business_id})
+        elif user_role != 'super_admin':
+            user_business_id = g.current_user.get('businessId')
+            if user_business_id:
+                filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
 
         if active_only:
             filters.append({'field': 'isActive', 'operator': '==', 'value': True})

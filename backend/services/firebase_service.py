@@ -172,7 +172,7 @@ class FirebaseService:
             
             # Ordenamiento
             if order_by:
-                direction = firestore.DESCENDING if direction.upper() == 'DESC' else firestore.ASCENDING
+                direction = firestore.Query.DESCENDING if direction.upper() == 'DESC' else firestore.Query.ASCENDING
                 query = query.order_by(order_by, direction=direction)
             
             # Paginación
@@ -195,6 +195,8 @@ class FirebaseService:
             
         except Exception as e:
             logger.error(f"Error en query a {collection}: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             return []
     
     def get_document(self, collection: str, doc_id: str) -> Optional[Dict[str, Any]]:

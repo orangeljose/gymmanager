@@ -52,7 +52,8 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     icon: 'Settings',
     roles: ['super_admin', 'admin'],
     submenu: [
-      { label: 'Crear Negocio', href: '/admin/businesses/create', roles: ['super_admin', 'admin'] },
+      { label: 'Negocios', href: '/businesses', roles: ['super_admin'] },
+      { label: 'Negocio', href: '/admin/businesses/create', roles: ['admin'] },
       { label: 'Planes', href: '/plans', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Cuentas de Pago', href: '/payment-accounts', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Recibos', href: '/receipts', roles: ['super_admin', 'admin', 'branch_admin'] },

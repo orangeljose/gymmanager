@@ -70,9 +70,12 @@ def get_users():
         # Construir filtros base
         filters = []
 
-        # Super admin ve todos los negocios
+        # Super admin ve todos los negocios, pero no ve super_admins
         if user_role == 'super_admin':
-            pass  # Sin filtro de negocio
+            # Puede filtrar por businessId si lo pasa
+            business_id = request.args.get('businessId')
+            if business_id:
+                filters.append({'field': 'businessId', 'operator': '==', 'value': business_id})
         elif user_role == 'admin':
             # Admin ve solo empleados de su negocio
             filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
@@ -91,19 +94,27 @@ def get_users():
                 'value': is_active_filter.lower() == 'true'
             })
 
+        logger.info(f"[DEBUG get_users] role={user_role}, businessId={user_business_id}, branchId={user_branch_id}")
+        logger.info(f"[DEBUG get_users] businessId from query: {request.args.get('businessId')}")
+        logger.info(f"[DEBUG get_users] filters: {filters}")
+
         firebase_service = FirebaseService()
         users = firebase_service.query_firestore('users', filters=filters)
+
+        logger.info(f"[DEBUG get_users] raw users count: {len(users)}")
 
         # Filtrar por rol: no puede ver roles de nivel superior o igual
         # Primero determinamos qué roles puede ver este usuario
         ROLES_CAN_SEE = {
-            'super_admin': ['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer'],  # ve todos
+            'super_admin': ['admin', 'branch_admin', 'cashier', 'trainer'],  # ve todos menos super_admin
             'admin': ['branch_admin', 'cashier', 'trainer'],  # no ve otros admins ni super_admin
             'branch_admin': ['cashier', 'trainer']  # solo ve subordinados
         }
 
         can_see_roles = ROLES_CAN_SEE.get(user_role, [])
         users = [u for u in users if u.get('role') in can_see_roles]
+
+        logger.info(f"[DEBUG get_users] filtered users count: {len(users)}, can_see_roles: {can_see_roles}")
 
         logger.info(f"Listados {len(users)} usuarios para negocio {user_business_id}")
 
@@ -250,16 +261,34 @@ def create_user():
             }), 400
 
         user_business_id = g.current_user.get('businessId')
+        user_role = g.current_user.get('role')
 
         firebase_service = FirebaseService()
 
         permissions = UserModel.get_permissions(role)
 
+        # Determinar el businessId del nuevo usuario
+        # Super_admin puede especificar businessId en el request (del selector)
+        # Admin/branch_admin usan su propio businessId
+        if user_role == 'super_admin' and data.get('businessId'):
+            new_user_business_id = data.get('businessId')
+        elif user_role != 'super_admin':
+            new_user_business_id = user_business_id
+        else:
+            # super_admin sin businessId en request - error
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 400,
+                    'message': 'businessId es requerido para crear usuarios'
+                }
+            }), 400
+
         user_data = {
             'email': data.get('email').strip().lower(),
             'name': data.get('name').strip(),
             'role': role,
-            'businessId': user_business_id,
+            'businessId': new_user_business_id,
             'branchId': data.get('branchId') or None,
             'isActive': True,
             'permissions': permissions

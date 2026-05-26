@@ -12,6 +12,7 @@ interface AuthContextType extends AuthState {
   hasPermission: (permission: string) => boolean;
   canAccessResource: (businessId?: string, branchId?: string) => boolean;
   switchBusiness: (businessId: string) => void;
+  loadBusinesses: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -60,6 +61,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthState(prev => ({ ...prev, selectedBusinessId: businessId }));
     localStorage.setItem('gm_selectedBusinessId', businessId);
   }, []);
+
+  const loadBusinesses = useCallback(async () => {
+    if (authState.user?.role !== 'super_admin') return;
+    try {
+      const res = await apiService.getBusinesses();
+      if (res.success && res.data) {
+        setAuthState(prev => ({
+          ...prev,
+          businesses: res.data
+        }));
+      }
+    } catch (e) {
+      console.error('Error loading businesses:', e);
+    }
+  }, [authState.user?.role]);
 
   // Initialize auth state
   useEffect(() => {
@@ -189,7 +205,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     hasRole,
     hasPermission,
     canAccessResource,
-    switchBusiness
+    switchBusiness,
+    loadBusinesses
   };
 
   return (

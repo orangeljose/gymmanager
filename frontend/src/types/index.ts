@@ -73,7 +73,7 @@ export interface PaymentAccountFormData {
   identifier: string;
   label?: string;
   description?: string;
-  businessId: string;
+  businessId?: string; // Solo para create, no se envía en update
 }
 
 export interface PlanFormData {
@@ -82,7 +82,7 @@ export interface PlanFormData {
   durationDays: number;
   description?: string;
   benefits: string[];
-  businessId: string;
+  businessId?: string; // Solo para create, no se envía en update
 }
 
 // Client Types
@@ -242,15 +242,15 @@ export interface BranchFormData {
   name: string;
   address: string;
   phone: string;
-  businessId: string;
+  businessId?: string; // Solo para create, no se envía en update
 }
 
 export interface UserFormData {
   email: string;
   name: string;
   role: UserRole;
-  businessId: string;
   branchId?: string;
+  businessId?: string; // Solo para create, no se envía en update
 }
 
 // Invitation Types
