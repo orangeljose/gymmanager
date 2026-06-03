@@ -31,7 +31,8 @@ class InvitationModel:
         email: str,
         inviter_data: Dict[str, Any],
         target_role: str,
-        invited_name: str = None
+        invited_name: str = None,
+        business_id_from_request: str = None
     ) -> Dict[str, Any]:
         """
         Crea los datos para una nueva invitación
@@ -41,6 +42,7 @@ class InvitationModel:
             inviter_data: Datos del usuario que invita (uid, role, businessId, branchId, name)
             target_role: Rol que se asignará al invitado
             invited_name: Nombre del invitado (opcional)
+            business_id_from_request: businessId específico pasado en el request (para super_admin que invita a admin con negocio ya existente)
 
         Returns:
             Dict con datos de la invitación
@@ -71,7 +73,11 @@ class InvitationModel:
         }
 
         # Agregar businessId y branchId según quien invite
-        if inviter_role == 'super_admin':
+        # Si se pasa un businessId específico (desde el request), usarlo
+        if business_id_from_request:
+            invitation_data['businessId'] = business_id_from_request
+            invitation_data['branchId'] = None
+        elif inviter_role == 'super_admin':
             # super_admin invita a admin - no tiene negocio aún
             # El admin creará su negocio al registrarse
             invitation_data['businessId'] = None

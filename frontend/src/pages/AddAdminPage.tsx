@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import toast from 'react-hot-toast';
-import { UserPlus, Mail } from 'lucide-react';
+import { UserPlus, Mail, Building } from 'lucide-react';
 
 export const AddAdminPage: React.FC = () => {
   const navigate = useNavigate();
+  const { selectedBusinessId, businesses } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
+
+  const selectedBusiness = businesses.find(b => b.id === selectedBusinessId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,18 +23,24 @@ export const AddAdminPage: React.FC = () => {
       return;
     }
 
+    if (!selectedBusinessId) {
+      toast.error('Selecciona un negocio del dropdown para invitar a un admin');
+      return;
+    }
+
     try {
       setLoading(true);
 
-      // Create invitation for admin
+      // Create invitation for admin with businessId from selector
       const response = await apiService.createInvitation({
         email: email.trim(),
         name: name.trim() || undefined,
-        role: 'admin'
+        role: 'admin',
+        businessId: selectedBusinessId
       });
 
       if (response.success) {
-        toast.success('Invitación enviada. El nuevo admin recibirá un email para crear su cuenta y negocio.');
+        toast.success(`Invitación enviada a ${email}. Recibirá un email para unirse a ${selectedBusiness?.name || 'tu negocio'}.`);
         // Reset form
         setEmail('');
         setName('');
@@ -49,15 +59,26 @@ export const AddAdminPage: React.FC = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Agregar Admin</h1>
         <p className="text-gray-600 mt-1">
-          Invita a un nuevo administrador para crear su propio negocio y sucursales
+          Invita a un nuevo administrador para {selectedBusiness ? selectedBusiness.name : 'tu negocio'}
         </p>
       </div>
+
+      {selectedBusiness && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center space-x-3">
+          <Building className="h-5 w-5 text-blue-600" />
+          <div>
+            <p className="text-sm text-blue-700">
+              El nuevo admin se unirá a: <strong>{selectedBusiness.name}</strong>
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-6">
           <p className="text-sm text-primary-700">
-            <strong>Nota:</strong> El nuevo admin recibirá un link de invitación por email. 
-            Al registrarse, podrá crear su propio negocio y primera sucursal.
+            El nuevo admin recibirá un link de invitación por email. 
+            Al registrarse, tendrá acceso al negocio {selectedBusiness?.name || 'seleccionado'}.
           </p>
         </div>
 

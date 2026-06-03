@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { apiService } from '@/services/api';
-import { firebaseAuth, envConfig } from '@/services/firebase';
+import { firebaseAuth } from '@/services/firebase';
 import toast from 'react-hot-toast';
 import { Mail, User, Building, ArrowRight, AlertCircle } from 'lucide-react';
 
@@ -32,13 +32,11 @@ export const InvitePage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Onboarding state (for admin registration)
+  // Onboarding state (for admin registration - only when requiresOnboarding is true)
   const [businessName, setBusinessName] = useState('');
   const [branchName, setBranchName] = useState('');
-  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    // Get token from URL params if not in route params
     const urlToken = searchParams.get('token');
     const actualToken = token || urlToken;
 
@@ -61,9 +59,6 @@ export const InvitePage: React.FC = () => {
         } else {
           setInvitation(response.data);
           setName(response.data.name || '');
-          if (response.data.requiresOnboarding) {
-            setShowOnboarding(true);
-          }
         }
       } else {
         setError(response.error?.message || 'Error validando invitación');
@@ -80,7 +75,6 @@ export const InvitePage: React.FC = () => {
 
     if (!invitation) return;
 
-    // Validate passwords
     if (password.length < 8) {
       toast.error('La contraseña debe tener al menos 8 caracteres');
       return;
@@ -88,6 +82,12 @@ export const InvitePage: React.FC = () => {
 
     if (password !== confirmPassword) {
       toast.error('Las contraseñas no coinciden');
+      return;
+    }
+
+    // Validate onboarding fields if required
+    if (invitation.requiresOnboarding && (!businessName.trim() || !branchName.trim())) {
+      toast.error('El nombre del negocio y sucursal son requeridos');
       return;
     }
 
@@ -105,43 +105,37 @@ export const InvitePage: React.FC = () => {
 
       const uid = result.user.uid;
 
-      // If admin and requires onboarding, create business first
-      let newBusinessId: string | undefined = invitation.businessId;
+      // Only create business and branch if requiresOnboarding is true
+      // (for admin registering for the first time with their own business)
+      if (invitation.requiresOnboarding && businessName.trim() && branchName.trim()) {
+        // Create business via API (uses fresh token internally)
+        const businessResponse = await apiService.createBusiness({ name: businessName.trim() });
 
-      if (invitation.requiresOnboarding && businessName && branchName) {
-        // Create business via API
-        const businessResponse = await fetch(`${envConfig.apiUrl}/businesses`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${await result.token}`
-          },
-          body: JSON.stringify({ name: businessName })
-        });
-        const businessData = await businessResponse.json();
-
-        if (businessData.success && businessData.data) {
-          newBusinessId = businessData.data.id;
-
-          // Create branch
-          await fetch(`${envConfig.apiUrl}/branches`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${await result.token}`
-            },
-            body: JSON.stringify({ name: branchName, businessId: newBusinessId, address: '', phone: '' })
-          });
+        if (!businessResponse.success || !businessResponse.data) {
+          toast.error(businessResponse.error?.message || 'Error creando negocio');
+          setSubmitting(false);
+          return;
         }
+
+        const newBusinessId = businessResponse.data.id;
+
+        // Create branch for the new business
+        await apiService.createBranch({
+          name: branchName.trim(),
+          address: '',
+          phone: ''
+        });
       }
 
       // Accept invitation (link Firebase UID to Firestore user)
       // Backend will use businessId/branchId from the invitation document
-      const acceptResponse = await apiService.acceptInvitation(token || searchParams.get('token') || '', uid);
+      const acceptResponse = await apiService.acceptInvitation(
+        token || searchParams.get('token') || '',
+        uid
+      );
 
       if (acceptResponse.success) {
         toast.success('¡Cuenta creada exitosamente!');
-        // Redirect to login
         setTimeout(() => {
           navigate('/login');
         }, 2000);
@@ -241,7 +235,8 @@ export const InvitePage: React.FC = () => {
             </div>
           </div>
 
-          {showOnboarding && (
+          {/* Onboarding section - only for admin registering for first time */}
+          {invitation.requiresOnboarding && (
             <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-6">
               <h3 className="font-semibold text-primary-900 mb-2">Crear tu Negocio</h3>
               <p className="text-sm text-primary-700 mb-4">

@@ -5,6 +5,7 @@ import logging
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_auth, require_role
 from services.firebase_service import FirebaseService
+from services.email_service import sendInvitationEmail
 from models.invitation import InvitationModel
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,7 @@ def create_invitation():
         email = data.get('email', '').strip().lower()
         target_role = data.get('role', '').strip()
         invited_name = data.get('name', '').strip() or None
+        business_id_from_request = data.get('businessId') or None
 
         # Validar campos requeridos
         if not email:
@@ -117,7 +119,8 @@ def create_invitation():
             email=email,
             inviter_data=inviter_data,
             target_role=target_role,
-            invited_name=invited_name
+            invited_name=invited_name,
+            business_id_from_request=business_id_from_request
         )
 
         # Guardar en Firestore
@@ -127,6 +130,28 @@ def create_invitation():
             # Generar link de invitación
             invitation_id = created.get('id')
             token = invitation_data['token']
+
+            # Obtener nombre del negocio para el email
+            business_name = None
+            if invitation_data.get('businessId'):
+                business = firebase_service.get_document('businesses', invitation_data['businessId'])
+                if business:
+                    business_name = business.get('name')
+
+            # Enviar email de invitación
+            frontend_url = request.environ.get('HTTP_ORIGIN', 'https://gymmanager-pink.vercel.app')
+            invitation_link = f"{frontend_url}/invite?token={token}"
+
+            email_result = sendInvitationEmail(to_email=email, invitation_data={
+                'role': target_role,
+                'invitedByName': inviter_data['name'],
+                'businessName': business_name or 'GymManager',
+                'invitationLink': invitation_link,
+                'expiresAt': invitation_data.get('expiresAt')
+            })
+
+            if not email_result.get('success'):
+                logger.warning(f"Email no enviado a {email}, pero invitación creada: {invitation_id}")
 
             logger.info(f"Invitación creada: {email} -> {target_role} por {g.current_user.get('uid')}")
 
@@ -139,7 +164,8 @@ def create_invitation():
                     'role': target_role,
                     'name': invited_name,
                     'expiresAt': invitation_data['expiresAt'],
-                    'invitationLink': f"/invite?token={token}"
+                    'invitationLink': invitation_link,
+                    'emailSent': email_result.get('success', False)
                 }
             }), 201
         else:
