@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building, ArrowLeft, CheckCircle, Edit2 } from 'lucide-react';
+import { Building, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 
@@ -118,18 +118,9 @@ export const BusinessCreatePage: React.FC = () => {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 mb-1">Nombre del Negocio</p>
-              <p className="text-xl font-semibold text-gray-900">{existingBusiness.name}</p>
-            </div>
-            <button
-              onClick={() => setIsEditing(true)}
-              className="btn btn-outline flex items-center"
-            >
-              <Edit2 className="h-4 w-4 mr-2" />
-              Editar
-            </button>
+          <div>
+            <p className="text-sm text-gray-500 mb-1">Nombre del Negocio</p>
+            <p className="text-xl font-semibold text-gray-900">{existingBusiness.name}</p>
           </div>
         </div>
       </div>
