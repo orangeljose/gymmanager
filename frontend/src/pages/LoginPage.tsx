@@ -14,7 +14,7 @@ export const LoginPage: React.FC = () => {
   
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, authError, clearError } = useAuth();
   const { isOnline } = useOffline();
 
   const from = location.state?.from?.pathname || '/dashboard';
@@ -27,6 +27,8 @@ export const LoginPage: React.FC = () => {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+    // Clear auth error too
+    if (authError) clearError();
   };
 
   const validateForm = (): boolean => {
@@ -85,7 +87,14 @@ export const LoginPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Login form */}
+        {/* Auth error banner (from previous session) */}
+          {authError && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4" role="alert">
+              <p className="text-sm text-red-800">{authError}</p>
+            </div>
+          )}
+
+          {/* Login form */}
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             {/* Email field */}

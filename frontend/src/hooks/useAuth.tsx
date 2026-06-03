@@ -5,6 +5,7 @@ import type { AuthState } from '@/types';
 
 interface AuthContextType extends AuthState {
   error: string | null;
+  authError: string | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<{ success: boolean; error?: string }>;
   clearError: () => void;
@@ -27,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [error, setError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Restaurar selectedBusinessId desde localStorage al iniciar
   useEffect(() => {
@@ -82,7 +84,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = firebaseAuth.onAuthStateChanged(async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          await new Promise(resolve => setTimeout(resolve, 2000));
           const token = await firebaseAuth.getIdToken();
           
           if (token) {
@@ -95,13 +96,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 isAuthenticated: true
               }));
             } else {
+              setAuthError(response.error?.message || 'Error de verificación');
               setAuthState(prev => ({
                 ...prev,
                 user: null,
                 isLoading: false,
                 isAuthenticated: false
               }));
-              setError(response.error?.message || 'Error de verificación');
             }
           } else {
             setAuthState(prev => ({
@@ -174,7 +175,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const clearError = useCallback(() => setError(null), []);
+  const clearError = useCallback(() => {
+    setError(null);
+    setAuthError(null);
+  }, []);
 
   const hasRole = useCallback((role: string | string[]): boolean => {
     if (!authState.user) return false;
@@ -199,6 +203,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value: AuthContextType = {
     ...authState,
     error,
+    authError,
     login,
     logout,
     clearError,
