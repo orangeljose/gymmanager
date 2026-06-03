@@ -25,7 +25,6 @@ export interface AuthState {
 export interface Business {
   id: string;
   name: string;
-  rubro: string;
   logo?: string | null;
   ownerId: string;
   createdAt: string | { seconds: number };

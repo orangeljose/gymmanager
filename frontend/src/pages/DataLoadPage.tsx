@@ -56,7 +56,7 @@ export const DataLoadPage: React.FC = () => {
         </select>
         {currentBusiness && (
           <p className="text-xs text-gray-500 mt-2">
-            Rubro: {currentBusiness.rubro} • ID: {currentBusiness.id}
+            ID: {currentBusiness.id}
           </p>
         )}
       </div>

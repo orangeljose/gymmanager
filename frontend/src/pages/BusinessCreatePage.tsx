@@ -61,8 +61,7 @@ export const BusinessCreatePage: React.FC = () => {
       } else {
         // Crear nuevo negocio
         const response = await apiService.createBusiness({
-          name: name.trim(),
-          rubro: 'Gimnasio'
+          name: name.trim()
         });
         if (response.success) {
           setSuccess(`Negocio "${name.trim()}" creado exitosamente`);

@@ -203,7 +203,7 @@ class ApiService {
     return this.requestWithAuth<Business[]>('/businesses');
   }
 
-  async createBusiness(data: { name: string; rubro?: string }): Promise<ApiResponse<Business>> {
+  async createBusiness(data: { name: string }): Promise<ApiResponse<Business>> {
     return this.requestWithAuth<Business>('/businesses', {
       method: 'POST',
       body: JSON.stringify(data),

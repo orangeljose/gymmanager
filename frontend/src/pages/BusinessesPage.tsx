@@ -54,8 +54,7 @@ export const BusinessesPage: React.FC = () => {
         }
       } else {
         const response = await apiService.createBusiness({
-          name: name.trim(),
-          rubro: 'Gimnasio'
+          name: name.trim()
         });
         if (response.success) {
           toast.success('Negocio creado');

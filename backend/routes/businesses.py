@@ -88,7 +88,6 @@ def create_business():
             }), 400
 
         name = data.get('name', '').strip()
-        rubro = data.get('rubro', 'Gimnasio').strip()
 
         if not name:
             return jsonify({
@@ -114,7 +113,7 @@ def create_business():
 
         business_data = {
             'name': name,
-            'rubro': rubro,
+            'rubro': 'Gimnasio',
             'ownerId': user_uid,
             'createdBy': user_uid,
             'createdByRole': user_role
