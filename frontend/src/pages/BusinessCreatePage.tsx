@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Building, ArrowLeft, CheckCircle, Calendar, MapPin, Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 
@@ -14,18 +14,25 @@ export const BusinessCreatePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [existingBusiness, setExistingBusiness] = useState<{ id: string; name: string } | null>(null);
+  const [existingBusiness, setExistingBusiness] = useState<{ id: string; name: string; createdAt?: any } | null>(null);
+  const [branchesCount, setBranchesCount] = useState(0);
 
   // Si el admin ya tiene negocio, cargarlo
   useEffect(() => {
     if (user?.role === 'admin' && user.businessId) {
-      apiService.getBusinesses().then(res => {
-        if (res.success && res.data) {
-          const myBusiness = res.data.find(b => b.id === user.businessId);
+      Promise.all([
+        apiService.getBusinesses(),
+        apiService.getBranches(user.businessId)
+      ]).then(([bizRes, branchRes]) => {
+        if (bizRes.success && bizRes.data) {
+          const myBusiness = bizRes.data.find(b => b.id === user.businessId);
           if (myBusiness) {
-            setExistingBusiness({ id: myBusiness.id, name: myBusiness.name });
+            setExistingBusiness({ id: myBusiness.id, name: myBusiness.name, createdAt: myBusiness.createdAt });
             setName(myBusiness.name);
           }
+        }
+        if (branchRes.success) {
+          setBranchesCount((branchRes.data || []).length);
         }
         setLoading(false);
       });
@@ -98,8 +105,23 @@ export const BusinessCreatePage: React.FC = () => {
     );
   }
 
-  // Si el admin ya tiene negocio y NO está editando, mostrar vista de solo lectura
-  if (existingBusiness && !isEditing) {
+  // Si el admin ya tiene negocio, mostrar vista de solo lectura
+  if (existingBusiness) {
+    const formatDate = (createdAt: any) => {
+      if (!createdAt) return 'N/A';
+      if (typeof createdAt === 'string') return new Date(createdAt).toLocaleDateString();
+      if ('seconds' in createdAt) return new Date(createdAt.seconds * 1000).toLocaleDateString();
+      return 'N/A';
+    };
+
+    const roleLabels: Record<string, string> = {
+      'admin': 'Administrador',
+      'branch_admin': 'Encargado de Sucursal',
+      'cashier': 'Cajero',
+      'trainer': 'Entrenador',
+      'super_admin': 'Super Admin'
+    };
+
     return (
       <div className="p-6 max-w-2xl mx-auto">
         <button
@@ -117,10 +139,27 @@ export const BusinessCreatePage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Mi Negocio</h1>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div>
-            <p className="text-sm text-gray-500 mb-1">Nombre del Negocio</p>
-            <p className="text-xl font-semibold text-gray-900">{existingBusiness.name}</p>
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">{existingBusiness.name}</h2>
+
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3 text-sm">
+              <Calendar className="h-4 w-4 text-gray-400" />
+              <span className="text-gray-500">Creado:</span>
+              <span className="text-gray-900 font-medium">{formatDate(existingBusiness.createdAt)}</span>
+            </div>
+
+            <div className="flex items-center space-x-3 text-sm">
+              <MapPin className="h-4 w-4 text-gray-400" />
+              <span className="text-gray-500">Sucursales:</span>
+              <span className="text-gray-900 font-medium">{branchesCount}</span>
+            </div>
+
+            <div className="flex items-center space-x-3 text-sm">
+              <Shield className="h-4 w-4 text-gray-400" />
+              <span className="text-gray-500">Rol:</span>
+              <span className="text-gray-900 font-medium">{roleLabels[user?.role || ''] || user?.role}</span>
+            </div>
           </div>
         </div>
       </div>
