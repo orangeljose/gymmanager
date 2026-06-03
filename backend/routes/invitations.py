@@ -293,26 +293,11 @@ def validate_invitation(token):
 @invitations_bp.route('/accept', methods=['POST', 'OPTIONS'])
 def accept_invitation():
     """
-    Registra un usuario desde una invitación ( después de crear Firebase Auth )
-
-    Request Body:
-    {
-        "token": "abc-123-xyz",
-        "uid": "firebase-uid-123"  // UID de Firebase Auth
-    }
-
-    Response (201):
-    {
-        "success": true,
-        "data": {
-            "userId": "firebase-uid-123",
-            "email": "nuevo@empleado.com",
-            "role": "cashier",
-            "businessId": "biz-456",
-            "branchId": "branch-789"
-        }
-    }
+    Registra un usuario desde una invitacion (despues de crear Firebase Auth)
     """
+    if request.method == 'OPTIONS':
+        return '', 200
+
     try:
         data = request.get_json()
         if not data:
