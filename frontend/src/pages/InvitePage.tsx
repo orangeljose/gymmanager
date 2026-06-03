@@ -117,8 +117,6 @@ export const InvitePage: React.FC = () => {
           return;
         }
 
-        const newBusinessId = businessResponse.data.id;
-
         // Create branch for the new business
         await apiService.createBranch({
           name: branchName.trim(),

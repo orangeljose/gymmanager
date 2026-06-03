@@ -203,7 +203,7 @@ class ApiService {
     return this.requestWithAuth<Business[]>('/businesses');
   }
 
-  async createBusiness(data: { name: string; rubro: string }): Promise<ApiResponse<Business>> {
+  async createBusiness(data: { name: string; rubro?: string }): Promise<ApiResponse<Business>> {
     return this.requestWithAuth<Business>('/businesses', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -378,7 +378,7 @@ class ApiService {
   }
 
   // Invitations
-  async createInvitation(data: { email: string; name?: string; role: UserRole }): Promise<ApiResponse<{
+  async createInvitation(data: { email: string; name?: string; role: UserRole; businessId?: string }): Promise<ApiResponse<{
     invitationId: string;
     token: string;
     email: string;
