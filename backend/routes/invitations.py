@@ -24,26 +24,6 @@ def create_invitation():
         return '', 200
 
     try:
-    {
-        "email": "nuevo@empleado.com",
-        "name": "Juan Pérez",  // opcional
-        "role": "cashier"
-    }
-
-    Response (201):
-    {
-        "success": true,
-        "data": {
-            "invitationId": "inv-123",
-            "token": "abc-123-xyz",
-            "email": "nuevo@empleado.com",
-            "role": "cashier",
-            "expiresAt": "2026-05-18T...",
-            "invitationLink": "https://app.com/invite?token=abc-123-xyz"
-        }
-    }
-    """
-    try:
         data = request.get_json()
         if not data:
             return jsonify({
