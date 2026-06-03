@@ -253,7 +253,28 @@ class FirebaseService:
             
         except Exception as e:
             logger.error(f"Error creando documento en {collection}: {str(e)}")
-            raise
+            return None
+    
+    def set_document(self, collection: str, doc_id: str, data: Dict[str, Any]) -> bool:
+        """
+        Crea o actualiza un documento con un ID especifico
+        
+        Args:
+            collection: Nombre de la coleccion
+            doc_id: ID del documento
+            data: Datos del documento
+            
+        Returns:
+            True si se creo/actualizo correctamente
+        """
+        try:
+            data['createdAt'] = firestore.SERVER_TIMESTAMP
+            self.db.collection(collection).document(doc_id).set(data)
+            logger.info(f"Documento guardado: {collection}/{doc_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error guardando documento {collection}/{doc_id}: {str(e)}")
+            return False
     
     def update_document(self, collection: str, doc_id: str, data: Dict[str, Any]) -> bool:
         """

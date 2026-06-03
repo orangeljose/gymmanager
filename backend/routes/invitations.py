@@ -339,7 +339,18 @@ def accept_invitation():
             'invitedVia': 'invitation_token'
         }
 
-        created_user = firebase_service.create_document('users', user_data)
+        # Usar UID de Firebase Auth como ID del documento en Firestore
+        user_data.pop('id', None)
+        created_user = firebase_service.set_document('users', uid, user_data)
+
+        if not created_user:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 500,
+                    'message': 'Error al crear usuario en Firestore'
+                }
+            }), 500
 
         # Marcar invitación como aceptada
         invitation_id = invitation.get('id') or token

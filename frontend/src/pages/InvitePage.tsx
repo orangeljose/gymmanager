@@ -136,6 +136,9 @@ export const InvitePage: React.FC = () => {
       );
 
       if (acceptResponse.success) {
+        // Sign out to prevent auto-verify trigger that would fail
+        // User must login manually with their new credentials
+        await firebaseAuth.signOut();
         toast.success('¡Cuenta creada exitosamente!');
         setTimeout(() => {
           navigate('/login');

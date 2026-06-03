@@ -81,58 +81,78 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Initialize auth state
   useEffect(() => {
+    let isCancelled = false;
+
     const unsubscribe = firebaseAuth.onAuthStateChanged(async (firebaseUser) => {
-      if (firebaseUser) {
-        try {
-          const token = await firebaseAuth.getIdToken();
-          
-          if (token) {
-            const response = await apiService.verifyToken(token);
-            if (response.success && response.data) {
-              setAuthState(prev => ({
-                ...prev,
-                user: response.data,
-                isLoading: false,
-                isAuthenticated: true
-              }));
-            } else {
-              setAuthError(response.error?.message || 'Error de verificación');
-              setAuthState(prev => ({
-                ...prev,
-                user: null,
-                isLoading: false,
-                isAuthenticated: false
-              }));
-            }
-          } else {
-            setAuthState(prev => ({
-              ...prev,
-              user: null,
-              isLoading: false,
-              isAuthenticated: false
-            }));
-          }
-        } catch (error) {
-          console.error('Error verifying token:', error);
-          setAuthState(prev => ({
-            ...prev,
-            user: null,
-            isLoading: false,
-            isAuthenticated: false
-          }));
-          setError('Error de autenticación');
-        }
-      } else {
+      if (isCancelled) return;
+
+      if (!firebaseUser) {
         setAuthState(prev => ({
           ...prev,
           user: null,
           isLoading: false,
           isAuthenticated: false
         }));
+        return;
+      }
+
+      try {
+        const token = await firebaseAuth.getIdToken();
+        
+        if (!token) {
+          setAuthError('No se pudo obtener el token de autenticación');
+          return;
+        }
+
+        const response = await apiService.verifyToken(token);
+        if (response.success && response.data) {
+          setAuthState(prev => ({
+            ...prev,
+            user: response.data,
+            isLoading: false,
+            isAuthenticated: true
+          }));
+        } else {
+          setAuthError(response.error?.message || 'Error de verificación');
+          setAuthState(prev => ({
+            ...prev,
+            user: null,
+            isLoading: false,
+            isAuthenticated: false
+          }));
+        }
+      } catch (error) {
+        console.error('Error verifying token:', error);
+        setAuthError('Error de autenticación. Verifica tu conexión.');
+      } finally {
+        if (!isCancelled) {
+          setAuthState(prev => {
+            if (prev.isLoading) {
+              return { ...prev, isLoading: false, isAuthenticated: false };
+            }
+            return prev;
+          });
+        }
       }
     });
 
-    return () => unsubscribe();
+    // Safety timeout
+    const safetyTimeout = setTimeout(() => {
+      if (!isCancelled) {
+        setAuthState(prev => {
+          if (prev.isLoading) {
+            return { ...prev, isLoading: false, isAuthenticated: false };
+          }
+          return prev;
+        });
+      }
+    }, 5000);
+
+    return () => {
+      isCancelled = true;
+      unsubscribe();
+      clearTimeout(safetyTimeout);
+    };
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
