@@ -25,10 +25,8 @@ def get_businesses():
         else:
             if not user_business_id:
                 return jsonify({'success': True, 'data': []}), 200
-            businesses = firebase_service.query_firestore(
-                'businesses',
-                filters=[{'field': 'id', 'operator': '==', 'value': user_business_id}]
-            )
+            business = firebase_service.get_document('businesses', user_business_id)
+            businesses = [business] if business else []
 
         logger.info(f"Listados {len(businesses)} negocios para {user_role}")
         return jsonify({'success': True, 'data': businesses}), 200
