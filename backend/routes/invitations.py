@@ -18,9 +18,12 @@ invitations_bp = Blueprint('invitations', __name__, url_prefix='/api/invitations
 @require_role(['super_admin', 'admin'])
 def create_invitation():
     """
-    Crea una nueva invitación para un empleado
+    Crea una nueva invitacion para un empleado
+    """
+    if request.method == 'OPTIONS':
+        return '', 200
 
-    Request Body:
+    try:
     {
         "email": "nuevo@empleado.com",
         "name": "Juan Pérez",  // opcional
@@ -200,24 +203,11 @@ def create_invitation():
 @invitations_bp.route('/validate/<token>', methods=['GET', 'OPTIONS'])
 def validate_invitation(token):
     """
-    Valida un token de invitación y devuelve los datos del invitado
-
-    Response (200):
-    {
-        "success": true,
-        "data": {
-            "valid": true,
-            "email": "nuevo@empleado.com",
-            "role": "cashier",
-            "name": "Juan Pérez",
-            "businessId": "biz-456",
-            "branchId": "branch-789",
-            "businessName": "Gimnasio Central",
-            "invitedByName": "Carlos Dueño",
-            "requiresOnboarding": false  // true solo si super_admin->admin
-        }
-    }
+    Valida un token de invitacion
     """
+    if request.method == 'OPTIONS':
+        return '', 200
+
     try:
         firebase_service = FirebaseService()
 
