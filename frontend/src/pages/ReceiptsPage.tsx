@@ -3,9 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import type { Receipt } from '@/types';
 import toast from 'react-hot-toast';
-import { ReceiptIcon, Download, ChevronLeft, ChevronRight } from 'lucide-react';
-
-
+import { ReceiptIcon, Download, ChevronLeft, ChevronRight, Calendar, User, CreditCard } from 'lucide-react';
 
 export const ReceiptsPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
@@ -89,17 +87,17 @@ export const ReceiptsPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 sm:mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Recibos de Pago</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Recibos de Pago</h1>
+          <p className="text-sm text-gray-600 mt-1">
             {total > 0 ? `${total} recibos encontrados` : 'Sin recibos registrados'}
           </p>
         </div>
-        <button onClick={() => window.print()} className="btn btn-outline">
+        <button onClick={() => window.print()} className="btn btn-outline self-start sm:self-auto">
           <Download className="h-4 w-4 mr-2" />
-          Exportar
+          <span className="hidden sm:inline">Exportar</span>
         </button>
       </div>
 
@@ -111,68 +109,37 @@ export const ReceiptsPage: React.FC = () => {
         </div>
       ) : (
         <>
-          <div className="card overflow-hidden">
+          {/* Desktop table */}
+          <div className="hidden md:block card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Recibo
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fecha
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Cliente
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Plan
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Monto
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Método
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Referencia
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Recibido por
-                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recibo</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Método</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referencia</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Recibido por</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {receipts.map((receipt) => (
                     <tr key={receipt.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
-                        <span className="font-mono text-sm font-medium text-blue-600">
-                          {receipt.receiptNumber}
-                        </span>
+                        <span className="font-mono text-sm font-medium text-blue-600">{receipt.receiptNumber}</span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {formatDate(receipt.createdAt)}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {receipt.clientName}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {receipt.planName || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
-                        {formatAmount(receipt.amount)}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{formatDate(receipt.createdAt)}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{receipt.clientName}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{receipt.planName || '-'}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">{formatAmount(receipt.amount)}</td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getMethodColor(receipt.method)}`}>
-                          {getMethodLabel(receipt.method)}
-                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getMethodColor(receipt.method)}`}>{getMethodLabel(receipt.method)}</span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 font-mono">
-                        {receipt.reference || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {receipt.registeredByName}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500 font-mono">{receipt.reference || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">{receipt.registeredByName}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -180,13 +147,50 @@ export const ReceiptsPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {receipts.map((receipt) => (
+              <div key={receipt.id} className="card">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="font-mono text-sm font-medium text-blue-600">{receipt.receiptNumber}</span>
+                  <span className="text-base font-bold text-gray-900">{formatAmount(receipt.amount)}</span>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <User className="h-3.5 w-3.5 text-gray-400" />
+                    <span className="font-medium text-gray-900">{receipt.clientName}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                    <span className="text-gray-600">{formatDate(receipt.createdAt)}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-3.5 w-3.5 text-gray-400" />
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getMethodColor(receipt.method)}`}>{getMethodLabel(receipt.method)}</span>
+                    {receipt.reference && (
+                      <span className="text-gray-500 font-mono text-xs">{receipt.reference}</span>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between items-center pt-1 border-t border-gray-100">
+                    <span className="text-xs text-gray-500">{receipt.planName || 'Sin plan'}</span>
+                    <span className="text-xs text-gray-400">{receipt.registeredByName}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex justify-between items-center mt-4">
-              <p className="text-sm text-gray-600">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-4">
+              <p className="text-sm text-gray-600 text-center sm:text-left">
                 Mostrando {startItem}-{endItem} de {total}
               </p>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center justify-center space-x-2">
                 <button
                   onClick={() => setPage(p => Math.max(0, p - 1))}
                   disabled={page === 0}
