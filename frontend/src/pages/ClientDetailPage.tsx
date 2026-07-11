@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Edit2, CreditCard, Phone, Mail, MapPin, X, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Edit2, CreditCard, Phone, Mail, MapPin, AlertCircle, Clock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useClients } from '@/hooks/useClients';
 import { usePlans } from '@/hooks/usePlans';
-import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
-import { apiService } from '@/services/api';
-import type { Client, Payment, PaymentFormData } from '@/types';
-import toast from 'react-hot-toast';
+import { PaymentForm } from '@/components/PaymentForm';
+import type { Client, Payment } from '@/types';
 
 export const ClientDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,13 +13,10 @@ export const ClientDetailPage: React.FC = () => {
   const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
   const { getClient, getClientPayments } = useClients(effectiveBusinessId || '');
   const { plans } = usePlans(effectiveBusinessId || '');
-  const { accounts } = usePaymentAccounts(effectiveBusinessId || '');
   const [client, setClient] = useState<Client | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [paymentForm, setPaymentForm] = useState<Partial<PaymentFormData>>({});
 
   useEffect(() => {
     if (!id) return;
@@ -65,58 +60,17 @@ export const ClientDetailPage: React.FC = () => {
     return plan ? plan.name : planId;
   };
 
-  const getSelectedPlan = () => {
-    return plans.find(p => p.id === (paymentForm.membershipPlanId || client?.membershipPlanId));
-  };
-
   const handleOpenPaymentModal = () => {
-    const selectedPlan = getSelectedPlan();
-    setPaymentForm({
-      clientId: client?.id,
-      membershipPlanId: client?.membershipPlanId,
-      branchId: client?.branchId,
-      amount: selectedPlan?.price || 0,
-      method: 'cash',
-      methodDetails: {}
-    });
     setShowPaymentModal(true);
   };
 
-  const handlePaymentMethodChange = (method: string) => {
-    setPaymentForm(prev => ({
-      ...prev,
-      method: method as any,
-      methodDetails: {}
-    }));
-  };
-
-  const handleRegisterPayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!client || !paymentForm.method || !paymentForm.membershipPlanId) return;
-    try {
-      setPaymentLoading(true);
-      const payload: PaymentFormData = {
-        clientId: client.id,
-        amount: paymentForm.amount || 0,
-        method: paymentForm.method,
-        membershipPlanId: paymentForm.membershipPlanId,
-        branchId: client.branchId,
-        methodDetails: paymentForm.methodDetails || {}
-      };
-      const response = await apiService.createPayment(payload);
-      if (response.success) {
-        toast.success('Pago registrado correctamente');
-        const updatedPayments = await getClientPayments(client.id);
-        if (updatedPayments) setPayments(updatedPayments);
-        const updatedClient = await getClient(client.id);
-        if (updatedClient) setClient(updatedClient);
-        setShowPaymentModal(false);
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Error registrando pago');
-    } finally {
-      setPaymentLoading(false);
-    }
+  const handlePaymentSuccess = async () => {
+    if (!client) return;
+    const updatedPayments = await getClientPayments(client.id);
+    if (updatedPayments) setPayments(updatedPayments);
+    const updatedClient = await getClient(client.id);
+    if (updatedClient) setClient(updatedClient);
+    setShowPaymentModal(false);
   };
 
   if (loading) {
@@ -145,7 +99,7 @@ export const ClientDetailPage: React.FC = () => {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
-            <div className="flex items-center gap-3 mt-2">
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                 client.status === 'active' ? 'bg-green-100 text-green-800' :
                   client.status === 'expired' ? 'bg-red-100 text-red-800' :
@@ -153,6 +107,14 @@ export const ClientDetailPage: React.FC = () => {
               }`}>
                 {client.status === 'active' ? 'Al día' : client.status === 'expired' ? 'Vencido' : 'Suspendido'}
               </span>
+              {client.status === 'active' && daysRemaining >= 0 && daysRemaining <= 7 && (
+                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
+                  daysRemaining === 0 ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'
+                }`}>
+                  <Clock className="h-3 w-3" />
+                  {daysRemaining === 0 ? 'Vence hoy' : `Vence en ${daysRemaining} días`}
+                </span>
+              )}
               <span className="text-sm text-gray-500">
                 Registrado el {formatDate(client.createdAt)}
               </span>
@@ -173,7 +135,7 @@ export const ClientDetailPage: React.FC = () => {
             <div className="mb-4">
               <div className="flex justify-between text-sm mb-1">
                 <span className="font-medium">{getPlanName(client.membershipPlanId)}</span>
-                <span className="text-gray-500">{formatCurrency(getSelectedPlan()?.price || 0)}</span>
+                <span className="text-gray-500">{formatCurrency(plans.find(p => p.id === client.membershipPlanId)?.price || 0)}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
@@ -271,190 +233,17 @@ export const ClientDetailPage: React.FC = () => {
       </div>
 
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-semibold">Registrar Pago</h3>
-              <button onClick={() => setShowPaymentModal(false)} className="btn btn-ghost btn-sm">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <form onSubmit={handleRegisterPayment} className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-                <input type="text" value={client.name} className="input bg-gray-50" disabled />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
-                <select
-                  value={paymentForm.membershipPlanId}
-                  onChange={e => {
-                    const plan = plans.find(p => p.id === e.target.value);
-                    setPaymentForm(prev => ({ ...prev, membershipPlanId: e.target.value, amount: plan?.price }));
-                  }}
-                  className="input"
-                  required
-                >
-                  <option value="">Seleccionar plan</option>
-                  {plans.map(plan => (
-                    <option key={plan.id} value={plan.id}>{plan.name} - {formatCurrency(plan.price)}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Monto (USD)</label>
-                <input
-                  type="number"
-                  value={(paymentForm.amount || 0) / 100}
-                  onChange={e => setPaymentForm(prev => ({ ...prev, amount: Math.round(parseFloat(e.target.value || '0') * 100) }))}
-                  className="input"
-                  step="0.01"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
-                <select
-                  value={paymentForm.method}
-                  onChange={e => handlePaymentMethodChange(e.target.value)}
-                  className="input"
-                  required
-                >
-                  <option value="">Seleccionar método</option>
-                  <option value="cash">Efectivo</option>
-                  <option value="card">Tarjeta</option>
-                  <option value="transfer">Transferencia</option>
-                  <option value="zelle">Zelle</option>
-                  <option value="pago_movil">Pago Móvil</option>
-                  <option value="other">Otro</option>
-                </select>
-              </div>
-
-              {paymentForm.method === 'zelle' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email del quien pag&oacute;</label>
-                    <input
-                      type="email"
-                      value={paymentForm.methodDetails?.senderEmail || ''}
-                      onChange={e => setPaymentForm(prev => ({
-                        ...prev,
-                        methodDetails: { ...prev.methodDetails, senderEmail: e.target.value }
-                      }))}
-                      className="input"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cuenta Zelle destino</label>
-                    <select
-                      value={(paymentForm.methodDetails as any)?.destinationAccountId || ''}
-                      onChange={e => setPaymentForm(prev => ({
-                        ...prev,
-                        methodDetails: { ...prev.methodDetails, destinationAccountId: e.target.value }
-                      }))}
-                      className="input"
-                    >
-                      <option value="">Seleccionar cuenta</option>
-                      {accounts.filter(a => a.type === 'zelle').map(acc => (
-                        <option key={acc.id} value={acc.id}>{acc.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
-
-              {paymentForm.method === 'pago_movil' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono que envió</label>
-                    <input
-                      type="tel"
-                      value={paymentForm.methodDetails?.phoneSender || ''}
-                      onChange={e => setPaymentForm(prev => ({
-                        ...prev,
-                        methodDetails: { ...prev.methodDetails, phoneSender: e.target.value }
-                      }))}
-                      className="input"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Código de confirmación</label>
-                    <input
-                      type="text"
-                      value={paymentForm.methodDetails?.paymentCode || ''}
-                      onChange={e => setPaymentForm(prev => ({
-                        ...prev,
-                        methodDetails: { ...prev.methodDetails, paymentCode: e.target.value }
-                      }))}
-                      className="input"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cuenta pago móvil destino</label>
-                    <select
-                      value={(paymentForm.methodDetails as any)?.destinationAccountId || ''}
-                      onChange={e => setPaymentForm(prev => ({
-                        ...prev,
-                        methodDetails: { ...prev.methodDetails, destinationAccountId: e.target.value }
-                      }))}
-                      className="input"
-                    >
-                      <option value="">Seleccionar cuenta</option>
-                      {accounts.filter(a => a.type === 'pago_movil').map(acc => (
-                        <option key={acc.id} value={acc.id}>{acc.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
-
-              {paymentForm.method === 'card' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Últimos 4 dígitos</label>
-                  <input
-                    type="text"
-                    maxLength={4}
-                    value={paymentForm.methodDetails?.cardLast4 || ''}
-                    onChange={e => setPaymentForm(prev => ({
-                      ...prev,
-                      methodDetails: { ...prev.methodDetails, cardLast4: e.target.value }
-                    }))}
-                    className="input"
-                    required
-                  />
-                </div>
-              )}
-
-              {paymentForm.method === 'transfer' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Referencia</label>
-                  <input
-                    type="text"
-                    value={paymentForm.methodDetails?.reference || ''}
-                    onChange={e => setPaymentForm(prev => ({
-                      ...prev,
-                      methodDetails: { ...prev.methodDetails, reference: e.target.value }
-                    }))}
-                    className="input"
-                    required
-                  />
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <button type="button" onClick={() => setShowPaymentModal(false)} className="btn btn-outline">
-                  Cancelar
-                </button>
-                <button type="submit" disabled={paymentLoading} className="btn btn-primary">
-                  {paymentLoading ? 'Registrando...' : 'Registrar Pago'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <PaymentForm
+          businessId={effectiveBusinessId}
+          clientId={client.id}
+          clientName={client.name}
+          currentPlanId={client.membershipPlanId}
+          branchId={client.branchId}
+          initialAmount={plans.find(p => p.id === client.membershipPlanId)?.price}
+          onSuccess={handlePaymentSuccess}
+          onCancel={() => setShowPaymentModal(false)}
+          isModal={true}
+        />
       )}
     </div>
   );
