@@ -457,7 +457,7 @@ def get_dashboard():
             "overdueClients": 5,
             "expiringThisWeek": 8,
             "incomeChart": [{"date": "2026-07-01", "amount": 35000}, ...],
-            "topSpendingClients": [{"clientId": "x", "clientName": "Juan", "totalSpent": 210000}, ...],
+             "topPayingClients": [{"clientId": "x", "clientName": "Juan", "paymentCount": 5}, ...],
             "retentionRate": 85.5
         }
     }
@@ -564,14 +564,13 @@ def get_dashboard():
                 'amount': daily_sums.get(day, 0)
             })
 
-        # Top spending clients (top 5 by payment count)
-        client_payment_counts = defaultdict(lambda: {'count': 0, 'clientName': '', 'totalSpent': 0})
+        # Top paying clients (top 5 by payment count)
+        client_payment_counts = defaultdict(lambda: {'count': 0, 'clientName': ''})
         for p in payments:
             cid = p.get('clientId', '')
             if cid:
                 client_payment_counts[cid]['count'] += 1
                 client_payment_counts[cid]['clientName'] = p.get('clientName', 'Cliente')
-                client_payment_counts[cid]['totalSpent'] += p.get('amount', 0)
 
         top_spenders = sorted(
             client_payment_counts.items(),
@@ -579,11 +578,11 @@ def get_dashboard():
             reverse=True
         )[:5]
 
-        top_spending_clients = [
+        top_paying_clients = [
             {
                 'clientId': cid,
                 'clientName': data['clientName'],
-                'totalSpent': data['totalSpent']
+                'paymentCount': data['count']
             }
             for cid, data in top_spenders
         ]
@@ -601,7 +600,7 @@ def get_dashboard():
                 'overdueClients': overdue_count,
                 'expiringThisWeek': expiring_count,
                 'incomeChart': income_chart,
-                'topSpendingClients': top_spending_clients,
+                'topPayingClients': top_paying_clients,
                 'retentionRate': retention_rate
             }
         }), 200

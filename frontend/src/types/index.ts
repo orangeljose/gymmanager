@@ -368,7 +368,7 @@ export interface DashboardData {
   overdueClients: number;
   expiringThisWeek: number;
   incomeChart: IncomeChartPoint[];
-  topSpendingClients: TopSpendingClient[];
+  topPayingClients: TopPayingClient[];
   retentionRate: number;
 }
 
@@ -377,10 +377,10 @@ export interface IncomeChartPoint {
   amount: number;
 }
 
-export interface TopSpendingClient {
+export interface TopPayingClient {
   clientId: string;
   clientName: string;
-  totalSpent: number;
+  paymentCount: number;
 }
 
 export interface ReceiptFilters {

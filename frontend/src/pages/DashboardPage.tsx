@@ -116,7 +116,7 @@ export const DashboardPage: React.FC = () => {
     overdueClients: 0,
     expiringThisWeek: 0,
     incomeChart: [],
-    topSpendingClients: [],
+    topPayingClients: [],
     retentionRate: 0
   };
 
@@ -279,11 +279,11 @@ export const DashboardPage: React.FC = () => {
             <p className="card-description">Mayor cantidad de pagos (30 días)</p>
           </div>
           <div className="card-content">
-            {metrics.topSpendingClients.length === 0 ? (
+            {metrics.topPayingClients.length === 0 ? (
               <p className="text-gray-500 text-center py-8">Sin datos de pagos recientes</p>
             ) : (
               <div className="space-y-3">
-                {metrics.topSpendingClients.map((client, index) => (
+                {metrics.topPayingClients.map((client, index) => (
                   <div key={client.clientId} className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -299,7 +299,7 @@ export const DashboardPage: React.FC = () => {
                       </div>
                     </div>
                     <span className="text-sm font-semibold text-gray-900">
-                      {formatCurrency(client.totalSpent)}
+                      {client.paymentCount} pagos
                     </span>
                   </div>
                 ))}
