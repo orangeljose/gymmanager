@@ -80,7 +80,7 @@ export const LoginPage: React.FC = () => {
             <Dumbbell className="h-8 w-8 text-white" />
           </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            GymManager
+            GoatGym
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             Inicia sesión para administrar tu gimnasio
