@@ -361,6 +361,37 @@ export interface DashboardMetrics {
   expiringThisWeek: number;
 }
 
+// Dashboard API Types
+export interface DashboardData {
+  activeClients: number;
+  todayIncome: number;
+  overdueClients: number;
+  expiringThisWeek: number;
+  incomeChart: IncomeChartPoint[];
+  topSpendingClients: TopSpendingClient[];
+  retentionRate: number;
+}
+
+export interface IncomeChartPoint {
+  date: string;
+  amount: number;
+}
+
+export interface TopSpendingClient {
+  clientId: string;
+  clientName: string;
+  totalSpent: number;
+}
+
+export interface ReceiptFilters {
+  method?: PaymentMethod;
+  startDate?: string;
+  endDate?: string;
+  branchId?: string;
+  limit?: number;
+  offset?: number;
+}
+
 // PWA Types
 export interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
