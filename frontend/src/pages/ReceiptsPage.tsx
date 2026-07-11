@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import type { Receipt, Branch } from '@/types';
 import toast from 'react-hot-toast';
-import { ReceiptIcon, Download, ChevronLeft, ChevronRight, Calendar, User, CreditCard, Filter, X } from 'lucide-react';
+import { ReceiptIcon, Download, ChevronLeft, ChevronRight, Calendar, User, CreditCard, Filter, Search, X } from 'lucide-react';
 
 const METHOD_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'Todos los métodos' },
@@ -24,14 +24,21 @@ export const ReceiptsPage: React.FC = () => {
   const [page, setPage] = useState(0);
   const [limit] = useState(50);
 
-  // Filter state
+  // Filter state — "draft" values bound to form inputs
   const [method, setMethod] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [branchId, setBranchId] = useState<string>('');
+
+  // "Committed" values — applied when user clicks "Buscar"
+  const [appliedMethod, setAppliedMethod] = useState<string>('');
+  const [appliedStartDate, setAppliedStartDate] = useState<string>('');
+  const [appliedEndDate, setAppliedEndDate] = useState<string>('');
+  const [appliedBranchId, setAppliedBranchId] = useState<string>('');
+
   const [branches, setBranches] = useState<Branch[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const hasActiveFilters = method || startDate || endDate || branchId;
+  const hasActiveFilters = appliedMethod || appliedStartDate || appliedEndDate || appliedBranchId;
 
   useEffect(() => {
     if (effectiveBusinessId && user?.role === 'super_admin') {
@@ -49,10 +56,10 @@ export const ReceiptsPage: React.FC = () => {
         limit,
         offset: page * limit
       };
-      if (method) params.method = method;
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
-      if (branchId) params.branchId = branchId;
+      if (appliedMethod) params.method = appliedMethod;
+      if (appliedStartDate) params.startDate = appliedStartDate;
+      if (appliedEndDate) params.endDate = appliedEndDate;
+      if (appliedBranchId) params.branchId = appliedBranchId;
 
       const response = await apiService.getReceipts(params);
       if (response.success && response.data) {
@@ -64,7 +71,7 @@ export const ReceiptsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [effectiveBusinessId, page, limit, method, startDate, endDate, branchId]);
+  }, [effectiveBusinessId, page, limit, appliedMethod, appliedStartDate, appliedEndDate, appliedBranchId]);
 
   useEffect(() => {
     loadReceipts();
@@ -75,6 +82,18 @@ export const ReceiptsPage: React.FC = () => {
     setStartDate('');
     setEndDate('');
     setBranchId('');
+    setAppliedMethod('');
+    setAppliedStartDate('');
+    setAppliedEndDate('');
+    setAppliedBranchId('');
+    setPage(0);
+  };
+
+  const applyFilters = () => {
+    setAppliedMethod(method);
+    setAppliedStartDate(startDate);
+    setAppliedEndDate(endDate);
+    setAppliedBranchId(branchId);
     setPage(0);
   };
 
@@ -150,45 +169,45 @@ export const ReceiptsPage: React.FC = () => {
       {showFilters && (
         <div className="card mb-4">
           <div className="p-4 flex flex-wrap gap-4 items-end">
-            <div className="w-full sm:w-auto">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Método de pago</label>
-              <select
-                value={method}
-                onChange={(e) => { setMethod(e.target.value); setPage(0); }}
-                className="input"
-              >
-                {METHOD_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
+              <div className="w-full sm:w-auto">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Método de pago</label>
+                <select
+                  value={method}
+                  onChange={(e) => setMethod(e.target.value)}
+                  className="input"
+                >
+                  {METHOD_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
 
-            <div className="w-full sm:w-auto">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); setPage(0); }}
-                className="input"
-              />
-            </div>
+              <div className="w-full sm:w-auto">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="input"
+                />
+              </div>
 
-            <div className="w-full sm:w-auto">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => { setEndDate(e.target.value); setPage(0); }}
-                className="input"
-              />
-            </div>
+              <div className="w-full sm:w-auto">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="input"
+                />
+              </div>
 
             {user?.role === 'super_admin' && branches.length > 0 && (
               <div className="w-full sm:w-auto">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Sucursal</label>
                 <select
                   value={branchId}
-                  onChange={(e) => { setBranchId(e.target.value); setPage(0); }}
+                  onChange={(e) => setBranchId(e.target.value)}
                   className="input"
                 >
                   <option value="">Todas</option>
@@ -199,17 +218,24 @@ export const ReceiptsPage: React.FC = () => {
               </div>
             )}
 
-            {hasActiveFilters && (
-              <div className="flex items-end">
+            <div className="flex items-end gap-2">
+              <button
+                onClick={applyFilters}
+                className="btn btn-primary"
+              >
+                <Search className="h-4 w-4 mr-1" />
+                Buscar
+              </button>
+              {hasActiveFilters && (
                 <button
                   onClick={clearFilters}
                   className="btn btn-ghost text-sm"
                 >
                   <X className="h-4 w-4 mr-1" />
-                  Limpiar filtros
+                  Limpiar
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
