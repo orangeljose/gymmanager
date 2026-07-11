@@ -94,6 +94,11 @@ const openModal = (plan?: MembershipPlan) => {
     e.preventDefault();
     if (!effectiveBusinessId) return;
 
+    if (formData.price <= 0) {
+      toast.error('El precio debe ser mayor a $0');
+      return;
+    }
+
     try {
       setSaving(true);
       if (editingPlan) {
@@ -307,7 +312,7 @@ const openModal = (plan?: MembershipPlan) => {
                     }}
                     className="input"
                     placeholder="35.00"
-                    min="0"
+                    min="1"
                     step="0.01"
                     required
                   />

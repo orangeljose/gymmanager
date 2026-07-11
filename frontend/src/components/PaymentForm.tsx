@@ -61,10 +61,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
     if (plan) setAmount(plan.price);
   };
 
-  const handleAmountChange = (dollarValue: string) => {
-    setAmount(Math.round(parseFloat(dollarValue || '0') * 100));
-  };
-
   const handleMethodChange = (newMethod: string) => {
     setMethod(newMethod as PaymentMethod);
     setMethodDetails({});
@@ -127,9 +123,10 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
         <input
           type="number"
           value={(amount || 0) / 100}
-          onChange={e => handleAmountChange(e.target.value)}
-          className="input"
+          className="input bg-gray-50"
+          min="1"
           step="0.01"
+          readOnly
           required
         />
       </div>

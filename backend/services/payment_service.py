@@ -97,7 +97,7 @@ class PaymentService:
             
             # Validar monto contra plan
             if not self.membership_service.validate_payment_amount(client_id, amount, plan_id):
-                return None
+                raise ValueError({"errors": ["El monto no coincide con el precio del plan seleccionado"]})
             
             # Validar que la sede pertenezca al negocio del usuario
             user_business_id = current_user.get('businessId')
