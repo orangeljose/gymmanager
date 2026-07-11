@@ -8,27 +8,22 @@ import {
   TrendingUp,
   CreditCard,
   UserCheck,
-  Building
+  Building,
+  Percent
 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '@/hooks/useAuth';
 import { useOffline } from '@/hooks/useOffline';
 import { apiService } from '@/services/api';
-// import { BCVWidget } from '@/components/BCVWidget'; // Desactivado temporalmente
-import type { DashboardMetrics, Client, Branch } from '@/types';
+import type { DashboardData, Client, Branch } from '@/types';
 
 export const DashboardPage: React.FC = () => {
   const { user, hasPermission, selectedBusinessId } = useAuth();
   const { isOnline } = useOffline();
   const effectiveBusinessId = selectedBusinessId || user?.businessId || '';
-  const [metrics, setMetrics] = useState<DashboardMetrics>({
-    activeClients: 0,
-    todayIncome: 0,
-    overdueClients: 0,
-    expiringThisWeek: 0
-  });
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [recentClients, setRecentClients] = useState<Client[]>([]);
-  const [expiringClients, setExpiringClients] = useState<Client[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
 
@@ -55,67 +50,25 @@ export const DashboardPage: React.FC = () => {
 
       try {
         setLoading(true);
-        
-        // Determinar el filtro a usar
-        const paymentFilter = user?.role === 'super_admin' 
-          ? {
-              ...(selectedBranchId !== 'all' ? { branchId: selectedBranchId } : { businessId: effectiveBusinessId }),
-              startDate: new Date().toISOString().split('T')[0],
-              endDate: new Date().toISOString().split('T')[0]
-            }
-          : {
-              ...(user?.branchId ? { branchId: user.branchId } : { businessId: effectiveBusinessId }),
-              startDate: new Date().toISOString().split('T')[0],
-              endDate: new Date().toISOString().split('T')[0]
-            };
 
-        // Load metrics (you would need to create these endpoints)
-        const [clientsResponse, paymentsResponse] = await Promise.all([
+        const branchParam = user?.role === 'super_admin' && selectedBranchId !== 'all'
+          ? { branchId: selectedBranchId }
+          : {};
+
+        const [dashboardResponse, clientsResponse] = await Promise.all([
+          apiService.getDashboard(branchParam),
           apiService.getClients({ 
             businessId: effectiveBusinessId, 
-            status: 'active', 
             limit: 100 
-          }),
-          apiService.getPaymentReport(paymentFilter)
+          })
         ]);
 
-        if (clientsResponse.success && clientsResponse.data) {
-          const now = new Date();
-          const activeClients = clientsResponse.data.length;
-          const overdueClients = clientsResponse.data.filter(client => {
-            const membershipEnd = new Date(client.membershipEnd);
-            return membershipEnd < now && client.isActive;
-          }).length;
-          const expiringThisWeek = clientsResponse.data.filter(client => {
-            const membershipEnd = new Date(client.membershipEnd);
-            const oneWeekFromNow = new Date();
-            oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
-            return membershipEnd <= oneWeekFromNow && membershipEnd > now;
-          }).length;
-
-          setMetrics(prev => ({
-            ...prev,
-            activeClients,
-            overdueClients,
-            expiringThisWeek
-          }));
-
-          // Get recent clients (last 5)
-          setRecentClients(clientsResponse.data.slice(0, 5));
-          setExpiringClients(clientsResponse.data
-            .filter(client => {
-              const membershipEnd = new Date(client.membershipEnd);
-              const oneWeekFromNow = new Date();
-              oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
-              return membershipEnd <= oneWeekFromNow && membershipEnd > new Date();
-            })
-            .slice(0, 3)
-          );
+        if (dashboardResponse.success && dashboardResponse.data) {
+          setDashboardData(dashboardResponse.data);
         }
 
-        if (paymentsResponse.success && paymentsResponse.data) {
-          const todayIncome = paymentsResponse.data.summary?.totalAmount || 0;
-          setMetrics(prev => ({ ...prev, todayIncome }));
+        if (clientsResponse.success && clientsResponse.data) {
+          setRecentClients(clientsResponse.data.slice(0, 5));
         }
 
       } catch (error) {
@@ -135,20 +88,18 @@ export const DashboardPage: React.FC = () => {
     }).format(amount / 100);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-MX', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
+  const formatShortCurrency = (amount: number) => {
+    return `$${(amount / 100).toFixed(0)}`;
   };
 
-  const getDaysUntilExpiry = (membershipEnd: string) => {
-    const today = new Date();
-    const expiry = new Date(membershipEnd);
-    const diffTime = expiry.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+  const formatChartDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('es-VE', { day: '2-digit', month: 'short' });
+  };
+
+  const formatTooltipDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
   };
 
   if (loading) {
@@ -158,6 +109,16 @@ export const DashboardPage: React.FC = () => {
       </div>
     );
   }
+
+  const metrics = dashboardData || {
+    activeClients: 0,
+    todayIncome: 0,
+    overdueClients: 0,
+    expiringThisWeek: 0,
+    incomeChart: [],
+    topSpendingClients: [],
+    retentionRate: 0
+  };
 
   return (
     <div className="p-6">
@@ -189,9 +150,6 @@ export const DashboardPage: React.FC = () => {
               </select>
             </div>
           )}
-
-          {/* BCV Rate Widget - Desactivado temporalmente */}
-          {/* <BCVWidget /> */}
         </div>
         
         {/* Offline Warning Message */}
@@ -208,7 +166,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         <div className="card">
           <div className="flex items-center">
             <div className="p-3 bg-green-100 rounded-full">
@@ -254,13 +212,102 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Vencen esta Semana</p>
-              <p className="text-2xl font-bold text-gray-900">{metrics.expiringThisWeek}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-2xl font-bold text-gray-900">{metrics.expiringThisWeek}</p>
+                {metrics.expiringThisWeek > 0 && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-500 text-white">
+                    {metrics.expiringThisWeek}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center">
+            <div className="p-3 bg-purple-100 rounded-full">
+              <Percent className="h-6 w-6 text-purple-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Retención</p>
+              <p className="text-2xl font-bold text-gray-900">{metrics.retentionRate}%</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Income Chart */}
+      <div className="card mb-8">
+        <div className="card-header">
+          <h3 className="card-title">Ingresos Últimos 30 Días</h3>
+          <p className="card-description">Total diario de pagos registrados</p>
+        </div>
+        <div className="card-content">
+          {metrics.incomeChart.length === 0 || metrics.incomeChart.every(p => p.amount === 0) ? (
+            <p className="text-gray-500 text-center py-12">No income data for this period</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={metrics.incomeChart} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="date"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={formatChartDate}
+                  interval="preserveStartEnd"
+                />
+                <YAxis 
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={formatShortCurrency}
+                />
+                <Tooltip 
+                  formatter={(value: number) => [formatCurrency(value), 'Ingresos']}
+                  labelFormatter={formatTooltipDate}
+                />
+                <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Top 5 Clients */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Top Clientes</h3>
+            <p className="card-description">Mayor cantidad de pagos (30 días)</p>
+          </div>
+          <div className="card-content">
+            {metrics.topSpendingClients.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">Sin datos de pagos recientes</p>
+            ) : (
+              <div className="space-y-3">
+                {metrics.topSpendingClients.map((client, index) => (
+                  <div key={client.clientId} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                        index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                        index === 1 ? 'bg-gray-200 text-gray-600' :
+                        index === 2 ? 'bg-orange-100 text-orange-700' :
+                        'bg-gray-100 text-gray-500'
+                      }`}>
+                        {index + 1}
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-900">{client.clientName}</p>
+                      </div>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {formatCurrency(client.totalSpent)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Recent Clients */}
         <div className="card">
           <div className="card-header">
@@ -301,56 +348,6 @@ export const DashboardPage: React.FC = () => {
                 className="btn btn-outline btn-sm w-full"
               >
                 Ver todos los clientes
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Expiring Soon */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Membresías por Vencer</h3>
-            <p className="card-description">Próximos vencimientos</p>
-          </div>
-          <div className="card-content">
-            {expiringClients.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No hay membresías por vencer</p>
-            ) : (
-              <div className="space-y-4">
-                {expiringClients.map((client) => {
-                  const daysUntilExpiry = getDaysUntilExpiry(client.membershipEnd);
-                  return (
-                    <div key={client.id} className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                          <Calendar className="h-4 w-4 text-yellow-600" />
-                        </div>
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-900">{client.name}</p>
-                          <p className="text-xs text-gray-500">
-                            Vence: {formatDate(client.membershipEnd)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className={`
-                          inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
-                          ${daysUntilExpiry <= 3 ? 'badge-error' : 'badge-warning'}
-                        `}>
-                          {daysUntilExpiry} días
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <div className="card-footer pt-4">
-              <Link
-                to="/reports/solvency"
-                className="btn btn-outline btn-sm w-full"
-              >
-                Ver reporte de morosidad
               </Link>
             </div>
           </div>

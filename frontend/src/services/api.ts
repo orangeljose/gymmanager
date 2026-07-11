@@ -21,7 +21,9 @@ import type {
   PlanFormData,
   UserRole,
   Receipt,
-  UserFormData
+  UserFormData,
+  DashboardData,
+  ReceiptFilters
 } from '@/types';
 
 class ApiService {
@@ -169,13 +171,24 @@ class ApiService {
     });
   }
 
-  async getReceipts(params: { limit?: number; offset?: number; branchId?: string }): Promise<ApiResponse<{ receipts: Receipt[]; total: number }>> {
+  async getReceipts(params: ReceiptFilters = {}): Promise<ApiResponse<{ receipts: Receipt[]; total: number }>> {
     const searchParams = new URLSearchParams();
     if (params.limit) searchParams.append('limit', params.limit.toString());
     if (params.offset) searchParams.append('offset', params.offset.toString());
     if (params.branchId) searchParams.append('branchId', params.branchId);
+    if (params.method) searchParams.append('method', params.method);
+    if (params.startDate) searchParams.append('startDate', params.startDate);
+    if (params.endDate) searchParams.append('endDate', params.endDate);
     const endpoint = `/payments/receipts${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
     return this.requestWithAuth<{ receipts: Receipt[]; total: number }>(endpoint);
+  }
+
+  // Dashboard
+  async getDashboard(params: { branchId?: string } = {}): Promise<ApiResponse<DashboardData>> {
+    const searchParams = new URLSearchParams();
+    if (params.branchId) searchParams.append('branchId', params.branchId);
+    const endpoint = `/reports/dashboard${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.requestWithAuth<DashboardData>(endpoint);
   }
 
   async syncOfflinePayments(payments: any[]): Promise<ApiResponse<any>> {
