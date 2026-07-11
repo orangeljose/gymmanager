@@ -4,6 +4,26 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-primary-50: #FFF5F0;
+  --color-primary-100: #FEE6D9;
+  --color-primary-200: #FDC9B1;
+  --color-primary-300: #FCA889;
+  --color-primary-400: #FA7A4D;
+  --color-primary-500: #F73F08;
+  --color-primary-600: #D43506;
+  --color-primary-700: #B02D05;
+  --color-primary-800: #8C2404;
+  --color-primary-900: #681B03;
+  --color-primary: #F73F08;
+  --color-primary-hover: #D43506;
+  --color-primary-light: #FEE6D9;
+  --color-success: #0D9488;
+  --color-warning: #EAB308;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+}
+
 @layer base {
   * {
     @apply border-gray-200;
@@ -21,7 +41,7 @@
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
   }
   
   .btn-primary {
@@ -49,7 +69,7 @@
   }
   
   .input {
-    @apply flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
   }
   
   .card {
@@ -111,11 +131,11 @@
   }
   
   .shadow-glow {
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+    box-shadow: 0 0 20px rgba(247, 63, 8, 0.3);
   }
   
   .gradient-primary {
-    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-700) 100%);
   }
   
   .gradient-secondary {
@@ -137,7 +157,7 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
+  background-color: var(--color-primary-300);
 }
 
 /* Print styles */

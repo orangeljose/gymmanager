@@ -37,32 +37,32 @@ export default defineConfig({
       },
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'GymManager',
-        short_name: 'GymManager',
-        description: 'Administra tu gimnasio desde cualquier lugar',
-        theme_color: '#10B981',
+        name: 'GoatGym',
+        short_name: 'GoatGym',
+        description: 'GoatGym - Administra tu gimnasio',
+        theme_color: '#F73F08',
         background_color: '#FFFFFF',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
         icons: [
-          // {
-          //   src: 'pwa-192x192.png',
-          //   sizes: '192x192',
-          //   type: 'image/png'
-          // },
-          // {
-          //   src: 'pwa-512x512.png',
-          //   sizes: '512x512',
-          //   type: 'image/png'
-          // },
-          // {
-          //   src: 'pwa-512x512.png',
-          //   sizes: '512x512',
-          //   type: 'image/png',
-          //   purpose: 'any maskable'
-          // }
+          {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          }
         ]
       }
     })

@@ -1,11 +1,11 @@
 {
-  "name": "GymManager - Sistema de Gestión de Gimnasios",
-  "short_name": "GymManager",
-  "description": "Sistema completo para la administración de gimnasios con gestión de clientes, pagos y reportes",
+  "name": "GoatGym - Sistema de Gestión de Gimnasios",
+  "short_name": "GoatGym",
+  "description": "GoatGym - Administra tu gimnasio",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "theme_color": "#F73F08",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "es",
@@ -67,14 +67,14 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Panel principal de GymManager"
+      "label": "Panel principal de GoatGym"
     },
     {
       "src": "/screenshots/mobile.png",
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Vista móvil de GymManager"
+      "label": "Vista móvil de GoatGym"
     }
   ],
   "shortcuts": [
