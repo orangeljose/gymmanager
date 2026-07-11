@@ -261,6 +261,9 @@ def get_receipts():
         limit: int (optional, default 100) - Límite de resultados
         offset: int (optional, default 0) - Offset para paginación
         branchId: string (optional) - Filtrar por sede (solo super_admin puede especificar)
+        method: string (optional) - Filtrar por método de pago (cash, card, transfer, zelle, pago_movil, other)
+        startDate: string (optional) - Fecha inicio para rango (YYYY-MM-DD)
+        endDate: string (optional) - Fecha fin para rango (YYYY-MM-DD)
     
     Response (200):
     {
@@ -290,10 +293,47 @@ def get_receipts():
         limit = request.args.get('limit', 100, type=int)
         offset = request.args.get('offset', 0, type=int)
         branch_id = request.args.get('branchId')
+        method = request.args.get('method')
+        start_date = request.args.get('startDate')
+        end_date = request.args.get('endDate')
         
         # Validar y ajustar límites
         limit = min(max(1, limit), 500)  # Entre 1 y 500
         offset = max(0, offset)
+        
+        # Validar método de pago si se provee
+        if method:
+            valid_methods = ['cash', 'card', 'transfer', 'zelle', 'pago_movil', 'other']
+            if method not in valid_methods:
+                return jsonify({
+                    'success': False,
+                    'error': {
+                        'code': 400,
+                        'message': f'Método de pago debe ser uno de: {", ".join(valid_methods)}'
+                    }
+                }), 400
+        
+        # Validar formato de fechas si se proveen
+        if start_date:
+            date_errors = validate_date_format(start_date, 'startDate')
+            if date_errors:
+                return jsonify({
+                    'success': False,
+                    'error': {
+                        'code': 400,
+                        'message': '; '.join(date_errors)
+                    }
+                }), 400
+        if end_date:
+            date_errors = validate_date_format(end_date, 'endDate')
+            if date_errors:
+                return jsonify({
+                    'success': False,
+                    'error': {
+                        'code': 400,
+                        'message': '; '.join(date_errors)
+                    }
+                }), 400
         
         # Determinar filtros según rol
         user = g.current_user
@@ -322,6 +362,16 @@ def get_receipts():
         # Siempre filtrar por business del usuario
         if user_business_id:
             filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
+        
+        # Filtro por método de pago
+        if method:
+            filters.append({'field': 'method', 'operator': '==', 'value': method})
+        
+        # Filtro por rango de fechas
+        if start_date:
+            filters.append({'field': 'createdAt', 'operator': '>=', 'value': start_date})
+        if end_date:
+            filters.append({'field': 'createdAt', 'operator': '<=', 'value': end_date + 'T23:59:59'})
         
         # Obtener pagos
         firebase_service = FirebaseService()

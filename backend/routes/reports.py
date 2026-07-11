@@ -437,3 +437,183 @@ def get_income_by_method_report():
                 'message': 'Error interno del servidor'
             }
         }), 500
+
+@reports_bp.route('/dashboard', methods=['GET', 'OPTIONS'])
+@require_auth
+@require_role(['super_admin', 'admin', 'branch_admin', 'cashier'])
+def get_dashboard():
+    """
+    Dashboard agregado con métricas, gráfico de ingresos y top clientes
+
+    Query Parameters:
+        branchId: string (optional) - Filtrar por sede (solo super_admin)
+
+    Response (200):
+    {
+        "success": true,
+        "data": {
+            "activeClients": 42,
+            "todayIncome": 175000,
+            "overdueClients": 5,
+            "expiringThisWeek": 8,
+            "incomeChart": [{"date": "2026-07-01", "amount": 35000}, ...],
+            "topSpendingClients": [{"clientId": "x", "clientName": "Juan", "totalSpent": 210000}, ...],
+            "retentionRate": 85.5
+        }
+    }
+    """
+    try:
+        from datetime import datetime, timedelta
+        from collections import defaultdict
+
+        branch_id = request.args.get('branchId')
+        firebase_service = FirebaseService()
+        user_business_id = g.current_user.get('businessId')
+        user_role = g.current_user.get('role')
+        user_branch_id = g.current_user.get('branchId')
+        now = datetime.now()
+
+        # Resolver branch_id efectivo
+        effective_branch_id = None
+        if user_role != 'super_admin':
+            effective_branch_id = user_branch_id
+        elif branch_id:
+            effective_branch_id = branch_id
+
+        # --- Clients ---
+        client_filters = [
+            {'field': 'businessId', 'operator': '==', 'value': user_business_id}
+        ]
+        if effective_branch_id:
+            client_filters.append({'field': 'branchId', 'operator': '==', 'value': effective_branch_id})
+
+        all_clients = firebase_service.query_firestore('clients', filters=client_filters)
+
+        active_clients = [c for c in all_clients if c.get('isActive', False)]
+        active_count = len(active_clients)
+        total_count = len(all_clients)
+
+        overdue_count = 0
+        expiring_count = 0
+        for c in active_clients:
+            membership_end = c.get('membershipEnd')
+            if membership_end:
+                if isinstance(membership_end, str):
+                    membership_end_dt = datetime.fromisoformat(membership_end.replace('Z', '+00:00')).replace(tzinfo=None)
+                else:
+                    membership_end_dt = membership_end.replace(tzinfo=None) if hasattr(membership_end, 'replace') else membership_end
+
+                if membership_end_dt < now:
+                    overdue_count += 1
+                elif membership_end_dt <= now + timedelta(days=7):
+                    expiring_count += 1
+
+        # --- Payments (last 30 days) ---
+        thirty_days_ago = now - timedelta(days=30)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        payment_filters = [
+            {'field': 'businessId', 'operator': '==', 'value': user_business_id},
+            {'field': 'createdAt', 'operator': '>=', 'value': thirty_days_ago},
+            {'field': 'createdAt', 'operator': '<=', 'value': now}
+        ]
+        if effective_branch_id:
+            payment_filters.append({'field': 'branchId', 'operator': '==', 'value': effective_branch_id})
+
+        payments = firebase_service.query_firestore(
+            'payments',
+            filters=payment_filters,
+            order_by='createdAt',
+            direction='DESC',
+            limit=5000
+        )
+
+        # Today income
+        today_income = 0
+        for p in payments:
+            created_at = p.get('createdAt')
+            if created_at:
+                if isinstance(created_at, str):
+                    created_dt = datetime.fromisoformat(created_at.replace('Z', '+00:00')).replace(tzinfo=None)
+                elif hasattr(created_at, 'replace'):
+                    created_dt = created_at.replace(tzinfo=None)
+                else:
+                    created_dt = created_at
+
+                if created_dt >= today_start:
+                    today_income += p.get('amount', 0)
+
+        # Income chart (30 days grouped by date)
+        daily_sums = defaultdict(int)
+        for p in payments:
+            created_at = p.get('createdAt')
+            if created_at:
+                if isinstance(created_at, str):
+                    date_part = created_at.split('T')[0]
+                elif hasattr(created_at, 'strftime'):
+                    date_part = created_at.strftime('%Y-%m-%d')
+                else:
+                    date_part = str(created_at)[:10]
+                daily_sums[date_part] += p.get('amount', 0)
+
+        income_chart = []
+        for i in range(30):
+            day = (thirty_days_ago + timedelta(days=i)).strftime('%Y-%m-%d')
+            income_chart.append({
+                'date': day,
+                'amount': daily_sums.get(day, 0)
+            })
+
+        # Top spending clients (top 5 by payment count)
+        client_payment_counts = defaultdict(lambda: {'count': 0, 'clientName': '', 'totalSpent': 0})
+        for p in payments:
+            cid = p.get('clientId', '')
+            if cid:
+                client_payment_counts[cid]['count'] += 1
+                client_payment_counts[cid]['clientName'] = p.get('clientName', 'Cliente')
+                client_payment_counts[cid]['totalSpent'] += p.get('amount', 0)
+
+        top_spenders = sorted(
+            client_payment_counts.items(),
+            key=lambda x: x[1]['count'],
+            reverse=True
+        )[:5]
+
+        top_spending_clients = [
+            {
+                'clientId': cid,
+                'clientName': data['clientName'],
+                'totalSpent': data['totalSpent']
+            }
+            for cid, data in top_spenders
+        ]
+
+        # Retention rate
+        retention_rate = round((active_count / total_count * 100), 1) if total_count > 0 else 0.0
+
+        logger.info(f"Dashboard: {active_count} activos, {overdue_count} morosos, {expiring_count} próximos, ${today_income/100:.2f} hoy")
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'activeClients': active_count,
+                'todayIncome': today_income,
+                'overdueClients': overdue_count,
+                'expiringThisWeek': expiring_count,
+                'incomeChart': income_chart,
+                'topSpendingClients': top_spending_clients,
+                'retentionRate': retention_rate
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error generando dashboard: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 500,
+                'message': 'Error interno del servidor'
+            }
+        }), 500
