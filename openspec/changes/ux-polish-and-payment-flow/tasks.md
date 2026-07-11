@@ -21,7 +21,7 @@
 
 ---
 
-## Phase 2: Dashboard Analytics + UX Polish (PR 2 — 📍 CURRENT on `ux-polish-payment-flow-pt2`)
+## Phase 2: Dashboard Analytics + UX Polish (PR 2 — ✅ DONE on `ux-polish-payment-flow-pt2`)
 
 - [x] 2.1 Add getDashboard() to api service
 - [x] 2.2 Migrate DashboardPage to use /reports/dashboard endpoint
@@ -36,17 +36,16 @@
 
 ---
 
-## Phase 3: Payment Form + New Page (PR 3 — NOT STARTED)
+## Phase 3: Payment Form + New Page (PR 3 — 📍 CURRENT on `ux-polish-payment-flow-pt3`)
 
-- [ ] 3.1 Extract PaymentForm component from ClientDetailPage modal
-- [ ] 3.2 Create PaymentsNewPage at /payments/new
-- [ ] 3.3 Add client search + summary step in PaymentsNewPage
-- [ ] 3.4 Wire PaymentForm to createPayment API
-- [ ] 3.5 Add /payments/new route to App.tsx (cashier+)
-- [ ] 3.6 Update ClientDetailPage to use extracted PaymentForm
-- [ ] 3.7 Add expiry badge to ClientDetailPage
+- [x] 3.1 Extract PaymentForm component from ClientDetailPage modal
+- [x] 3.2 Create PaymentsNewPage at /payments/new
+- [x] 3.3 Add client search + summary step in PaymentsNewPage
+- [x] 3.4 Wire PaymentForm to createPayment API
+- [x] 3.5 Add /payments/new route to App.tsx (cashier+)
+- [x] 3.6 Update ClientDetailPage to use extracted PaymentForm
+- [x] 3.7 Add expiry badge to ClientDetailPage
 
-## Commits (PR 2)
-1. `feat(dashboard): migrate to /reports/dashboard endpoint with analytics`
-2. `feat(clients): resolve plan names and add expiry row badges`
-3. `feat(receipts): add date range, method, and branch filter bar`
+## Commits (PR 3)
+1. `feat(payments): extract PaymentForm component and add expiry badge to ClientDetailPage`
+2. `feat(payments): add PaymentsNewPage with client search and register route`
