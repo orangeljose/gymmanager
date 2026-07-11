@@ -156,6 +156,8 @@ class PaymentService:
                 logger.error("No se pudo registrar el pago")
                 return None
                 
+        except ValueError:
+            raise
         except Exception as e:
             logger.error(f"Error registrando pago: {str(e)}")
             return None
