@@ -1,9 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
-import type { Receipt } from '@/types';
+import type { Receipt, Branch } from '@/types';
 import toast from 'react-hot-toast';
-import { ReceiptIcon, Download, ChevronLeft, ChevronRight, Calendar, User, CreditCard } from 'lucide-react';
+import { ReceiptIcon, Download, ChevronLeft, ChevronRight, Calendar, User, CreditCard, Filter, X } from 'lucide-react';
+
+const METHOD_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: 'Todos los métodos' },
+  { value: 'cash', label: 'Efectivo' },
+  { value: 'card', label: 'Tarjeta' },
+  { value: 'transfer', label: 'Transferencia' },
+  { value: 'zelle', label: 'Zelle' },
+  { value: 'pago_movil', label: 'Pago Móvil' },
+  { value: 'other', label: 'Otro' },
+];
 
 export const ReceiptsPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
@@ -14,18 +24,37 @@ export const ReceiptsPage: React.FC = () => {
   const [page, setPage] = useState(0);
   const [limit] = useState(50);
 
-  useEffect(() => {
-    loadReceipts();
-  }, [effectiveBusinessId, page]);
+  // Filter state
+  const [method, setMethod] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [branchId, setBranchId] = useState<string>('');
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const hasActiveFilters = method || startDate || endDate || branchId;
 
-  const loadReceipts = async () => {
+  useEffect(() => {
+    if (effectiveBusinessId && user?.role === 'super_admin') {
+      apiService.getBranches(effectiveBusinessId).then(res => {
+        if (res.success && res.data) setBranches(res.data);
+      });
+    }
+  }, [effectiveBusinessId, user?.role]);
+
+  const loadReceipts = useCallback(async () => {
     if (!effectiveBusinessId) return;
     try {
       setLoading(true);
-      const response = await apiService.getReceipts({
+      const params: any = {
         limit,
         offset: page * limit
-      });
+      };
+      if (method) params.method = method;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      if (branchId) params.branchId = branchId;
+
+      const response = await apiService.getReceipts(params);
       if (response.success && response.data) {
         setReceipts(response.data.receipts);
         setTotal(response.data.total);
@@ -35,6 +64,18 @@ export const ReceiptsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }, [effectiveBusinessId, page, limit, method, startDate, endDate, branchId]);
+
+  useEffect(() => {
+    loadReceipts();
+  }, [loadReceipts]);
+
+  const clearFilters = () => {
+    setMethod('');
+    setStartDate('');
+    setEndDate('');
+    setBranchId('');
+    setPage(0);
   };
 
   const formatAmount = (cents: number) => {
@@ -52,19 +93,19 @@ export const ReceiptsPage: React.FC = () => {
     });
   };
 
-  const getMethodLabel = (method: string) => {
-    switch (method) {
+  const getMethodLabel = (m: string) => {
+    switch (m) {
       case 'cash': return 'Efectivo';
       case 'card': return 'Tarjeta';
       case 'transfer': return 'Transferencia';
       case 'zelle': return 'Zelle';
       case 'pago_movil': return 'Pago Móvil';
-      default: return method;
+      default: return m;
     }
   };
 
-  const getMethodColor = (method: string) => {
-    switch (method) {
+  const getMethodColor = (m: string) => {
+    switch (m) {
       case 'cash': return 'bg-green-100 text-green-700';
       case 'card': return 'bg-blue-100 text-blue-700';
       case 'transfer': return 'bg-purple-100 text-purple-700';
@@ -78,14 +119,6 @@ export const ReceiptsPage: React.FC = () => {
   const startItem = page * limit + 1;
   const endItem = Math.min((page + 1) * limit, total);
 
-  if (loading && receipts.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="loading-spinner h-10 w-10"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 sm:mb-6">
@@ -95,13 +128,97 @@ export const ReceiptsPage: React.FC = () => {
             {total > 0 ? `${total} recibos encontrados` : 'Sin recibos registrados'}
           </p>
         </div>
-        <button onClick={() => window.print()} className="btn btn-outline self-start sm:self-auto">
-          <Download className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">Exportar</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`btn btn-outline ${showFilters || hasActiveFilters ? 'bg-gray-50' : ''}`}
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filtros
+            {hasActiveFilters && (
+              <span className="ml-2 w-2 h-2 bg-primary-500 rounded-full" />
+            )}
+          </button>
+          <button onClick={() => window.print()} className="btn btn-outline">
+            <Download className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Exportar</span>
+          </button>
+        </div>
       </div>
 
-      {receipts.length === 0 ? (
+      {/* Filter Bar */}
+      {showFilters && (
+        <div className="card mb-4">
+          <div className="p-4 flex flex-wrap gap-4 items-end">
+            <div className="w-full sm:w-auto">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Método de pago</label>
+              <select
+                value={method}
+                onChange={(e) => { setMethod(e.target.value); setPage(0); }}
+                className="input"
+              >
+                {METHOD_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="w-full sm:w-auto">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => { setStartDate(e.target.value); setPage(0); }}
+                className="input"
+              />
+            </div>
+
+            <div className="w-full sm:w-auto">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => { setEndDate(e.target.value); setPage(0); }}
+                className="input"
+              />
+            </div>
+
+            {user?.role === 'super_admin' && branches.length > 0 && (
+              <div className="w-full sm:w-auto">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sucursal</label>
+                <select
+                  value={branchId}
+                  onChange={(e) => { setBranchId(e.target.value); setPage(0); }}
+                  className="input"
+                >
+                  <option value="">Todas</option>
+                  {branches.map(b => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {hasActiveFilters && (
+              <div className="flex items-end">
+                <button
+                  onClick={clearFilters}
+                  className="btn btn-ghost text-sm"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Limpiar filtros
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {loading && receipts.length === 0 ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="loading-spinner h-10 w-10"></div>
+        </div>
+      ) : receipts.length === 0 ? (
         <div className="card text-center py-12">
           <ReceiptIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No hay recibos registrados</h3>
