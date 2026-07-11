@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Calendar } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useClients } from '@/hooks/useClients';
+import { usePlans } from '@/hooks/usePlans';
 import type { ClientStatus, Branch } from '@/types';
 import { apiService } from '@/services/api';
 
@@ -10,11 +11,19 @@ export const ClientsPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
   const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
   const { clients, loading, error, pagination, fetchClients, searchClients } = useClients(effectiveBusinessId || '');
+  const { plans } = usePlans(effectiveBusinessId);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ClientStatus | ''>('');
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchFilter, setBranchFilter] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Build plan name lookup map
+  const planNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    plans.forEach(plan => { map[plan.id] = plan.name; });
+    return map;
+  }, [plans]);
 
   useEffect(() => {
     if (effectiveBusinessId) {
@@ -200,8 +209,13 @@ export const ClientsPage: React.FC = () => {
                 <tbody className="divide-y divide-gray-200">
                   {clients.map((client) => {
                     const daysRemaining = getDaysRemaining(client.membershipEnd);
+                    const isExpiringSoon = daysRemaining >= 0 && daysRemaining <= 7;
+                    const isExpired = daysRemaining < 0;
                     return (
-                      <tr key={client.id} className="hover:bg-gray-50">
+                      <tr 
+                        key={client.id} 
+                        className={`hover:bg-gray-50 ${isExpiringSoon ? 'bg-yellow-50' : isExpired ? 'bg-red-50' : ''}`}
+                      >
                         <td className="px-4 py-3">
                           <Link to={`/clients/${client.id}`} className="block">
                             <div className="font-medium text-gray-900 hover:text-primary-600">{client.name}</div>
@@ -209,11 +223,26 @@ export const ClientsPage: React.FC = () => {
                           </Link>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700">{client.phone}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{client.membershipPlanId}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {planNameMap[client.membershipPlanId] || client.membershipPlanId}
+                        </td>
                         <td className="px-4 py-3 text-sm">
-                          <div className="text-gray-900">{formatDate(client.membershipEnd)}</div>
-                          <div className={`text-xs ${daysRemaining < 0 ? 'text-red-600' : daysRemaining <= 7 ? 'text-yellow-600' : 'text-gray-500'}`}>
-                            {daysRemaining < 0 ? `Vencido hace ${Math.abs(daysRemaining)} días` :
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-900">{formatDate(client.membershipEnd)}</span>
+                            {isExpiringSoon && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                                <Calendar className="h-3 w-3" />
+                                {daysRemaining === 0 ? 'Hoy' : `${daysRemaining}d`}
+                              </span>
+                            )}
+                            {isExpired && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                                Vencido
+                              </span>
+                            )}
+                          </div>
+                          <div className={`text-xs mt-1 ${isExpired ? 'text-red-600' : isExpiringSoon ? 'text-yellow-600' : 'text-gray-500'}`}>
+                            {isExpired ? `Vencido hace ${Math.abs(daysRemaining)} días` :
                               daysRemaining === 0 ? 'Vence hoy' :
                                 `${daysRemaining} días restantes`}
                           </div>
