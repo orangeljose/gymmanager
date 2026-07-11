@@ -28,6 +28,7 @@ import { AddAdminPage } from '@/pages/AddAdminPage';
 import { BusinessCreatePage } from '@/pages/BusinessCreatePage';
 import { BusinessesPage } from '@/pages/BusinessesPage';
 import { DataLoadPage } from '@/pages/DataLoadPage';
+import { PaymentsNewPage } from '@/pages/PaymentsNewPage';
 
 // Loading component
 const LoadingSpinner = () => (
@@ -88,6 +89,15 @@ const App: React.FC = () => {
               <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <ClientFormPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            
+            {/* Payments */}
+            <Route path="payments/new" element={
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin', 'cashier']}>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <PaymentsNewPage />
                 </Suspense>
               </ProtectedRoute>
             } />
