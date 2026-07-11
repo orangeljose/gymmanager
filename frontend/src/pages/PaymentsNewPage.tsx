@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Search, UserCheck, Calendar, CreditCard, AlertCircle, Building } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Search, UserCheck, Calendar, CreditCard, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlans } from '@/hooks/usePlans';
 import { apiService } from '@/services/api';
@@ -11,7 +11,6 @@ export const PaymentsNewPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
   const effectiveBusinessId = selectedBusinessId || user?.businessId || '';
   const { plans } = usePlans(effectiveBusinessId);
-  const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [clients, setClients] = useState<Client[]>([]);
@@ -19,10 +18,6 @@ export const PaymentsNewPage: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [receiptNumber, setReceiptNumber] = useState<string | null>(null);
-
-  const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
-  };
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
 
@@ -75,10 +70,12 @@ export const PaymentsNewPage: React.FC = () => {
     setReceiptNumber(null);
   };
 
-  const handlePaymentSuccess = () => {
-    // Reset for next payment
-    setSelectedClient(null);
-    setReceiptNumber(null);
+  const handlePaymentSuccess = (receiptNumberParam?: string) => {
+    if (receiptNumberParam) {
+      setReceiptNumber(receiptNumberParam);
+    } else {
+      setSelectedClient(null);
+    }
   };
 
   const handleClearSelection = () => {
@@ -226,7 +223,7 @@ export const PaymentsNewPage: React.FC = () => {
       )}
 
       {/* Payment Form */}
-      {selectedClient && (
+      {selectedClient && !receiptNumber && (
         <div className="max-w-lg">
           <PaymentForm
             businessId={effectiveBusinessId}
@@ -239,6 +236,46 @@ export const PaymentsNewPage: React.FC = () => {
             onCancel={handleClearSelection}
             isModal={false}
           />
+        </div>
+      )}
+
+      {/* Receipt Success */}
+      {receiptNumber && (
+        <div className="max-w-lg">
+          <div className="card border-2 border-green-500">
+            <div className="card-header bg-green-50">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 bg-green-500 rounded-full flex items-center justify-center">
+                  <CreditCard className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="card-title text-green-800">¡Pago registrado exitosamente!</h3>
+                  <p className="card-description text-green-700">El comprobante fue generado correctamente.</p>
+                </div>
+              </div>
+            </div>
+            <div className="card-content space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-500 mb-1">Número de Recibo</p>
+                <p className="text-2xl font-mono font-bold text-blue-600">{receiptNumber}</p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setReceiptNumber(null)}
+                  className="btn btn-primary flex-1"
+                >
+                  Registrar otro pago
+                </button>
+                <Link
+                  to="/receipts"
+                  className="btn btn-outline"
+                >
+                  Ver recibos
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

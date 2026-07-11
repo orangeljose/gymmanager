@@ -13,7 +13,7 @@ interface PaymentFormProps {
   currentPlanId: string;
   branchId: string;
   initialAmount?: number;
-  onSuccess: () => void;
+  onSuccess: (receiptNumber?: string) => void;
   onCancel: () => void;
   isModal?: boolean;
 }
@@ -87,7 +87,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
       const response = await apiService.createPayment(payload);
       if (response.success) {
         toast.success('Pago registrado correctamente');
-        onSuccess();
+        onSuccess(response.data?.receiptNumber);
       }
     } catch (err: any) {
       toast.error(err.message || 'Error registrando pago');
@@ -116,6 +116,11 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
             <option key={plan.id} value={plan.id}>{plan.name} - {formatCurrency(plan.price)}</option>
           ))}
         </select>
+        {planId && (
+          <p className="mt-1 text-sm text-blue-600">
+            Plan: {getPlanName(planId)} — {formatCurrency(plans.find(p => p.id === planId)?.price || 0)}
+          </p>
+        )}
       </div>
 
       <div>
