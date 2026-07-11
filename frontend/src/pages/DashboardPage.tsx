@@ -80,17 +80,23 @@ export const DashboardPage: React.FC = () => {
         ]);
 
         if (clientsResponse.success && clientsResponse.data) {
+          const now = new Date();
           const activeClients = clientsResponse.data.length;
+          const overdueClients = clientsResponse.data.filter(client => {
+            const membershipEnd = new Date(client.membershipEnd);
+            return membershipEnd < now && client.isActive;
+          }).length;
           const expiringThisWeek = clientsResponse.data.filter(client => {
             const membershipEnd = new Date(client.membershipEnd);
             const oneWeekFromNow = new Date();
             oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
-            return membershipEnd <= oneWeekFromNow && membershipEnd > new Date();
+            return membershipEnd <= oneWeekFromNow && membershipEnd > now;
           }).length;
 
           setMetrics(prev => ({
             ...prev,
             activeClients,
+            overdueClients,
             expiringThisWeek
           }));
 
@@ -123,10 +129,10 @@ export const DashboardPage: React.FC = () => {
   }, [effectiveBusinessId, selectedBranchId]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-MX', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'MXN'
-    }).format(amount / 100); // Convert from cents to pesos
+      currency: 'USD'
+    }).format(amount / 100);
   };
 
   const formatDate = (dateString: string) => {
