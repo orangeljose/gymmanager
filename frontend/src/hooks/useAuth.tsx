@@ -189,9 +189,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: result.error?.message };
       }
 
-      // Paso 2: Verificar con backend DIRECTAMENTE (sin esperar onAuthStateChanged)
-      // El token de signIn() ya es válido porque signInWithEmailAndPassword terminó
-      const token = result.token;
+      // Pequeña espera para asegurar propagación del token en Firebase
+      await new Promise(r => setTimeout(r, 3000));
+      const token = result.token!;
       console.log('🔑 Verificando token con backend (longitud:', token?.length, ')');
       
       const response = await apiService.verifyToken(token);

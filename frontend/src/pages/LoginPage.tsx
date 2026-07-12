@@ -72,19 +72,14 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-900 via-primary-800 to-gray-900 py-6 px-8 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-5">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-800 via-primary-500 to-primary-800 py-6 px-8 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-3">
         {/* Header */}
-        <div className="text-center">
+        <div className="text-center h-64 mb-24">
           <div className="mx-auto flex items-center justify-center">
             <img src="/goatgymlogo.png" alt="GoatGym" className="h-72 w-auto mx-auto" />
           </div>
-          <h2 className="relative -top-8 text-3xl text-white font-extrabold inline-block">
-            GOAT GYM
-          </h2>
-          <p className="mt-0 text-sm text-primary-200">
-            Inicia sesión para administrar tu gimnasio
-          </p>
+          <img src="/goatgymletters.png" alt="GoatGym" className="h-96 w-auto mx-auto -mt-48" />
         </div>
 
         {/* Auth error banner (from previous session) */}
@@ -200,9 +195,9 @@ export const LoginPage: React.FC = () => {
 
         {/* Footer */}
         <div className="text-center">
-          <p className="text-sm text-primary-200/70">
+          <p className="text-sm text-white">
             ¿Problemas para iniciar sesión?{' '}
-            <button className="font-medium text-primary-600 hover:text-primary-500">
+            <button className="font-medium text-white hover:text-primary-500">
               Contacta al administrador
             </button>
           </p>

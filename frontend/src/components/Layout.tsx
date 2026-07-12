@@ -125,7 +125,7 @@ export const Layout: React.FC = () => {
         fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:relative lg:h-full lg:flex lg:flex-col
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="flex items-center justify-between h-16 px-6 bg-primary-600">
+        <div className="flex items-center justify-between h-16 px-6 bg-gradient-to-br from-primary-800 via-primary-500 to-primary-500">
           <div className="flex items-center">
             <img src="/logo.png" alt="GoatGym" className="h-12 w-auto mr-2" />
           </div>
@@ -198,7 +198,7 @@ export const Layout: React.FC = () => {
                       className={`
                         group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
                         ${active
-                          ? 'bg-primary-600 text-white font-semibold shadow-md'
+                          ? 'bg-primary-500 text-white font-semibold shadow-md'
                           : 'text-gray-600 hover:bg-primary-50 hover:text-primary-700'
                         }
                       `}
@@ -243,7 +243,7 @@ export const Layout: React.FC = () => {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-y-auto">
         {/* Top bar */}
-        <header className="bg-primary-600 shadow-md sticky top-0 z-30">
+        <header className="bg-gradient-to-br from-primary-500 via-primary-500 to-primary-800 shadow-md sticky top-0 z-30">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
             <button
               onClick={() => setSidebarOpen(true)}
