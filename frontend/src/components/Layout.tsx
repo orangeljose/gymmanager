@@ -122,8 +122,8 @@ export const Layout: React.FC = () => {
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 lg:sticky lg:top-0 lg:h-screen lg:inset-y-auto z-40 w-64 bg-white shadow-lg flex flex-col transform transition-transform duration-300 ease-in-out relative
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg flex flex-col transform transition-transform duration-300 ease-in-out lg:translate-x-0 relative
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex items-center justify-between h-16 px-6 bg-primary-600">
           <div className="flex items-center">
@@ -241,7 +241,7 @@ export const Layout: React.FC = () => {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 lg:ml-0">
+      <div className="flex-1 lg:ml-64">
         {/* Top bar */}
         <header className="bg-primary-600 shadow-md sticky top-0 z-30">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
