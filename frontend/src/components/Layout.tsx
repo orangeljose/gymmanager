@@ -122,17 +122,17 @@ export const Layout: React.FC = () => {
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-primary-800 to-primary-900 shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
+        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="flex items-center justify-between h-16 px-6 border-b border-primary-700">
+        <div className="flex items-center justify-between h-16 px-6 bg-primary-600">
           <div className="flex items-center">
             <img src="/logo.svg" alt="GoatGym" className="h-8 w-auto mr-2" />
             <h1 className="text-xl font-extrabold tracking-tight text-white">GoatGym</h1>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-2 rounded-md text-primary-200 hover:text-white hover:bg-primary-700"
+            className="lg:hidden p-2 rounded-md text-primary-100 hover:text-white hover:bg-primary-500"
           >
             <X className="h-6 w-6" />
           </button>
@@ -157,20 +157,20 @@ export const Layout: React.FC = () => {
                           w-full group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
                           ${submenuActive
                             ? 'bg-primary-600 text-white font-semibold shadow-md'
-                            : 'text-primary-100 hover:bg-primary-700 hover:text-white'
+                            : 'text-gray-600 hover:bg-primary-50 hover:text-primary-700'
                           }
                         `}
                       >
                         <Icon className="mr-3 h-5 w-5" />
                         <span className="flex-1 text-left">{item.label}</span>
                         {isExpanded ? (
-                          <ChevronDown className="h-4 w-4 text-primary-300" />
+                          <ChevronDown className="h-4 w-4 text-gray-400" />
                         ) : (
-                          <ChevronRight className="h-4 w-4 text-primary-300" />
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
                         )}
                       </button>
                       {isExpanded && item.submenu && (
-                        <ul className="ml-6 mt-1 space-y-1 border-l border-primary-600">
+                        <ul className="ml-6 mt-1 space-y-1 border-l border-gray-200">
                           {item.submenu
                             .filter(subItem => !subItem.roles || hasRole(subItem.roles))
                             .map((subItem) => (
@@ -180,8 +180,8 @@ export const Layout: React.FC = () => {
                                 className={`
                                   block px-3 py-2 text-sm rounded-md transition-colors
                                   ${location.pathname === subItem.href
-                                    ? 'bg-primary-500 text-white'
-                                    : 'text-primary-200 hover:bg-primary-700 hover:text-white'
+                                    ? 'bg-primary-100 text-primary-700 font-medium'
+                                    : 'text-gray-500 hover:bg-primary-50 hover:text-primary-700'
                                   }
                                 `}
                                 onClick={() => setSidebarOpen(false)}
@@ -200,7 +200,7 @@ export const Layout: React.FC = () => {
                         group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
                         ${active
                           ? 'bg-primary-600 text-white font-semibold shadow-md'
-                          : 'text-primary-100 hover:bg-primary-700 hover:text-white'
+                          : 'text-gray-600 hover:bg-primary-50 hover:text-primary-700'
                         }
                       `}
                       onClick={() => setSidebarOpen(false)}
@@ -216,7 +216,7 @@ export const Layout: React.FC = () => {
         </nav>
 
         {/* User section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-primary-700">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center">
@@ -225,15 +225,15 @@ export const Layout: React.FC = () => {
                 </span>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-white">{user?.name}</p>
-                <p className="text-xs text-primary-200">{user?.role?.replace('_', ' ')}</p>
+                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                <p className="text-xs text-gray-500">{user?.role?.replace('_', ' ')}</p>
               </div>
             </div>
           </div>
           
           <button
             onClick={handleLogout}
-            className="w-full flex items-center px-3 py-2 text-sm font-medium text-primary-200 rounded-md hover:bg-primary-700 hover:text-white transition-colors"
+            className="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-600 rounded-md hover:bg-primary-50 hover:text-primary-700 transition-colors"
           >
             <LogOut className="mr-3 h-4 w-4" />
             Cerrar sesión
