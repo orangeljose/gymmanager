@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, Dumbbell } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOffline } from '@/hooks/useOffline';
 
@@ -76,11 +76,11 @@ export const LoginPage: React.FC = () => {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center shadow-lg shadow-primary-500/30">
-            <Dumbbell className="h-10 w-10 text-primary-600" />
+          <div className="mx-auto flex items-center justify-center">
+            <img src="/logo.svg" alt="GoatGym" className="h-16 w-auto" />
           </div>
           <h2 className="mt-6 text-4xl font-extrabold tracking-tight gradient-primary bg-clip-text text-transparent inline-block">
-            GoatGym
+            GOAT GYM
           </h2>
           <p className="mt-2 text-sm text-primary-200">
             Inicia sesión para administrar tu gimnasio
