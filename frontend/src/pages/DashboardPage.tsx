@@ -167,7 +167,7 @@ export const DashboardPage: React.FC = () => {
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-        <div className="card">
+        <div className="card border-l-4 border-primary-500">
           <div className="flex items-center">
             <div className="p-3 bg-green-100 rounded-full">
               <Users className="h-6 w-6 text-green-600" />
@@ -179,7 +179,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="card">
+        <div className="card border-l-4 border-teal-500">
           <div className="flex items-center">
             <div className="p-3 bg-blue-100 rounded-full">
               <DollarSign className="h-6 w-6 text-blue-600" />
@@ -193,7 +193,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="card">
+        <div className="card border-l-4 border-red-500">
           <div className="flex items-center">
             <div className="p-3 bg-red-100 rounded-full">
               <AlertTriangle className="h-6 w-6 text-red-600" />
@@ -205,7 +205,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="card">
+        <div className="card border-l-4 border-yellow-500">
           <div className="flex items-center">
             <div className="p-3 bg-yellow-100 rounded-full">
               <Calendar className="h-6 w-6 text-yellow-600" />
@@ -224,7 +224,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="card">
+        <div className="card border-l-4 border-blue-500">
           <div className="flex items-center">
             <div className="p-3 bg-purple-100 rounded-full">
               <Percent className="h-6 w-6 text-purple-600" />
