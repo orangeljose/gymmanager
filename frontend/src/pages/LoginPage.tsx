@@ -72,17 +72,17 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-900 via-primary-800 to-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-900 via-primary-800 to-gray-900 py-6 px-8 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-5">
         {/* Header */}
         <div className="text-center">
           <div className="mx-auto flex items-center justify-center">
-            <img src="/logo.svg" alt="GoatGym" className="h-16 w-auto" />
+            <img src="/goatgymlogo.png" alt="GoatGym" className="h-72 w-auto mx-auto" />
           </div>
-          <h2 className="mt-6 text-4xl font-extrabold tracking-tight gradient-primary bg-clip-text text-transparent inline-block">
+          <h2 className="relative -top-8 text-3xl text-white font-extrabold inline-block">
             GOAT GYM
           </h2>
-          <p className="mt-2 text-sm text-primary-200">
+          <p className="mt-0 text-sm text-primary-200">
             Inicia sesión para administrar tu gimnasio
           </p>
         </div>
@@ -95,8 +95,8 @@ export const LoginPage: React.FC = () => {
           )}
 
           {/* Login form */}
-        <form className="mt-8 space-y-6 bg-white rounded-xl shadow-2xl shadow-primary-900/30 border-l-4 border-primary-500 p-8" onSubmit={handleSubmit}>
-          <div className="space-y-4">
+        <form className="mt-5 space-y-4 bg-white rounded-xl shadow-2xl shadow-primary-900/30 border-l-4 border-primary-500 p-6" onSubmit={handleSubmit}>
+          <div className="space-y-3">
             {/* Email field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -200,7 +200,7 @@ export const LoginPage: React.FC = () => {
 
         {/* Footer */}
         <div className="text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-primary-200/70">
             ¿Problemas para iniciar sesión?{' '}
             <button className="font-medium text-primary-600 hover:text-primary-500">
               Contacta al administrador
