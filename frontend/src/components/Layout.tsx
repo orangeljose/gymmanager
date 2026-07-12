@@ -111,7 +111,7 @@ export const Layout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="h-screen bg-gray-50 flex overflow-hidden">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -122,13 +122,12 @@ export const Layout: React.FC = () => {
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:flex lg:flex-col lg:relative
+        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:relative lg:h-full lg:flex lg:flex-col
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex items-center justify-between h-16 px-6 bg-primary-600">
           <div className="flex items-center">
-            <img src="/logo.svg" alt="GoatGym" className="h-8 w-auto mr-2" />
-            <h1 className="text-xl font-extrabold tracking-tight text-white">GoatGym</h1>
+            <img src="/logo.png" alt="GoatGym" className="h-12 w-auto mr-2" />
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -242,7 +241,7 @@ export const Layout: React.FC = () => {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 lg:ml-0">
+      <div className="flex-1 flex flex-col overflow-y-auto">
         {/* Top bar */}
         <header className="bg-primary-600 shadow-md sticky top-0 z-30">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
