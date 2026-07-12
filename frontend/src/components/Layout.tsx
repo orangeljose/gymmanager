@@ -122,7 +122,7 @@ export const Layout: React.FC = () => {
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
+        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:h-screen lg:flex lg:flex-col lg:relative
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex items-center justify-between h-16 px-6 bg-primary-600">
@@ -138,7 +138,7 @@ export const Layout: React.FC = () => {
           </button>
         </div>
 
-        <nav className="mt-6 px-3">
+        <nav className="mt-6 px-3 lg:flex-1 lg:overflow-y-auto">
           <ul className="space-y-1">
             {filteredNavigation.map((item) => {
               const Icon = iconMap[item.icon as keyof typeof iconMap];
@@ -244,7 +244,7 @@ export const Layout: React.FC = () => {
       {/* Main content */}
       <div className="flex-1 lg:ml-0">
         {/* Top bar */}
-        <header className="bg-primary-600 shadow-md">
+        <header className="bg-primary-600 shadow-md sticky top-0 z-30">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
             <button
               onClick={() => setSidebarOpen(true)}
