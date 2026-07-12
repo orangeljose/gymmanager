@@ -122,12 +122,13 @@ export const Layout: React.FC = () => {
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg flex flex-col transform transition-transform duration-300 ease-in-out lg:translate-x-0 relative
+        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex items-center justify-between h-16 px-6 bg-primary-600">
           <div className="flex items-center">
-            <img src="/logo.png" alt="GoatGym" className="h-12 w-auto mr-2" />
+            <img src="/logo.svg" alt="GoatGym" className="h-8 w-auto mr-2" />
+            <h1 className="text-xl font-extrabold tracking-tight text-white">GoatGym</h1>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -137,7 +138,7 @@ export const Layout: React.FC = () => {
           </button>
         </div>
 
-        <nav className="mt-6 px-3 flex-1 overflow-y-auto">
+        <nav className="mt-6 px-3">
           <ul className="space-y-1">
             {filteredNavigation.map((item) => {
               const Icon = iconMap[item.icon as keyof typeof iconMap];
@@ -241,9 +242,9 @@ export const Layout: React.FC = () => {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 lg:ml-64">
+      <div className="flex-1 lg:ml-0">
         {/* Top bar */}
-        <header className="bg-primary-600 shadow-md sticky top-0 z-30">
+        <header className="bg-primary-600 shadow-md">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
             <button
               onClick={() => setSidebarOpen(true)}
