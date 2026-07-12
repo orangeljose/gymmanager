@@ -26,11 +26,15 @@ export const storage = getStorage(app);
 export const firebaseAuth = {
   signIn: async (email: string, password: string) => {
     try {
+      console.log('🔥 signInWithEmailAndPassword iniciando...');
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log('🔥 signInWithEmailAndPassword OK, obteniendo token...');
+      const token = await userCredential.user.getIdToken(true);  // forceRefresh tras signIn
+      console.log('🔥 token obtenido (longitud:', token.length, ')');
       return {
         success: true,
         user: userCredential.user,
-        token: await userCredential.user.getIdToken()
+        token
       };
     } catch (error: any) {
       console.error('Firebase sign in error:', error);

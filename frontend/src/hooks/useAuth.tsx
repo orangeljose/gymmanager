@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react';
 import { firebaseAuth } from '@/services/firebase';
 import { apiService } from '@/services/api';
 import type { AuthState } from '@/types';
@@ -29,6 +29,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [error, setError] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // Flag para que onAuthStateChanged no interfiera durante login activo
+  const isLoggingIn = useRef(false);
 
   // Restaurar selectedBusinessId desde localStorage al iniciar
   useEffect(() => {
@@ -85,6 +88,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const unsubscribe = firebaseAuth.onAuthStateChanged(async (firebaseUser) => {
       if (isCancelled) return;
+      
+      // Si hay un login en progreso, no verificar — el token puede ser parcial
+      if (isLoggingIn.current) {
+        console.log('⏭️ onAuthStateChanged ignorado (login en progreso)');
+        return;
+      }
+      
+      console.log('🔔 onAuthStateChanged:', firebaseUser ? `uid=${firebaseUser.uid}` : 'null (signed out)');
 
       if (!firebaseUser) {
         setAuthState(prev => ({
@@ -97,14 +108,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       try {
-        const token = await firebaseAuth.getIdToken();
+        console.log('🔑 Solicitando token (forceRefresh)...');
+        const token = await firebaseUser.getIdToken(true);  // forzar refresh
+        console.log('🔑 Token recibido (longitud:', token?.length, 'primeros 50:', token?.substring(0, 50) + '...');
         
         if (!token) {
           setAuthError('No se pudo obtener el token de autenticación');
           return;
         }
 
+        console.log('📤 Enviando verifyToken al backend...');
         const response = await apiService.verifyToken(token);
+        console.log('📥 Respuesta verifyToken:', JSON.stringify(response));
         if (response.success && response.data) {
           setAuthState(prev => ({
             ...prev,
@@ -157,20 +172,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = useCallback(async (email: string, password: string) => {
     setError(null);
+    setAuthError(null);
+    console.log('🔐 login() iniciado para:', email);
     setAuthState(prev => ({ ...prev, isLoading: true }));
+    isLoggingIn.current = true;  // ⚡ Bloquear onAuthStateChanged ANTES de signIn
+
     try {
+      // Paso 1: Autenticar con Firebase
       const result = await firebaseAuth.signIn(email, password);
-      if (result.success) {
-        return { success: true };
-      } else {
+      console.log('🔐 signIn result:', result.success ? 'SUCCESS' : 'FAIL', result.error?.message || '');
+      
+      if (!result.success) {
         setError(result.error?.message || 'Error al iniciar sesión');
         setAuthState(prev => ({ ...prev, isLoading: false }));
+        isLoggingIn.current = false;
         return { success: false, error: result.error?.message };
+      }
+
+      // Paso 2: Verificar con backend DIRECTAMENTE (sin esperar onAuthStateChanged)
+      // El token de signIn() ya es válido porque signInWithEmailAndPassword terminó
+      const token = result.token;
+      console.log('🔑 Verificando token con backend (longitud:', token?.length, ')');
+      
+      const response = await apiService.verifyToken(token);
+      console.log('📥 Respuesta backend:', response.success ? 'OK' : 'FAIL', response.error?.message || '');
+      
+      if (response.success && response.data) {
+        setAuthState(prev => ({
+          ...prev,
+          user: response.data,
+          isLoading: false,
+          isAuthenticated: true
+        }));
+        isLoggingIn.current = false;
+        return { success: true };
+      } else {
+        const errMsg = response.error?.message || 'Error de verificación';
+        setError(errMsg);
+        setAuthState(prev => ({ ...prev, isLoading: false, isAuthenticated: false }));
+        isLoggingIn.current = false;
+        return { success: false, error: errMsg };
       }
     } catch (error: any) {
       const errorMessage = error.message || 'Error al iniciar sesión';
+      console.error('❌ Error en login:', errorMessage);
       setError(errorMessage);
       setAuthState(prev => ({ ...prev, isLoading: false }));
+      isLoggingIn.current = false;
       return { success: false, error: errorMessage };
     }
   }, []);
