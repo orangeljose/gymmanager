@@ -65,6 +65,8 @@ export interface PaymentAccount {
   businessId: string;
   isActive: boolean;
   createdAt: string;
+  bankName?: string;  // Para pago_movil
+  cedula?: string;     // Para pago_movil
 }
 
 export interface PaymentAccountFormData {
@@ -73,6 +75,8 @@ export interface PaymentAccountFormData {
   label?: string;
   description?: string;
   businessId?: string; // Solo para create, no se envía en update
+  bankName?: string;   // Para pago_movil
+  cedula?: string;      // Para pago_movil
 }
 
 export interface PlanFormData {

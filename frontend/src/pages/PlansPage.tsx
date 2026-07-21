@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import type { MembershipPlan, PlanFormData } from '@/types';
 import toast from 'react-hot-toast';
-import { Plus, Edit2, Trash2, X, Check, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, AlertCircle } from 'lucide-react';
 
 export const PlansPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
@@ -20,7 +20,8 @@ export const PlansPage: React.FC = () => {
     benefits: [],
     businessId: ''
   });
-  const [benefitInput, setBenefitInput] = useState('');
+  // Beneficios ocultos temporalmente
+  // const [benefitInput, setBenefitInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -32,7 +33,7 @@ export const PlansPage: React.FC = () => {
     if (!effectiveBusinessId) return;
     try {
       setLoading(true);
-      const response = await apiService.getPlans({ businessId: effectiveBusinessId });
+      const response = await apiService.getPlans({ businessId: effectiveBusinessId, isActive: true });
       if (response.success && response.data) {
         setPlans(response.data);
       }
@@ -63,16 +64,15 @@ const openModal = (plan?: MembershipPlan) => {
         benefits: []
       });
     }
-    setBenefitInput('');
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditingPlan(null);
-    setBenefitInput('');
   };
 
+  /* Beneficios ocultos temporalmente
   const addBenefit = () => {
     if (benefitInput.trim()) {
       setFormData(prev => ({
@@ -89,6 +89,7 @@ const openModal = (plan?: MembershipPlan) => {
       benefits: (prev.benefits || []).filter((_, i) => i !== index)
     }));
   };
+  */
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,7 +210,8 @@ const openModal = (plan?: MembershipPlan) => {
                 <p className="text-sm text-gray-600 mb-4">{plan.description}</p>
               )}
 
-              {plan.benefits && plan.benefits.length > 0 && (
+              {/* Beneficios ocultos temporalmente */}
+              {/* {plan.benefits && plan.benefits.length > 0 && (
                 <ul className="space-y-1 mb-4">
                   {plan.benefits.slice(0, 3).map((benefit, idx) => (
                     <li key={idx} className="flex items-center text-sm text-gray-700">
@@ -223,7 +225,7 @@ const openModal = (plan?: MembershipPlan) => {
                     </li>
                   )}
                 </ul>
-              )}
+              )} */}
 
               <div className="flex justify-end space-x-2 pt-4 border-t">
                 <button
@@ -352,6 +354,8 @@ const openModal = (plan?: MembershipPlan) => {
                 />
               </div>
 
+              {/* Beneficios ocultos temporalmente */}
+              {/*
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Beneficios
@@ -382,6 +386,7 @@ const openModal = (plan?: MembershipPlan) => {
                   </ul>
                 )}
               </div>
+              */}
 
               <div className="flex justify-end space-x-2 pt-4 border-t">
                 <button type="button" onClick={closeModal} className="btn btn-outline">

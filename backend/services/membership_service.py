@@ -3,7 +3,7 @@ Servicio para gestión de membresías y planes
 """
 import logging
 from typing import Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from .firebase_service import FirebaseService
 
 logger = logging.getLogger(__name__)
@@ -89,13 +89,17 @@ class MembershipService:
             Nueva fecha de vencimiento
         """
         try:
+            now = datetime.now(timezone.utc)
             # Usar fecha actual si no hay fecha de vencimiento
             if current_end is None:
-                start_date = datetime.now()
+                start_date = now
             else:
+                # Asegurar que current_end sea timezone-aware
+                if current_end.tzinfo is None:
+                    current_end = current_end.replace(tzinfo=timezone.utc)
                 # Si la membresía ya venció, empezar desde hoy
-                if current_end < datetime.now():
-                    start_date = datetime.now()
+                if current_end < now:
+                    start_date = now
                 else:
                     start_date = current_end
             
@@ -143,14 +147,20 @@ class MembershipService:
             duration_days = plan.get('durationDays', 30) * months_paid
             
             # Obtener fecha actual de vencimiento
-            current_end_str = client.get('membershipEnd')
+            current_end_raw = client.get('membershipEnd')
             current_end = None
-            if current_end_str:
-                # Convertir string a datetime si es necesario
-                if isinstance(current_end_str, str):
-                    current_end = datetime.fromisoformat(current_end_str.replace('Z', '+00:00'))
+            if current_end_raw:
+                # Convertir a datetime timezone-aware
+                if isinstance(current_end_raw, str):
+                    current_end = datetime.fromisoformat(current_end_raw.replace('Z', '+00:00'))
+                elif hasattr(current_end_raw, 'to_datetime'):
+                    # Firestore Timestamp
+                    current_end = current_end_raw.to_datetime()
                 else:
-                    current_end = current_end_str
+                    current_end = current_end_raw
+                # Asegurar timezone-aware
+                if current_end and current_end.tzinfo is None:
+                    current_end = current_end.replace(tzinfo=timezone.utc)
             
             # Calcular nueva fecha de vencimiento
             new_end = self.calculate_new_end_date(current_end, duration_days)
@@ -164,8 +174,16 @@ class MembershipService:
             }
             
             # Si es una nueva membresía o estaba vencida, actualizar start
-            if current_end is None or current_end < datetime.now():
-                update_data['membershipStart'] = datetime.now()
+            now = datetime.now(timezone.utc)
+            if current_end is None:
+                update_data['membershipStart'] = now.isoformat()
+            else:
+                if hasattr(current_end, 'tzinfo') and current_end.tzinfo is not None:
+                    if current_end < now:
+                        update_data['membershipStart'] = now.isoformat()
+                else:
+                    if current_end.replace(tzinfo=timezone.utc) < now:
+                        update_data['membershipStart'] = now.isoformat()
             
             # Actualizar cliente
             success = self.firebase_service.update_document('clients', client_id, update_data)

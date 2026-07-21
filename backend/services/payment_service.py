@@ -84,19 +84,21 @@ class PaymentService:
             amount = data.get('amount')
             plan_id = data.get('membershipPlanId')
             branch_id = data.get('branchId')
+            logger.info(f"[DEBUG register_payment] client={client_id}, amount={amount}, plan={plan_id}, branch={branch_id}")
             
             # Validar cliente existente y activo
             client = self.firebase_service.get_document('clients', client_id)
             if not client:
-                logger.error(f"Cliente no encontrado: {client_id}")
+                logger.error(f"[DEBUG] Cliente no encontrado: {client_id}")
                 return None
             
             if not client.get('isActive', False):
-                logger.error(f"Cliente inactivo: {client_id}")
+                logger.error(f"[DEBUG] Cliente inactivo: {client_id}")
                 return None
             
             # Validar monto contra plan
             if not self.membership_service.validate_payment_amount(client_id, amount, plan_id):
+                logger.error(f"[DEBUG] Amount validation failed for {client_id}")
                 raise ValueError({"errors": ["El monto no coincide con el precio del plan seleccionado"]})
             
             # Validar que la sede pertenezca al negocio del usuario
@@ -114,12 +116,13 @@ class PaymentService:
             
             # Extender membresía del cliente
             months_paid = data.get('monthsPaid', 1)
+            logger.info(f"[DEBUG] Extending membership for {client_id}, plan={plan_id}, months={months_paid}")
             membership_update = self.membership_service.extend_membership(
                 client_id, plan_id, months_paid
             )
             
             if not membership_update:
-                logger.error(f"No se pudo extender membresía para cliente {client_id}")
+                logger.error(f"[DEBUG] Membership extension failed for {client_id}")
                 return None
             
             # Generar número de recibo

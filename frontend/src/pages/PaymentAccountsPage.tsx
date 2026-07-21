@@ -48,7 +48,9 @@ export const PaymentAccountsPage: React.FC = () => {
         type: account.type,
         identifier: account.identifier,
         label: account.label || '',
-        description: account.description || ''
+        description: account.description || '',
+        bankName: account.bankName || '',
+        cedula: account.cedula || ''
       });
     } else {
       setEditingAccount(null);
@@ -56,7 +58,9 @@ export const PaymentAccountsPage: React.FC = () => {
         type: 'zelle',
         identifier: '',
         label: '',
-        description: ''
+        description: '',
+        bankName: '',
+        cedula: ''
       });
     }
     setShowModal(true);
@@ -126,8 +130,8 @@ export const PaymentAccountsPage: React.FC = () => {
         return 'Zelle';
       case 'pago_movil':
         return 'Pago Móvil';
-      case 'bank':
-        return 'Transferencia Bancaria';
+      // case 'bank':
+      //   return 'Transferencia Bancaria';
     }
   };
 
@@ -287,9 +291,42 @@ export const PaymentAccountsPage: React.FC = () => {
                 >
                   <option value="zelle">Zelle</option>
                   <option value="pago_movil">Pago Móvil</option>
-                  <option value="bank">Transferencia Bancaria</option>
+                  {/* <option value="bank">Transferencia Bancaria</option> */}
                 </select>
               </div>
+
+              {/* Campos específicos para Pago Móvil */}
+              {formData.type === 'pago_movil' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Banco *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.bankName || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, bankName: e.target.value }))}
+                      className="input"
+                      placeholder="Ej: Banco Nacional de Crédito"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cédula *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.cedula || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, cedula: e.target.value }))}
+                      className="input"
+                      placeholder="Ej: V-12345678"
+                      required
+                    />
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -304,7 +341,7 @@ export const PaymentAccountsPage: React.FC = () => {
                   className="input"
                   placeholder={
                     formData.type === 'zelle' ? 'correo@example.com' :
-                      formData.type === 'pago_movil' ? '+584141234567' :
+                      formData.type === 'pago_movil' ? '04141234567' :
                         '01234567890123456789'
                   }
                   required

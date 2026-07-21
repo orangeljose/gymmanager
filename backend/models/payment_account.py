@@ -80,7 +80,7 @@ class PaymentAccountModel:
         """Valida datos para actualizar una cuenta"""
         errors = []
 
-        allowed_fields = ['identifier', 'label', 'description', 'isActive']
+        allowed_fields = ['identifier', 'label', 'description', 'isActive', 'bankName', 'cedula']
         invalid_fields = [field for field in data.keys() if field not in allowed_fields]
         if invalid_fields:
             errors.append(f"Campos no permitidos: {', '.join(invalid_fields)}")

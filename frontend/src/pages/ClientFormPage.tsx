@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, ChevronLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useClients } from '@/hooks/useClients';
 import { usePlans } from '@/hooks/usePlans';
@@ -46,8 +46,6 @@ export const ClientFormPage: React.FC = () => {
     amount: 0,
     methodDetails: {}
   });
-
-  const [skipPayment, setSkipPayment] = useState(false);
 
   useEffect(() => {
     if (effectiveBusinessId) {
@@ -198,7 +196,7 @@ export const ClientFormPage: React.FC = () => {
             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-medium ${
               step === 2 ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-400'
             }`}>2</div>
-            <span className="ml-2 font-medium">{skipPayment ? '-listo' : 'Pago'}</span>
+            <span className="ml-2 font-medium">Pago</span>
           </div>
         </div>
       )}
@@ -333,61 +331,39 @@ export const ClientFormPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">¿Deseas registrar el pago ahora?</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              El cliente puede pagar después. Si saltas este paso, su membresía quedará como vencida hasta que registres su primer pago.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setSkipPayment(true)}
-                className="btn btn-outline flex-1"
+          <form onSubmit={handleSubmitWithPayment} className="card space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Registrar Pago</h3>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
+              <select
+                value={paymentData.method}
+                onChange={e => handlePaymentMethodChange(e.target.value)}
+                className="input"
+                required
               >
-                Saltar pago
-              </button>
-              <button
-                onClick={() => setSkipPayment(false)}
-                className="btn btn-primary flex-1"
-              >
-                Registrar pago
-              </button>
+                <option value="">Seleccionar</option>
+                <option value="cash">Efectivo</option>
+                {accounts.filter(a => a.type === 'zelle').length > 0 && <option value="zelle">Zelle</option>}
+                {accounts.filter(a => a.type === 'pago_movil').length > 0 && <option value="pago_movil">Pago Móvil</option>}
+                {accounts.filter(a => a.type === 'bank').length > 0 && <option value="transfer">Transferencia</option>}
+              </select>
             </div>
-          </div>
 
-          {!skipPayment && (
-            <form onSubmit={handleSubmitWithPayment} className="card space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
-                <select
-                  value={paymentData.method}
-                  onChange={e => handlePaymentMethodChange(e.target.value)}
-                  className="input"
-                  required
-                >
-                  <option value="">Seleccionar</option>
-                  <option value="cash">Efectivo</option>
-                  <option value="card">Tarjeta</option>
-                  <option value="transfer">Transferencia</option>
-                  <option value="zelle">Zelle</option>
-                  <option value="pago_movil">Pago Móvil</option>
-                  <option value="other">Otro</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Monto (USD)</label>
-                <input
-                  type="number"
-                  value={(paymentData.amount || selectedPlan?.price || 0) / 100}
-                  onChange={e => setPaymentData(prev => ({
-                    ...prev,
-                    amount: Math.round(parseFloat(e.target.value || '0') * 100)
-                  }))}
-                  className="input"
-                  step="0.01"
-                  required
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Monto (USD)</label>
+              <input
+                type="number"
+                value={(paymentData.amount || selectedPlan?.price || 0) / 100}
+                onChange={e => setPaymentData(prev => ({
+                  ...prev,
+                  amount: Math.round(parseFloat(e.target.value || '0') * 100)
+                }))}
+                className="input"
+                step="0.01"
+                required
+              />
+            </div>
 
               {paymentData.method === 'zelle' && (
                 <>
@@ -503,40 +479,26 @@ export const ClientFormPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-4 border-t">
+              <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
                 <button type="button" onClick={() => setStep(1)} className="btn btn-outline">
                   <ChevronLeft className="h-4 w-4 mr-1" /> Atrás
                 </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleSubmitClient(e as any);
+                  }}
+                  disabled={loading}
+                  className="btn btn-outline"
+                >
+                  {loading ? 'Creando...' : 'Crear Cliente sin Pago'}
+                </button>
                 <button type="submit" disabled={loading} className="btn btn-primary">
-                  {loading ? 'Procesando...' : 'Crear Cliente y Registrar Pago'}
+                  {loading ? 'Procesando...' : 'Registrar Pago y Crear'}
                 </button>
               </div>
             </form>
-          )}
-
-          {skipPayment && (
-            <form onSubmit={handleSubmitClient} className="card">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                <div className="flex items-start">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 mr-2" />
-                  <div>
-                    <p className="text-sm text-yellow-800 font-medium">El pago se registrará después</p>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      Al crear el cliente sin pago, su membresía aparecerá como vencida. Podrás registrar el pago desde su perfil.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <button type="button" onClick={() => setStep(1)} className="btn btn-outline">
-                  <ChevronLeft className="h-4 w-4 mr-1" /> Atrás
-                </button>
-                <button type="submit" disabled={loading} className="btn btn-primary">
-                  {loading ? 'Creando...' : 'Crear Cliente'}
-                </button>
-              </div>
-            </form>
-          )}
         </div>
       )}
     </div>
