@@ -2,7 +2,6 @@
 Servicio de envío de emails usando Resend
 """
 import os
-import resend
 import logging
 from typing import Dict, Any
 
@@ -11,6 +10,14 @@ logger = logging.getLogger(__name__)
 # Resend API key - configurar en variables de entorno
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
 RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
+
+# Intentar importar resend (opcional)
+try:
+    import resend
+    HAS_RESEND = True
+except ImportError:
+    HAS_RESEND = False
+    logger.warning("Resend no instalado - los emails no se enviarán")
 
 
 def sendInvitationEmail(to_email: str, invitation_data: dict) -> dict:
@@ -32,6 +39,10 @@ def sendInvitationEmail(to_email: str, invitation_data: dict) -> dict:
     if not RESEND_API_KEY:
         logger.warning(f"Email de invitación no enviado a {to_email} - RESEND_API_KEY no configurado")
         return {'success': False, 'error': 'Email service not configured'}
+
+    if not HAS_RESEND:
+        logger.warning(f"Email de invitación no enviado a {to_email} - resend no instalado")
+        return {'success': False, 'error': 'Resend package not installed'}
 
     # Configurar la API key de resend
     resend.api_key = RESEND_API_KEY
