@@ -117,6 +117,8 @@ export const ClientFormPage: React.FC = () => {
         if (result.success) {
           toast.success('Cliente registrado');
           navigate(`/clients/${result.data?.id}`);
+        } else {
+          toast.error(result.error || 'Error al crear cliente');
         }
       }
     } catch (err: any) {
@@ -128,7 +130,7 @@ export const ClientFormPage: React.FC = () => {
 
   const handleSubmitWithPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientData.name || !clientData.email || !clientData.phone || !clientData.branchId || !clientData.membershipPlanId) {
+    if (!clientData.name || !clientData.email || !clientData.phone || !clientData.branchId || !clientData.membershipPlanId || !clientData.documentId) {
       toast.error('Completa todos los campos requeridos');
       return;
     }
@@ -243,13 +245,14 @@ export const ClientFormPage: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cédula / Documento</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cédula / Documento <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={clientData.documentId || ''}
                   onChange={e => setClientData(prev => ({ ...prev, documentId: e.target.value }))}
                   className="input"
                   placeholder="V-30123456"
+                  required
                 />
               </div>
               <div>
@@ -306,7 +309,7 @@ export const ClientFormPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  if (!clientData.name || !clientData.email || !clientData.phone || !clientData.branchId || !clientData.membershipPlanId) {
+if (!clientData.name || !clientData.email || !clientData.phone || !clientData.branchId || !clientData.membershipPlanId || !clientData.documentId) {
                     toast.error('Completa todos los campos requeridos');
                     return;
                   }

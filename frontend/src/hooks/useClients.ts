@@ -16,18 +16,19 @@ export const useClients = (businessId: string) => {
 
   // Fetch clients from API
   const fetchClients = useCallback(async (filters: ClientFilters = {}) => {
-    if (!businessId) return;
-
     setLoading(true);
     setError(null);
 
     try {
-      const response = await apiService.getClients({
+      const params: any = {
         ...filters,
-        businessId,
         page: filters.page || pagination.page,
         limit: filters.limit || pagination.limit
-      });
+      };
+      // Solo pasar businessId si existe
+      if (businessId) params.businessId = businessId;
+
+      const response = await apiService.getClients(params);
 
       if (response.success && response.data) {
         setClients(response.data);
@@ -57,24 +58,21 @@ export const useClients = (businessId: string) => {
     }
   }, [businessId, pagination.page, pagination.limit]);
 
-  // Search clients (offline first, then online)
+  // Search clients
   const searchClients = useCallback(async (searchTerm: string) => {
-    if (!businessId) return;
-
     setLoading(true);
     setError(null);
 
     try {
+      const params: any = { search: searchTerm, limit: 50 };
+      if (businessId) params.businessId = businessId;
+
       // First try offline search for instant results
       const offlineResults = await offlineService.searchClientsOffline(businessId, searchTerm);
       setClients(offlineResults as Client[]);
 
       // Then try online search
-      const response = await apiService.getClients({
-        businessId,
-        search: searchTerm,
-        limit: 50
-      });
+      const response = await apiService.getClients(params);
 
       if (response.success && response.data) {
         setClients(response.data);
@@ -94,8 +92,6 @@ export const useClients = (businessId: string) => {
 
   // Get single client
   const getClient = useCallback(async (clientId: string) => {
-    if (!businessId) return null;
-
     setLoading(true);
     setError(null);
 
@@ -127,28 +123,21 @@ export const useClients = (businessId: string) => {
 
   // Create client
   const createClient = useCallback(async (data: ClientFormData) => {
-    if (!businessId) return { success: false, error: 'Business ID requerido' };
-
     setLoading(true);
     setError(null);
 
     try {
-      const response = await apiService.createClient({
-        ...data,
-        businessId
-      });
+      const dataWithBusinessId = businessId ? { ...data, businessId } : data;
+      const response = await apiService.createClient(dataWithBusinessId);
 
       if (response.success && response.data) {
         // Add to local state
         setClients(prev => [response.data!, ...prev]);
-        
-        // Cache offline
         await offlineService.saveClientOffline(response.data);
-        
         return { success: true, data: response.data };
       }
       
-      return { success: false, error: 'Error al crear cliente' };
+      return { success: false, error: response.error?.message || 'Error al crear cliente' };
     } catch (error: any) {
       console.error('Error creating client:', error);
       const errorMessage = error.message || 'Error al crear cliente';
@@ -161,8 +150,6 @@ export const useClients = (businessId: string) => {
 
   // Update client
   const updateClient = useCallback(async (clientId: string, data: Partial<ClientFormData>) => {
-    if (!businessId) return { success: false, error: 'Business ID requerido' };
-
     setLoading(true);
     setError(null);
 
@@ -196,8 +183,6 @@ export const useClients = (businessId: string) => {
 
   // Get client payments
   const getClientPayments = useCallback(async (clientId: string) => {
-    if (!businessId) return [];
-
     setLoading(true);
     setError(null);
 
@@ -220,9 +205,7 @@ export const useClients = (businessId: string) => {
 
   // Load initial data
   useEffect(() => {
-    if (businessId) {
-      fetchClients();
-    }
+    fetchClients();
   }, [businessId, fetchClients]);
 
   return {

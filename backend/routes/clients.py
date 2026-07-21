@@ -54,7 +54,15 @@ def get_clients():
         
         # Filtro por negocio del usuario
         user_business_id = g.current_user.get('businessId')
-        filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
+        user_role = g.current_user.get('role')
+
+        # super_admin ve todo o puede filtrar por query param
+        if user_role == 'super_admin':
+            filter_business_id = request.args.get('businessId')
+            if filter_business_id:
+                filters.append({'field': 'businessId', 'operator': '==', 'value': filter_business_id})
+        elif user_business_id:
+            filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
         
         # Filtro por sede (si el usuario no es super admin)
         if g.current_user.get('role') != 'super_admin':
@@ -253,6 +261,23 @@ def create_client():
                         'message': 'No puedes crear clientes en esta sede'
                     }
                 }), 403
+        
+        # Validar que no exista un cliente con la misma cédula
+        document_id = client_data.get('documentId', '').strip()
+        if document_id:
+            firebase_service = FirebaseService()
+            existing = firebase_service.query_firestore(
+                'clients',
+                filters=[{'field': 'documentId', 'operator': '==', 'value': document_id}]
+            )
+            if existing:
+                return jsonify({
+                    'success': False,
+                    'error': {
+                        'code': 409,
+                        'message': f'Ya existe un cliente con la cédula {document_id}'
+                    }
+                }), 409
         
         # Validar que el plan de membresía exista
         membership_service = MembershipService()

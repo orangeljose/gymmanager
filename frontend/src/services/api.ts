@@ -146,10 +146,15 @@ class ApiService {
   }
 
   async createClient(data: ClientFormData): Promise<ApiResponse<Client>> {
-    return this.requestWithAuth<Client>('/clients', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    try {
+      return await this.requestWithAuth<Client>('/clients', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    } catch (err: any) {
+      // Extraer mensaje del backend para errores de duplicado
+      throw new Error(err.message || 'Error al crear cliente');
+    }
   }
 
   async updateClient(id: string, data: Partial<ClientFormData>): Promise<ApiResponse<Client>> {

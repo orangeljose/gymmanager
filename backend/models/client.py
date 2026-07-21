@@ -9,10 +9,10 @@ class ClientModel:
     """Modelo de cliente para Firestore"""
     
     # Campos requeridos
-    REQUIRED_FIELDS = ['name', 'email', 'phone', 'branchId', 'businessId', 'membershipPlanId']
+    REQUIRED_FIELDS = ['name', 'email', 'phone', 'branchId', 'businessId', 'membershipPlanId', 'documentId']
     
     # Campos opcionales
-    OPTIONAL_FIELDS = ['documentId', 'notes']
+    OPTIONAL_FIELDS = ['notes']
     
     @staticmethod
     def validate_create_data(data: Dict[str, Any]) -> Dict[str, Any]:
