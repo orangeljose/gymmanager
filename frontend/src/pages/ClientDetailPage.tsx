@@ -53,7 +53,18 @@ export const ClientDetailPage: React.FC = () => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
   };
 
-  const formatDate = (d: string) => new Date(d).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+  const formatDate = (d: any) => {
+    if (!d) return 'N/A';
+    let date: Date;
+    if (typeof d === 'string') {
+      date = new Date(d);
+    } else if (d.seconds) {
+      date = new Date(d.seconds * 1000);
+    } else {
+      date = new Date(d);
+    }
+    return date.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
 
   const getPlanName = (planId: string) => {
     const plan = plans.find(p => p.id === planId);

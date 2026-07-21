@@ -140,6 +140,8 @@ export const useClients = (businessId: string) => {
       return { success: false, error: response.error?.message || 'Error al crear cliente' };
     } catch (error: any) {
       console.error('Error creating client:', error);
+      console.error('Error message:', error.message);
+      console.error('Error type:', error.constructor.name);
       const errorMessage = error.message || 'Error al crear cliente';
       setError(errorMessage);
       return { success: false, error: errorMessage };

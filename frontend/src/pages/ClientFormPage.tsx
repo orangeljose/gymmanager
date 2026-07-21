@@ -141,7 +141,7 @@ export const ClientFormPage: React.FC = () => {
       let clientId: string;
       if (!isEdit) {
         const result = await createClient(clientData);
-        if (!result.success) throw new Error(result.error?.message || 'Error creando cliente');
+        if (!result.success) throw new Error(result.error || 'Error creando cliente');
         if (!result.data?.id) throw new Error('No se pudo obtener client ID');
         clientId = result.data.id;
       } else {
