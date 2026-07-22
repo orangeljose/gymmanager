@@ -103,7 +103,7 @@ class PaymentService:
                 return None
             
             # Generar número de recibo
-            receipt_number = self.generate_receipt_number(user_business_id)
+            receipt_number = self.generate_receipt_number(payment_business_id)
             
             # Preparar datos del pago
             payment_data = {
