@@ -17,7 +17,7 @@ class PaymentService:
         self.firebase_service = FirebaseService()
         self.membership_service = MembershipService()
     
-    def def generate_receipt_number(self, business_id: str) -> str:
+    def generate_receipt_number(self, business_id: str) -> str:
         """Genera numero de recibo unico P-YYYYMMDD-XXX"""
         try:
             today = datetime.now()
