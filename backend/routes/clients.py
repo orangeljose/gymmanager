@@ -2,6 +2,7 @@
 Rutas de gestión de clientes para GymManager
 """
 import logging
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_auth, require_role, validate_branch_access
 from services.firebase_service import FirebaseService
@@ -307,15 +308,15 @@ def create_client():
         client_data['registeredBy'] = g.current_user.get('uid')
         
         # Calcular fechas de membresía
+        now_utc = datetime.now(timezone.utc)
         duration_days = plan.get('durationDays', 30)
-        membership_service = MembershipService()
-        membership_dates = membership_service.calculate_new_end_date(
+        membership_end = membership_service.calculate_new_end_date(
             None,  # Nueva membresía, empieza desde hoy
             duration_days
         )
         
-        client_data['membershipStart'] = membership_dates
-        client_data['membershipEnd'] = membership_dates
+        client_data['membershipStart'] = now_utc
+        client_data['membershipEnd'] = membership_end
         
         # Crear cliente
         firebase_service = FirebaseService()
