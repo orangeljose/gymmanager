@@ -111,6 +111,12 @@ class PaymentService:
                     logger.error(f"Usuario no tiene acceso a la sede: {branch_id}")
                     return None
             
+            # Determinar businessId: super_admin usa el del cliente
+            payment_business_id = user_business_id
+            if current_user.get('role') == 'super_admin' and not payment_business_id:
+                # Tomar businessId del cliente
+                payment_business_id = client.get('businessId')
+            
             # Obtener información del cliente para denormalización
             client_name = client.get('name', 'Cliente Desconocido')
             
@@ -142,7 +148,7 @@ class PaymentService:
                 'startDate': membership_update.get('membershipStart'),
                 'endDate': membership_update.get('membershipEnd'),
                 'branchId': branch_id,
-                'businessId': user_business_id,
+                'businessId': payment_business_id,
                 'registeredBy': current_user.get('uid'),
                 'registeredByName': current_user.get('name', 'Usuario'),
                 'receiptNumber': receipt_number,
