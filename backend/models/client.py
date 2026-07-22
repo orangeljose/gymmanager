@@ -116,14 +116,21 @@ class ClientModel:
         
         # Convertir timestamps a strings si es necesario
         for field in ['membershipStart', 'membershipEnd', 'createdAt']:
-            if field in client and hasattr(client[field], 'isoformat'):
-                iso = client[field].isoformat()
-                # Quitar microsegundos que pueden causar problemas en JS
-                if '.' in iso and '+' in iso:
-                    iso = iso.split('.')[0] + '+' + iso.split('+')[1]
-                elif '.' in iso and 'Z' in iso:
-                    iso = iso.split('.')[0] + 'Z'
-                client[field] = iso
+            if field in client:
+                val = client[field]
+                logger = None
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"[DEBUG from_firestore] {field} = {val} (type: {type(val).__name__})")
+                if hasattr(val, 'isoformat'):
+                    iso = val.isoformat()
+                    # Quitar microsegundos
+                    if '.' in iso and '+' in iso:
+                        iso = iso.split('.')[0] + '+' + iso.split('+')[1]
+                    elif '.' in iso and 'Z' in iso:
+                        iso = iso.split('.')[0] + 'Z'
+                    client[field] = iso
+                    logger.info(f"[DEBUG from_firestore] {field} converted to: {iso}")
         
         return client
     

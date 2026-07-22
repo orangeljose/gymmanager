@@ -96,13 +96,7 @@ export const useClients = (businessId: string) => {
     setError(null);
 
     try {
-      // First try offline
-      const offlineClient = await offlineService.getClientOffline(clientId);
-      if (offlineClient) {
-        return offlineClient as Client;
-      }
-
-      // Then try online
+      // Try online first
       const response = await apiService.getClient(clientId);
       
       if (response.success && response.data) {
@@ -111,7 +105,9 @@ export const useClients = (businessId: string) => {
         return response.data;
       }
       
-      return null;
+      // Fallback to offline if online fails
+      const offlineClient = await offlineService.getClientOffline(clientId);
+      return offlineClient as Client || null;
     } catch (error: any) {
       console.error('Error getting client:', error);
       setError(error.message || 'Error al obtener cliente');
