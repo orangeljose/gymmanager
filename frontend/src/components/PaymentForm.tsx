@@ -146,11 +146,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
         >
           <option value="">Seleccionar método</option>
           <option value="cash">Efectivo</option>
-          <option value="card">Tarjeta</option>
-          <option value="transfer">Transferencia</option>
-          <option value="zelle">Zelle</option>
-          <option value="pago_movil">Pago Móvil</option>
-          <option value="other">Otro</option>
+          {accounts.filter(a => a.type === 'zelle').length > 0 && <option value="zelle">Zelle</option>}
+          {accounts.filter(a => a.type === 'pago_movil').length > 0 && <option value="pago_movil">Pago Móvil</option>}
+          {accounts.filter(a => a.type === 'bank').length > 0 && <option value="transfer">Transferencia</option>}
         </select>
       </div>
 
