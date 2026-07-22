@@ -33,19 +33,28 @@ export const ClientDetailPage: React.FC = () => {
     loadData();
   }, [id]);
 
-  const getDaysRemaining = (membershipEnd: string) => {
+  const toDate = (d: any): Date => {
+    if (!d) return new Date();
+    if (typeof d === 'string') return new Date(d);
+    if (d.seconds) return new Date(d.seconds * 1000);
+    if (d instanceof Date) return d;
+    return new Date(d);
+  };
+
+  const getDaysRemaining = (membershipEnd: any) => {
     const today = new Date();
-    const end = new Date(membershipEnd);
+    const end = toDate(membershipEnd);
     return Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   const getMembershipProgress = () => {
     if (!client) return 0;
-    const start = new Date(client.membershipStart).getTime();
-    const end = new Date(client.membershipEnd).getTime();
+    const start = toDate(client.membershipStart).getTime();
+    const end = toDate(client.membershipEnd).getTime();
     const now = Date.now();
     if (now >= end) return 100;
     if (now <= start) return 0;
+    if (end <= start) return 0; // Evitar división por 0
     return Math.round(((now - start) / (end - start)) * 100);
   };
 

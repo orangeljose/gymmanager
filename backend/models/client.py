@@ -117,7 +117,13 @@ class ClientModel:
         # Convertir timestamps a strings si es necesario
         for field in ['membershipStart', 'membershipEnd', 'createdAt']:
             if field in client and hasattr(client[field], 'isoformat'):
-                client[field] = client[field].isoformat()
+                iso = client[field].isoformat()
+                # Quitar microsegundos que pueden causar problemas en JS
+                if '.' in iso and '+' in iso:
+                    iso = iso.split('.')[0] + '+' + iso.split('+')[1]
+                elif '.' in iso and 'Z' in iso:
+                    iso = iso.split('.')[0] + 'Z'
+                client[field] = iso
         
         return client
     

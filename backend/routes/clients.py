@@ -6,7 +6,7 @@ from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_auth, require_role, validate_branch_access
 from services.firebase_service import FirebaseService
 from services.membership_service import MembershipService
-from models.client import ClientCreateSchema, ClientUpdateSchema
+from models.client import ClientCreateSchema, ClientUpdateSchema, ClientModel
 from utils.validators import validate_pagination, validate_choice
 
 logger = logging.getLogger(__name__)
@@ -114,6 +114,9 @@ def get_clients():
         total_clients = firebase_service.query_firestore('clients', filters=filters)
         total = len(total_clients)
         
+        # Convertir timestamps en todos los clientes
+        clients = [ClientModel.from_firestore(c, c['id']) for c in clients]
+        
         # Calcular páginas totales
         pages = (total + pagination['limit'] - 1) // pagination['limit']
         
@@ -170,6 +173,9 @@ def get_client(client_id):
                     'message': 'Cliente no encontrado'
                 }
             }), 404
+        
+        # Convertir timestamps a strings
+        client = ClientModel.from_firestore(client, client_id)
         
         # Validar acceso al negocio del cliente
         client_business_id = client.get('businessId')
@@ -292,7 +298,12 @@ def create_client():
             }), 404
         
         # Agregar información adicional
-        client_data['businessId'] = g.current_user.get('businessId')
+        user_role = g.current_user.get('role')
+        if user_role == 'super_admin':
+            # Super_admin usa el businessId del request (selector de negocio)
+            client_data['businessId'] = client_data.get('businessId') or request.args.get('businessId')
+        else:
+            client_data['businessId'] = g.current_user.get('businessId')
         client_data['registeredBy'] = g.current_user.get('uid')
         
         # Calcular fechas de membresía
@@ -513,7 +524,7 @@ def get_client_payments(client_id):
         # Obtener pagos del cliente
         from services.payment_service import PaymentService
         payment_service = PaymentService()
-        payments = payment_service.get_client_payments(client_id)
+        payments = payment_service.get_client_payments(client_id, client_business_id)
         
         logger.info(f"Obtenidos {len(payments)} pagos para cliente {client_id}")
         

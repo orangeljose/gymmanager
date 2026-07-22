@@ -272,21 +272,26 @@ class PaymentService:
                 'results': []
             }
     
-    def get_client_payments(self, client_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_client_payments(self, client_id: str, business_id: str = None, limit: int = 50) -> List[Dict[str, Any]]:
         """
         Obtiene el historial de pagos de un cliente
         
         Args:
             client_id: ID del cliente
+            business_id: ID del negocio (opcional, para filtrar)
             limit: Límite de resultados
             
         Returns:
             Lista de pagos del cliente
         """
         try:
+            filters = [{'field': 'clientId', 'operator': '==', 'value': client_id}]
+            if business_id:
+                filters.append({'field': 'businessId', 'operator': '==', 'value': business_id})
+            
             payments = self.firebase_service.query_firestore(
                 'payments',
-                filters=[{'field': 'clientId', 'operator': '==', 'value': client_id}],
+                filters=filters,
                 order_by='createdAt',
                 direction='DESC',
                 limit=limit
