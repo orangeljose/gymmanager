@@ -17,55 +17,26 @@ class PaymentService:
         self.firebase_service = FirebaseService()
         self.membership_service = MembershipService()
     
-    def generate_receipt_number(self, business_id: str) -> str:
-        """
-        Genera número de recibo único con formato P-YYYYMMDD-XXX
-        
-        Args:
-            business_id: ID del negocio
-            
-        Returns:
-            Número de recibo único
-        """
+    def def generate_receipt_number(self, business_id: str) -> str:
+        """Genera numero de recibo unico P-YYYYMMDD-XXX"""
         try:
-            # Obtener fecha actual
             today = datetime.now()
             date_str = today.strftime('%Y%m%d')
             
-            # Buscar pagos de hoy para este negocio
-            filters = [
-                {'field': 'businessId', 'operator': '==', 'value': business_id},
-                {'field': 'receiptNumber', 'operator': '>=', 'value': f'P-{date_str}'},
-                {'field': 'receiptNumber', 'operator': '<', 'value': f'P-{date_str}ZZZ'}
-            ]
-            
-            today_payments = self.firebase_service.query_firestore(
-                'payments', 
-                filters=filters,
-                order_by='receiptNumber',
-                direction='DESC'
+            # Contar total de pagos del negocio como secuencia
+            payments = self.firebase_service.query_firestore(
+                'payments',
+                filters=[{'field': 'businessId', 'operator': '==', 'value': business_id}]
             )
-            
-            # Calcular siguiente número
-            if today_payments:
-                # Extraer el número más alto de hoy
-                last_receipt = today_payments[0].get('receiptNumber', f'P-{date_str}-000')
-                last_number = int(last_receipt.split('-')[-1])
-                next_number = last_number + 1
-            else:
-                next_number = 1
-            
-            # Formatear con 3 dígitos
-            receipt_number = f'P-{date_str}-{next_number:03d}'
+            seq = len(payments) + 1
+            receipt_number = f'P-{date_str}-{seq:03d}'
             
             logger.info(f"Receipt number generado: {receipt_number} para negocio {business_id}")
             return receipt_number
             
         except Exception as e:
             logger.error(f"Error generando receipt number: {str(e)}")
-            # Fallback a timestamp simple
-            timestamp = int(datetime.now().timestamp())
-            return f'P-{timestamp}'
+            return f'P-{datetime.now().strftime("%Y%m%d-%H%M%S%f")}'
     
     def register_payment(self, data: Dict[str, Any], current_user: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
