@@ -19,6 +19,7 @@ export const BranchesPage: React.FC = () => {
     businessId: ''
   });
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   useEffect(() => {
     loadBranches();
@@ -96,13 +97,13 @@ export const BranchesPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (branchId: string, branchName: string) => {
-    if (!confirm(`¿Eliminar la sucursal "${branchName}"?`)) return;
+  const handleDelete = async (branchId: string) => {
     try {
       const response = await apiService.deleteBranch(branchId);
       if (response.success) {
         toast.success('Sucursal eliminada');
         setBranches(prev => prev.filter(b => b.id !== branchId));
+        setConfirmDelete(null);
       } else {
         toast.error(response.error?.message || 'Error al eliminar');
       }
@@ -182,13 +183,35 @@ export const BranchesPage: React.FC = () => {
                 </button>
                 {(user?.role === 'super_admin' || user?.role === 'admin') && (
                   <button
-                    onClick={() => handleDelete(branch.id, branch.name)}
+                    onClick={() => setConfirmDelete(branch.id)}
                     className="btn btn-ghost btn-sm text-red-600 hover:text-red-800"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 )}
               </div>
+
+              {confirmDelete === branch.id && (
+                <div className="absolute inset-0 bg-white/95 flex items-center justify-center rounded-lg">
+                  <div className="text-center p-4">
+                    <p className="text-sm text-gray-900 mb-4">¿Eliminar esta sucursal?</p>
+                    <div className="flex space-x-2 justify-center">
+                      <button
+                        onClick={() => handleDelete(branch.id)}
+                        className="btn btn-danger btn-sm"
+                      >
+                        Eliminar
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(null)}
+                        className="btn btn-ghost btn-sm"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
