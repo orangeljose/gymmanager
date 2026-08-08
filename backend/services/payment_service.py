@@ -95,6 +95,7 @@ class PaymentService:
             months_paid = data.get('monthsPaid', 1)
             payment_date_str = data.get('paymentDate')
             skip_extension = False
+            logger.info(f"[DEBUG] paymentDate from request: {payment_date_str}")
             
             if payment_date_str:
                 plan = self.membership_service.get_plan_by_id(plan_id)
@@ -106,7 +107,7 @@ class PaymentService:
                     # Si payment_date + duration < today, saltar extensión
                     if payment_date + timedelta(days=duration_days) < datetime.now(timezone.utc):
                         skip_extension = True
-                        logger.info(f"Pago antiguo detectado ({payment_date_str}), no se extiende membresía")
+                        logger.info(f"[DEBUG] Pago antiguo detectado ({payment_date_str}), no se extiende membresía")
                         # Usar fechas del plan desde la fecha de pago
                         membership_update = {
                             'membershipStart': payment_date.isoformat(),
@@ -117,6 +118,7 @@ class PaymentService:
                         }
             
             if not skip_extension:
+                logger.info(f"[DEBUG] No skip - calling extend_membership")
                 membership_update = self.membership_service.extend_membership(
                     client_id, plan_id, months_paid
                 )
