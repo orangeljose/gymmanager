@@ -78,14 +78,14 @@ export const BranchesPage: React.FC = () => {
         const response = await apiService.updateBranch(editingBranch.id, formData);
         if (response.success) {
           toast.success('Sucursal actualizada');
-          loadBranches();
+          setBranches(prev => prev.map(b => b.id === editingBranch.id ? response.data! : b));
           closeModal();
         }
       } else {
         const response = await apiService.createBranch({ ...formData, businessId: effectiveBusinessId });
         if (response.success) {
           toast.success('Sucursal creada');
-          loadBranches();
+          setBranches(prev => [...prev, response.data!]);
           closeModal();
         }
       }

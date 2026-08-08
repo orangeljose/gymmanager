@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
+import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import type { PaymentAccount, PaymentAccountFormData, PaymentAccountType } from '@/types';
 import toast from 'react-hot-toast';
 import { Plus, Edit2, Trash2, X, AlertCircle, Mail, Phone, Building } from 'lucide-react';
@@ -8,8 +9,7 @@ import { Plus, Edit2, Trash2, X, AlertCircle, Mail, Phone, Building } from 'luci
 export const PaymentAccountsPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
   const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
-  const [accounts, setAccounts] = useState<PaymentAccount[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { accounts, loading, setAccounts } = usePaymentAccounts(effectiveBusinessId);
   const [showModal, setShowModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<PaymentAccount | null>(null);
   const [formData, setFormData] = useState<PaymentAccountFormData>({
@@ -21,25 +21,6 @@ export const PaymentAccountsPage: React.FC = () => {
   });
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadAccounts();
-  }, [effectiveBusinessId]);
-
-  const loadAccounts = async () => {
-    if (!effectiveBusinessId) return;
-    try {
-      setLoading(true);
-      const response = await apiService.getPaymentAccounts({ businessId: effectiveBusinessId });
-      if (response.success && response.data) {
-        setAccounts(response.data);
-      }
-    } catch (error) {
-      toast.error('Error cargando cuentas');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const openModal = (account?: PaymentAccount) => {
     if (account) {
@@ -82,14 +63,14 @@ export const PaymentAccountsPage: React.FC = () => {
         const response = await apiService.updatePaymentAccount(editingAccount.id, updateData);
         if (response.success) {
           toast.success('Cuenta actualizada');
-          loadAccounts();
+          setAccounts(prev => prev.map(a => a.id === editingAccount.id ? response.data! : a));
           closeModal();
         }
       } else {
         const response = await apiService.createPaymentAccount({ ...formData, businessId: effectiveBusinessId });
         if (response.success) {
           toast.success('Cuenta creada');
-          loadAccounts();
+          setAccounts(prev => [...prev, response.data!]);
           closeModal();
         }
       }
@@ -103,11 +84,11 @@ export const PaymentAccountsPage: React.FC = () => {
   const handleDelete = async (accountId: string) => {
     try {
       const response = await apiService.deletePaymentAccount(accountId);
-      if (response.success) {
-        toast.success('Cuenta eliminada');
-        loadAccounts();
-        setConfirmDelete(null);
-      }
+if (response.success) {
+          toast.success('Cuenta eliminada');
+          setAccounts(prev => prev.filter(a => a.id !== accountId));
+          setConfirmDelete(null);
+        }
     } catch (error: any) {
       toast.error(error.message || 'Error eliminando cuenta');
     }

@@ -29,5 +29,5 @@ export const usePaymentAccounts = (businessId: string) => {
     if (businessId) fetchAccounts();
   }, [businessId, fetchAccounts]);
 
-  return { accounts, loading, error, fetchAccounts, clearError: () => setError(null) };
+  return { accounts, loading, error, fetchAccounts, setAccounts, clearError: () => setError(null) };
 };

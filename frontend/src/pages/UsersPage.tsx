@@ -125,14 +125,14 @@ export const UsersPage: React.FC = () => {
         const response = await apiService.updateUser(editingUser.id, formData);
         if (response.success) {
           toast.success('Usuario actualizado');
-          loadUsers();
+          setUsers(prev => prev.map(u => u.id === editingUser.id ? response.data! : u));
           closeModal();
         }
       } else {
         const response = await apiService.createUser(formData);
         if (response.success) {
           toast.success('Usuario creado. Se envió email para crear contraseña.');
-          loadUsers();
+          setUsers(prev => [...prev, response.data!]);
           closeModal();
         }
       }
@@ -146,11 +146,11 @@ export const UsersPage: React.FC = () => {
   const handleDelete = async (userId: string) => {
     try {
       const response = await apiService.deleteUser(userId);
-      if (response.success) {
-        toast.success('Usuario desactivado');
-        loadUsers();
-        setConfirmDelete(null);
-      }
+if (response.success) {
+          toast.success('Usuario desactivado');
+          setUsers(prev => prev.filter(u => u.id !== userId));
+          setConfirmDelete(null);
+        }
     } catch (error: any) {
       toast.error(error.message || 'Error desactivando usuario');
     }
