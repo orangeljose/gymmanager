@@ -37,6 +37,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [methodDetails, setMethodDetails] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
@@ -82,7 +83,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
         method,
         membershipPlanId: planId,
         branchId,
-        methodDetails
+        methodDetails,
+        paymentDate
       };
       const response = await apiService.createPayment(payload);
       if (response.success) {
@@ -132,6 +134,18 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
           min="1"
           step="0.01"
           readOnly
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Pago</label>
+        <input
+          type="date"
+          value={paymentDate}
+          onChange={e => setPaymentDate(e.target.value)}
+          className="input"
+          max={new Date().toISOString().split('T')[0]}
           required
         />
       </div>

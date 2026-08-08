@@ -215,6 +215,7 @@ export interface PaymentFormData {
   method: PaymentMethod;
   membershipPlanId: string;
   branchId: string;
+  paymentDate?: string;
   methodDetails?: {
     cardLast4?: string;
     transactionId?: string;

@@ -123,7 +123,8 @@ class PaymentService:
                 'registeredBy': current_user.get('uid'),
                 'registeredByName': current_user.get('name', 'Usuario'),
                 'receiptNumber': receipt_number,
-                'syncedAt': datetime.now()  # Online = synced immediately
+                'syncedAt': datetime.now(),  # Online = synced immediately
+                'paymentDate': data.get('paymentDate')  # Fecha real del pago (si se especifica)
             }
             
             # Crear pago en Firestore
