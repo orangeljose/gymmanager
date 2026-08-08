@@ -29,5 +29,5 @@ export const usePlans = (businessId: string) => {
     if (businessId) fetchPlans();
   }, [businessId, fetchPlans]);
 
-  return { plans, loading, error, fetchPlans, clearError: () => setError(null) };
+  return { plans, loading, error, fetchPlans, setPlans, clearError: () => setError(null) };
 };

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
+import { usePlans } from '@/hooks/usePlans';
 import type { MembershipPlan, PlanFormData } from '@/types';
 import toast from 'react-hot-toast';
 import { Plus, Edit2, Trash2, X, AlertCircle } from 'lucide-react';
@@ -8,8 +9,7 @@ import { Plus, Edit2, Trash2, X, AlertCircle } from 'lucide-react';
 export const PlansPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
   const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
-  const [plans, setPlans] = useState<MembershipPlan[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { plans, loading, setPlans } = usePlans(effectiveBusinessId);
   const [showModal, setShowModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState<MembershipPlan | null>(null);
   const [formData, setFormData] = useState<PlanFormData>({
@@ -24,25 +24,6 @@ export const PlansPage: React.FC = () => {
   // const [benefitInput, setBenefitInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadPlans();
-  }, [effectiveBusinessId]);
-
-  const loadPlans = async () => {
-    if (!effectiveBusinessId) return;
-    try {
-      setLoading(true);
-      const response = await apiService.getPlans({ businessId: effectiveBusinessId, isActive: true });
-      if (response.success && response.data) {
-        setPlans(response.data);
-      }
-    } catch (error) {
-      toast.error('Error cargando planes');
-    } finally {
-      setLoading(false);
-    }
-  };
 
 const openModal = (plan?: MembershipPlan) => {
     if (plan) {
@@ -106,14 +87,14 @@ const openModal = (plan?: MembershipPlan) => {
         const response = await apiService.updatePlan(editingPlan.id, formData);
         if (response.success) {
           toast.success('Plan actualizado');
-          loadPlans();
+          setPlans(prev => prev.map(p => p.id === editingPlan.id ? response.data! : p));
           closeModal();
         }
       } else {
         const response = await apiService.createPlan({ ...formData, businessId: effectiveBusinessId });
         if (response.success) {
           toast.success('Plan creado');
-          loadPlans();
+          setPlans(prev => [...prev, response.data!]);
           closeModal();
         }
       }
@@ -129,7 +110,7 @@ const openModal = (plan?: MembershipPlan) => {
       const response = await apiService.deletePlan(planId);
       if (response.success) {
         toast.success('Plan eliminado');
-        loadPlans();
+        setPlans(prev => prev.filter(p => p.id !== planId));
         setConfirmDelete(null);
       }
     } catch (error: any) {
