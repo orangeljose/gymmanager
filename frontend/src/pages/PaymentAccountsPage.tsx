@@ -63,7 +63,7 @@ export const PaymentAccountsPage: React.FC = () => {
         const response = await apiService.updatePaymentAccount(editingAccount.id, updateData);
         if (response.success) {
           toast.success('Cuenta actualizada');
-          setAccounts(prev => prev.map(a => a.id === editingAccount.id ? response.data! : a));
+          setAccounts(prev => prev.map(a => a.id === editingAccount.id ? { ...a, ...response.data } : a));
           closeModal();
         }
       } else {

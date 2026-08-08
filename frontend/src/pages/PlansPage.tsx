@@ -87,7 +87,7 @@ const openModal = (plan?: MembershipPlan) => {
         const response = await apiService.updatePlan(editingPlan.id, formData);
         if (response.success) {
           toast.success('Plan actualizado');
-          setPlans(prev => prev.map(p => p.id === editingPlan.id ? response.data! : p));
+          setPlans(prev => prev.map(p => p.id === editingPlan.id ? { ...p, ...response.data } : p));
           closeModal();
         }
       } else {

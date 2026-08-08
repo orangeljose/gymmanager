@@ -78,7 +78,7 @@ export const BranchesPage: React.FC = () => {
         const response = await apiService.updateBranch(editingBranch.id, formData);
         if (response.success) {
           toast.success('Sucursal actualizada');
-          setBranches(prev => prev.map(b => b.id === editingBranch.id ? response.data! : b));
+          setBranches(prev => prev.map(b => b.id === editingBranch.id ? { ...b, ...response.data } : b));
           closeModal();
         }
       } else {

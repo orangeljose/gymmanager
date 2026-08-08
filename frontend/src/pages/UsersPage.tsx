@@ -125,7 +125,7 @@ export const UsersPage: React.FC = () => {
         const response = await apiService.updateUser(editingUser.id, formData);
         if (response.success) {
           toast.success('Usuario actualizado');
-          setUsers(prev => prev.map(u => u.id === editingUser.id ? response.data! : u));
+          setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...response.data } : u));
           closeModal();
         }
       } else {
