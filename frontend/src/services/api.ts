@@ -260,6 +260,12 @@ class ApiService {
     });
   }
 
+  async deleteBranch(id: string): Promise<ApiResponse<{ id: string }>> {
+    return this.requestWithAuth<{ id: string }>(`/branches/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Reports
   async getSolvencyReport(filters: ReportFilters): Promise<ApiResponse<SolvencyReport[]>> {
     const params = new URLSearchParams();

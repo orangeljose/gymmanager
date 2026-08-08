@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import type { Branch, BranchFormData } from '@/types';
 import toast from 'react-hot-toast';
-import { Plus, Edit2, X, MapPin, Phone, Building } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, MapPin, Phone, Building } from 'lucide-react';
 
 export const BranchesPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
@@ -96,6 +96,21 @@ export const BranchesPage: React.FC = () => {
     }
   };
 
+  const handleDelete = async (branchId: string, branchName: string) => {
+    if (!confirm(`¿Eliminar la sucursal "${branchName}"?`)) return;
+    try {
+      const response = await apiService.deleteBranch(branchId);
+      if (response.success) {
+        toast.success('Sucursal eliminada');
+        setBranches(prev => prev.filter(b => b.id !== branchId));
+      } else {
+        toast.error(response.error?.message || 'Error al eliminar');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al eliminar');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -158,13 +173,21 @@ export const BranchesPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end mt-4 pt-4 border-t">
+              <div className="flex justify-end mt-4 pt-4 border-t gap-2">
                 <button
                   onClick={() => openModal(branch)}
                   className="btn btn-ghost btn-sm"
                 >
                   <Edit2 className="h-4 w-4" />
                 </button>
+                {(user?.role === 'super_admin' || user?.role === 'admin') && (
+                  <button
+                    onClick={() => handleDelete(branch.id, branch.name)}
+                    className="btn btn-ghost btn-sm text-red-600 hover:text-red-800"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
           ))}

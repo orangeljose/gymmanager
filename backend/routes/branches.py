@@ -151,7 +151,50 @@ def create_branch():
                     'code': 500,
                     'message': 'Error al crear sede'
                 }
-            }), 500
+}), 500
+
+
+@branches_bp.route('/branches/<branch_id>', methods=['DELETE', 'OPTIONS'])
+@require_auth
+@require_role(['super_admin', 'admin'])
+def delete_branch(branch_id):
+    """Elimina una sucursal (soft delete)"""
+    try:
+        firebase_service = FirebaseService()
+        branch = firebase_service.get_document('branches', branch_id)
+
+        if not branch:
+            return jsonify({
+                'success': False,
+                'error': {'code': 404, 'message': 'Sucursal no encontrada'}
+            }), 404
+
+        user_role = g.current_user.get('role')
+        user_business_id = g.current_user.get('businessId')
+
+        if user_role != 'super_admin' and branch.get('businessId') != user_business_id:
+            return jsonify({
+                'success': False,
+                'error': {'code': 403, 'message': 'No tienes acceso a esta sucursal'}
+            }), 403
+
+        success = firebase_service.update_document('branches', branch_id, {'isActive': False})
+
+        if success:
+            logger.info(f"Sucursal desactivada: {branch_id}")
+            return jsonify({'success': True, 'data': {'id': branch_id}}), 200
+
+        return jsonify({
+            'success': False,
+            'error': {'code': 500, 'message': 'Error al eliminar sucursal'}
+        }), 500
+
+    except Exception as e:
+        logger.error(f"Error eliminando sucursal {branch_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': {'code': 500, 'message': 'Error interno del servidor'}
+        }), 500
 
     except Exception as e:
         logger.error(f"Error creando sede: {str(e)}")
