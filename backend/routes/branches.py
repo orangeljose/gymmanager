@@ -151,7 +151,17 @@ def create_branch():
                     'code': 500,
                     'message': 'Error al crear sede'
                 }
-}), 500
+            }), 500
+
+    except Exception as e:
+        logger.error(f"Error creando sede: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 500,
+                'message': 'Error interno del servidor'
+            }
+        }), 500
 
 
 @branches_bp.route('/branches/<branch_id>', methods=['DELETE', 'OPTIONS'])
