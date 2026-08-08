@@ -4,7 +4,7 @@ Servicio para gestión de pagos y sincronización
 import logging
 import os
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from .firebase_service import FirebaseService
 from .membership_service import MembershipService
 
@@ -91,16 +91,39 @@ class PaymentService:
             # Obtener información del cliente para denormalización
             client_name = client.get('name', 'Cliente Desconocido')
             
-            # Extender membresía del cliente
+            # Extender membresía del cliente (solo si el pago no es muy antiguo)
             months_paid = data.get('monthsPaid', 1)
-            logger.info(f"[DEBUG] Extending membership for {client_id}, plan={plan_id}, months={months_paid}")
-            membership_update = self.membership_service.extend_membership(
-                client_id, plan_id, months_paid
-            )
+            payment_date_str = data.get('paymentDate')
+            skip_extension = False
             
-            if not membership_update:
-                logger.error(f"[DEBUG] Membership extension failed for {client_id}")
-                return None
+            if payment_date_str:
+                plan = self.membership_service.get_plan_by_id(plan_id)
+                if plan:
+                    duration_days = plan.get('durationDays', 30) * months_paid
+                    payment_date = datetime.fromisoformat(payment_date_str) if isinstance(payment_date_str, str) else payment_date_str
+                    if payment_date.tzinfo is None:
+                        payment_date = payment_date.replace(tzinfo=timezone.utc)
+                    # Si payment_date + duration < today, saltar extensión
+                    if payment_date + timedelta(days=duration_days) < datetime.now(timezone.utc):
+                        skip_extension = True
+                        logger.info(f"Pago antiguo detectado ({payment_date_str}), no se extiende membresía")
+                        # Usar fechas del plan desde la fecha de pago
+                        membership_update = {
+                            'membershipStart': payment_date.isoformat(),
+                            'membershipEnd': (payment_date + timedelta(days=duration_days)).isoformat(),
+                            'status': 'expired',
+                            'planName': plan.get('name', 'Plan'),
+                            'planPrice': plan.get('price', amount)
+                        }
+            
+            if not skip_extension:
+                membership_update = self.membership_service.extend_membership(
+                    client_id, plan_id, months_paid
+                )
+                
+                if not membership_update:
+                    logger.error(f"[DEBUG] Membership extension failed for {client_id}")
+                    return None
             
             # Generar número de recibo
             receipt_number = self.generate_receipt_number(payment_business_id)
