@@ -130,6 +130,7 @@ export interface Payment {
   receiptNumber: string;
   syncedAt?: string | null;
   createdAt: string;
+  paymentDate?: string; // Fecha real del pago (si diffiere de createdAt)
 }
 
 export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'zelle' | 'pago_movil' | 'other';

@@ -200,7 +200,7 @@ export const ClientDetailPage: React.FC = () => {
                   <tbody className="divide-y">
                     {payments.map((payment) => (
                       <tr key={payment.id}>
-                        <td className="py-3 text-sm">{formatDate(payment.createdAt)}</td>
+                        <td className="py-3 text-sm">{formatDate(payment.paymentDate || payment.createdAt)}</td>
                         <td className="py-3 text-sm">{getPlanName(payment.membershipPlanId)}</td>
                         <td className="py-3 text-sm font-medium">{formatCurrency(payment.amount)}</td>
                         <td className="py-3 text-sm capitalize">{payment.method}</td>
