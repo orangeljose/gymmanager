@@ -66,6 +66,8 @@ export const ClientDetailPage: React.FC = () => {
     if (!d) return 'N/A';
     let date: Date;
     if (typeof d === 'string') {
+      // Si es solo fecha (YYYY-MM-DD), agregar T00:00 para evitar timezone shift
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) d = d + 'T12:00:00';
       date = new Date(d);
     } else if (d.seconds) {
       date = new Date(d.seconds * 1000);
