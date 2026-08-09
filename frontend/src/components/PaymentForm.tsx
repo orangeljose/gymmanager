@@ -84,7 +84,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
         membershipPlanId: planId,
         branchId,
         methodDetails,
-        paymentDate
+        paymentDate,
+        paymentAccountId: methodDetails.destinationAccountId || undefined
       };
       const response = await apiService.createPayment(payload);
       if (response.success) {
