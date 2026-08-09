@@ -2,6 +2,7 @@
 Rutas de reportes para GymManager
 """
 import logging
+from math import ceil
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_auth, require_role, validate_branch_access
 from services.firebase_service import FirebaseService
@@ -129,7 +130,7 @@ def get_solvency_report():
                 if end_date.tzinfo is None:
                     end_date = end_date.replace(tzinfo=timezone.utc)
                 
-                days_remaining = (end_date - now).days
+                days_remaining = ceil((end_date - now).total_seconds() / 86400)
             else:
                 days_remaining = 0
             
