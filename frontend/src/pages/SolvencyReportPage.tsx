@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import type { SolvencyReport, Branch } from '@/types';
 import toast from 'react-hot-toast';
-import { ArrowLeft, AlertTriangle, Phone, Calendar, DollarSign, Filter } from 'lucide-react';
+import { ArrowLeft, Phone, Calendar, DollarSign, Filter, Clock, AlertCircle, CheckCircle } from 'lucide-react';
 
 export const SolvencyReportPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
@@ -68,10 +68,17 @@ export const SolvencyReportPage: React.FC = () => {
     }).format(cents / 100);
   };
 
-  const getOverdueClass = (days: number) => {
-    if (days > 30) return 'bg-red-100 text-red-800';
-    if (days > 7) return 'bg-orange-100 text-orange-800';
-    return 'bg-yellow-100 text-yellow-800';
+  const getStatusBadge = (days: number) => {
+    if (days <= 0) return { label: 'Al día', className: 'bg-green-100 text-green-800' };
+    if (days <= 7) return { label: 'Por vencer', className: 'bg-yellow-100 text-yellow-800' };
+    if (days <= 30) return { label: 'Vencido reciente', className: 'bg-orange-100 text-orange-800' };
+    return { label: 'Vencido', className: 'bg-red-100 text-red-800' };
+  };
+
+  const getStatusIcon = (days: number) => {
+    if (days <= 0) return <CheckCircle className="h-5 w-5 text-green-600" />;
+    if (days <= 7) return <Clock className="h-5 w-5 text-yellow-600" />;
+    return <AlertCircle className="h-5 w-5 text-red-600" />;
   };
 
   if (loading) {
@@ -83,16 +90,16 @@ export const SolvencyReportPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <Link to="/reports" className="btn btn-ghost btn-sm mb-4">
         <ArrowLeft className="h-4 w-4 mr-1" />
         Volver a Reportes
       </Link>
 
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reporte de Morosidad</h1>
-          <p className="text-gray-600 mt-1">Clientes con membresías vencidas</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Seguimiento de Membresías</h1>
+          <p className="text-sm text-gray-600 mt-1">Gestioná renovaciones y vencimientos de tus clientes</p>
         </div>
       </div>
 
@@ -114,21 +121,20 @@ export const SolvencyReportPage: React.FC = () => {
               ))}
             </select>
           </div>
-          <div className="w-full sm:w-48">
+          <div className="w-full sm:w-56">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Días de atraso mínimo
+              Estado
             </label>
             <select
               value={daysOverdue}
               onChange={(e) => setDaysOverdue(Number(e.target.value))}
               className="input w-full"
             >
-              <option value="0">Todos</option>
-              <option value="1">Más de 1 día</option>
-              <option value="7">Más de 7 días</option>
-              <option value="30">Más de 30 días</option>
-              <option value="60">Más de 60 días</option>
-              <option value="90">Más de 90 días</option>
+              <option value="-999">Todos</option>
+              <option value="-7">Próximos 7 días</option>
+              <option value="0">Vencidos</option>
+              <option value="7">+7 días vencido</option>
+              <option value="30">+30 días vencido</option>
             </select>
           </div>
         </div>
@@ -137,10 +143,10 @@ export const SolvencyReportPage: React.FC = () => {
       {reportData.length === 0 ? (
         <div className="card text-center py-12">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="h-8 w-8 text-green-600" />
+            <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay clientes morosos</h3>
-          <p className="text-gray-600">Todos tus clientes están al día con sus pagos</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay membresías por vencer</h3>
+          <p className="text-gray-600">Todos tus clientes están al día</p>
         </div>
       ) : (
         <>
@@ -148,36 +154,45 @@ export const SolvencyReportPage: React.FC = () => {
             {reportData.length} cliente{reportData.length !== 1 ? 's' : ''} encontrado{reportData.length !== 1 ? 's' : ''}
           </div>
           <div className="space-y-3">
-            {reportData.map((client) => (
-              <div key={client.id} className="card">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-gray-900">{client.name}</h3>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getOverdueClass(client.daysOverdue)}`}>
-                        {client.daysOverdue} días vencido
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                      <div className="flex items-center">
-                        <Phone className="h-4 w-4 mr-1" />
-                        {client.phone}
+            {reportData.map((client) => {
+              const badge = getStatusBadge(client.daysOverdue);
+              return (
+                <div key={client.id} className="card">
+                  <div className="flex items-start gap-4">
+                    <div className="mt-1">{getStatusIcon(client.daysOverdue)}</div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Link to={`/clients/${client.id}`} className="font-semibold text-gray-900 hover:text-primary-600">
+                          {client.name}
+                        </Link>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
+                          {badge.label}
+                        </span>
                       </div>
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        Venció: {formatDate(client.membershipEnd)}
+                      <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+                        <span className="flex items-center">
+                          <Phone className="h-3.5 w-3.5 mr-1" />
+                          {client.phone}
+                        </span>
+                        <span className="flex items-center">
+                          <Calendar className="h-3.5 w-3.5 mr-1" />
+                          {client.daysOverdue <= 0
+                            ? `Vence: ${formatDate(client.membershipEnd)}`
+                            : `Venció: ${formatDate(client.membershipEnd)} (${client.daysOverdue} días)`
+                          }
+                        </span>
+                        {client.lastPaymentDate && (
+                          <span className="flex items-center">
+                            <DollarSign className="h-3.5 w-3.5 mr-1" />
+                            Último: {formatCurrency(client.lastPaymentAmount || 0)} ({formatDate(client.lastPaymentDate)})
+                          </span>
+                        )}
                       </div>
-                      {client.lastPaymentDate && (
-                        <div className="flex items-center">
-                          <DollarSign className="h-4 w-4 mr-1" />
-                          Último pago: {formatCurrency(client.lastPaymentAmount || 0)} ({formatDate(client.lastPaymentDate)})
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}

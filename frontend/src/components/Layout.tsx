@@ -42,7 +42,7 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     icon: 'FileText',
     roles: ['super_admin', 'admin', 'branch_admin', 'cashier'],
     submenu: [
-      { label: 'Morosos', href: '/reports/solvency', roles: ['super_admin', 'admin', 'branch_admin', 'cashier'] },
+      { label: 'Membresías', href: '/reports/solvency', roles: ['super_admin', 'admin', 'branch_admin', 'cashier'] },
       { label: 'Ingresos', href: '/reports/income', roles: ['super_admin', 'admin', 'branch_admin'] }
     ]
   },
