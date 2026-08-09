@@ -106,9 +106,9 @@ def get_solvency_report():
         firebase_service = FirebaseService()
         clients = firebase_service.query_firestore(
             'clients',
-            filters=filters,
-            order_by='membershipEnd',
-            direction='ASC'
+            filters=filters
+            # order_by='membershipEnd',
+            # direction='ASC'
         )
         
         # Enriquecer datos de los clientes
