@@ -549,9 +549,9 @@ def get_dashboard():
             effective_branch_id = branch_id
 
         # --- Clients ---
-        client_filters = [
-            {'field': 'businessId', 'operator': '==', 'value': user_business_id}
-        ]
+        client_filters = []
+        if user_role != 'super_admin' and user_business_id:
+            client_filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
         if effective_branch_id:
             client_filters.append({'field': 'branchId', 'operator': '==', 'value': effective_branch_id})
 
@@ -581,10 +581,11 @@ def get_dashboard():
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
         payment_filters = [
-            {'field': 'businessId', 'operator': '==', 'value': user_business_id},
             {'field': 'createdAt', 'operator': '>=', 'value': thirty_days_ago},
             {'field': 'createdAt', 'operator': '<=', 'value': now}
         ]
+        if user_role != 'super_admin' and user_business_id:
+            payment_filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
         if effective_branch_id:
             payment_filters.append({'field': 'branchId', 'operator': '==', 'value': effective_branch_id})
 
