@@ -260,7 +260,9 @@ def get_daily_income_report():
         
         # Filtro por negocio del usuario
         user_business_id = g.current_user.get('businessId')
-        filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
+        user_role = g.current_user.get('role')
+        if user_role != 'super_admin' and user_business_id:
+            filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
         
         # Filtro por sede
         if g.current_user.get('role') != 'super_admin':
@@ -399,10 +401,12 @@ def get_income_by_method_report():
         
         # Filtro por negocio del usuario
         user_business_id = g.current_user.get('businessId')
-        filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
+        user_role2 = g.current_user.get('role')
+        if user_role2 != 'super_admin' and user_business_id:
+            filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
         
         # Filtro por sede
-        if g.current_user.get('role') != 'super_admin':
+        if user_role2 != 'super_admin':
             user_branch_id = g.current_user.get('branchId')
             filters.append({'field': 'branchId', 'operator': '==', 'value': user_branch_id})
         elif branch_id:
