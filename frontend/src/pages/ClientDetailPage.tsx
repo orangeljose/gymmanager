@@ -77,6 +77,16 @@ export const ClientDetailPage: React.FC = () => {
     return date.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
+  const methodLabels: Record<string, string> = {
+    cash: 'Efectivo',
+    card: 'Tarjeta',
+    transfer: 'Transferencia',
+    zelle: 'Zelle',
+    pago_movil: 'Pago Móvil',
+    other: 'Otro'
+  };
+  const getMethodLabel = (m: string) => methodLabels[m] || m;
+
   const getPlanName = (planId: string) => {
     const plan = plans.find(p => p.id === planId);
     return plan ? plan.name : planId;
@@ -192,21 +202,54 @@ export const ClientDetailPage: React.FC = () => {
                 <table className="w-full">
                   <thead className="border-b">
                     <tr>
-                      <th className="text-left text-xs font-medium text-gray-500 uppercase py-2">Fecha</th>
-                      <th className="text-left text-xs font-medium text-gray-500 uppercase py-2">Plan</th>
-                      <th className="text-left text-xs font-medium text-gray-500 uppercase py-2">Monto</th>
-                      <th className="text-left text-xs font-medium text-gray-500 uppercase py-2">Método</th>
-                      <th className="text-left text-xs font-medium text-gray-500 uppercase py-2">Recibo</th>
+                      <th className="text-left text-xs font-medium text-gray-500 uppercase py-2 hidden sm:table-cell">Fecha</th>
+                      <th className="text-left text-xs font-medium text-gray-500 uppercase py-2 hidden sm:table-cell">Plan</th>
+                      <th className="text-left text-xs font-medium text-gray-500 uppercase py-2 hidden sm:table-cell">Monto</th>
+                      <th className="text-left text-xs font-medium text-gray-500 uppercase py-2 hidden sm:table-cell">Método</th>
+                      <th className="text-left text-xs font-medium text-gray-500 uppercase py-2 hidden sm:table-cell">Cuenta / Registró</th>
+                      <th className="text-left text-xs font-medium text-gray-500 uppercase py-2 hidden sm:table-cell">Recibo</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {payments.map((payment) => (
                       <tr key={payment.id}>
-                        <td className="py-3 text-sm">{formatDate(payment.paymentDate || payment.createdAt)}</td>
-                        <td className="py-3 text-sm">{getPlanName(payment.membershipPlanId)}</td>
-                        <td className="py-3 text-sm font-medium">{formatCurrency(payment.amount)}</td>
-                        <td className="py-3 text-sm capitalize">{payment.method}</td>
-                        <td className="py-3 text-sm text-gray-500">{payment.receiptNumber}</td>
+                        <td className="py-3 text-sm hidden sm:table-cell">{formatDate(payment.paymentDate || payment.createdAt)}</td>
+                        <td className="py-3 text-sm hidden sm:table-cell">{getPlanName(payment.membershipPlanId)}</td>
+                        <td className="py-3 text-sm font-medium hidden sm:table-cell">{formatCurrency(payment.amount)}</td>
+                        <td className="py-3 text-sm hidden sm:table-cell">{getMethodLabel(payment.method)}</td>
+                        <td className="py-3 text-sm text-gray-500 hidden sm:table-cell">
+                          {payment.paymentAccountId || payment.registeredByName || '-'}
+                        </td>
+                        <td className="py-3 text-sm text-gray-500 hidden sm:table-cell">{payment.receiptNumber}</td>
+                        {/* Mobile card view */}
+                        <td className="py-3 sm:hidden" colSpan={6}>
+                          <div className="space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-xs text-gray-500">Fecha</span>
+                              <span className="text-sm">{formatDate(payment.paymentDate || payment.createdAt)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-xs text-gray-500">Plan</span>
+                              <span className="text-sm">{getPlanName(payment.membershipPlanId)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-xs text-gray-500">Monto</span>
+                              <span className="text-sm font-medium">{formatCurrency(payment.amount)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-xs text-gray-500">Método</span>
+                              <span className="text-sm">{getMethodLabel(payment.method)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-xs text-gray-500">Cuenta / Registró</span>
+                              <span className="text-sm text-gray-500">{payment.paymentAccountId || payment.registeredByName || '-'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-xs text-gray-500">Recibo</span>
+                              <span className="text-sm text-gray-500">{payment.receiptNumber}</span>
+                            </div>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
