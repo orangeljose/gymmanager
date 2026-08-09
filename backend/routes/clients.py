@@ -309,14 +309,10 @@ def create_client():
         
         # Calcular fechas de membresía
         now_utc = datetime.now(timezone.utc)
-        duration_days = plan.get('durationDays', 30)
-        membership_end = membership_service.calculate_new_end_date(
-            None,  # Nueva membresía, empieza desde hoy
-            duration_days
-        )
         
+        # Al crear sin pago, la membresía empieza y vence hoy (expirará hasta que se registre pago)
         client_data['membershipStart'] = now_utc
-        client_data['membershipEnd'] = membership_end
+        client_data['membershipEnd'] = now_utc
         
         # Crear cliente
         firebase_service = FirebaseService()

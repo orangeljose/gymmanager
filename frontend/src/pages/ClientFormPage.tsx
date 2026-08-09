@@ -23,6 +23,7 @@ export const ClientFormPage: React.FC = () => {
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
   const [initLoading, setInitLoading] = useState(isEdit);
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
 
   const [clientData, setClientData] = useState<ClientFormData>({
     name: '',
@@ -156,7 +157,8 @@ export const ClientFormPage: React.FC = () => {
         method: paymentData.method as any,
         membershipPlanId: paymentData.membershipPlanId || clientData.membershipPlanId,
         branchId: clientData.branchId,
-        methodDetails: paymentData.methodDetails || {}
+        methodDetails: paymentData.methodDetails || {},
+        paymentDate
       };
 
       const paymentRes = await apiService.createPayment(paymentPayload);
@@ -364,11 +366,23 @@ if (!clientData.name || !clientData.email || !clientData.phone || !clientData.br
                 }))}
                 className="input"
                 step="0.01"
+required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Pago</label>
+              <input
+                type="date"
+                value={paymentDate}
+                onChange={e => setPaymentDate(e.target.value)}
+                className="input"
+                max={new Date().toISOString().split('T')[0]}
                 required
               />
             </div>
 
-              {paymentData.method === 'zelle' && (
+            {paymentData.method === 'zelle' && (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email del quien pagó</label>
