@@ -18,6 +18,16 @@ const METHOD_COLORS: Record<string, string> = {
 
 export const IncomeReportPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
+
+  const methodLabels: Record<string, string> = {
+    cash: 'Efectivo',
+    card: 'Tarjeta',
+    transfer: 'Transferencia',
+    zelle: 'Zelle',
+    pago_movil: 'Pago Móvil',
+    other: 'Otro'
+  };
+  const getMethodLabel = (method: string) => methodLabels[method] || method;
   const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
   const [branches, setBranches] = useState<Branch[]>([]);
   const [filterBranch, setFilterBranch] = useState<string>('');
@@ -254,7 +264,7 @@ export const IncomeReportPage: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="label" fontSize={10} interval={groupLabel === 'diario' ? 2 : 0} />
                   <YAxis tickFormatter={v => `$${(v / 100).toFixed(0)}`} fontSize={10} />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                  <Tooltip formatter={(v: number) => [formatCurrency(v), 'Monto']} />
                   <Bar dataKey="amount" fill="#6366f1" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -271,14 +281,14 @@ export const IncomeReportPage: React.FC = () => {
                   <ResponsiveContainer width="100%" height={220}>
                     <PieChart>
                       <Pie
-                        data={methodEntries.map(([k, v]) => ({ name: k, value: v.amount }))}
+                        data={methodEntries.map(([k, v]) => ({ name: getMethodLabel(k), value: v.amount }))}
                         dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}
                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
                         {methodEntries.map(([k]) => (
                           <Cell key={k} fill={METHOD_COLORS[k] || '#6b7280'} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                      <Tooltip formatter={(v: number) => [formatCurrency(v), 'Monto']} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -297,7 +307,7 @@ export const IncomeReportPage: React.FC = () => {
                         <tr key={method} className="border-b border-gray-100">
                           <td className="py-2 flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full" style={{ background: METHOD_COLORS[method] || '#6b7280' }} />
-                            <span className="capitalize">{method.replace('_', ' ')}</span>
+                            <span className="capitalize">{getMethodLabel(method)}</span>
                           </td>
                           <td className="py-2 text-right">{data.count}</td>
                           <td className="py-2 text-right font-medium">{formatCurrency(data.amount)}</td>
