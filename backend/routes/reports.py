@@ -82,7 +82,10 @@ def get_solvency_report():
             filters.append({'field': 'branchId', 'operator': '==', 'value': branch_id})
         
         # Filtro de vencimiento
-        if days_overdue > 0:
+        if days_overdue == -999:
+            # Todos los clientes, sin filtro de fecha
+            pass
+        elif days_overdue > 0:
             # Clientes vencidos hace mas de X dias
             cutoff_date = now - timedelta(days=days_overdue)
             filters.append({'field': 'membershipEnd', 'operator': '<', 'value': cutoff_date})
