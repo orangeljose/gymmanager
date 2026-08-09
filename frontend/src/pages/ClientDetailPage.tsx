@@ -4,6 +4,7 @@ import { ArrowLeft, Edit2, CreditCard, Phone, Mail, MapPin, AlertCircle, Clock }
 import { useAuth } from '@/hooks/useAuth';
 import { useClients } from '@/hooks/useClients';
 import { usePlans } from '@/hooks/usePlans';
+import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import { PaymentForm } from '@/components/PaymentForm';
 import type { Client, Payment } from '@/types';
 
@@ -13,6 +14,8 @@ export const ClientDetailPage: React.FC = () => {
   const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
   const { getClient, getClientPayments } = useClients(effectiveBusinessId || '');
   const { plans } = usePlans(effectiveBusinessId || '');
+  const { accounts } = usePaymentAccounts(effectiveBusinessId || '');
+  const accountLookup = Object.fromEntries(accounts.map(a => [a.id, a.label || a.identifier]));
   const [client, setClient] = useState<Client | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -218,7 +221,9 @@ export const ClientDetailPage: React.FC = () => {
                         <td className="py-3 text-sm font-medium hidden sm:table-cell">{formatCurrency(payment.amount)}</td>
                         <td className="py-3 text-sm hidden sm:table-cell">{getMethodLabel(payment.method)}</td>
                         <td className="py-3 text-sm text-gray-500 hidden sm:table-cell">
-                          {payment.paymentAccountId || payment.registeredByName || '-'}
+                          {payment.method === 'cash'
+                            ? payment.registeredByName || '-'
+                            : accountLookup[payment.paymentAccountId || ''] || payment.registeredByName || '-'}
                         </td>
                         <td className="py-3 text-sm text-gray-500 hidden sm:table-cell">{payment.receiptNumber}</td>
                         {/* Mobile card view */}
@@ -242,7 +247,11 @@ export const ClientDetailPage: React.FC = () => {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-xs text-gray-500">Cuenta / Registró</span>
-                              <span className="text-sm text-gray-500">{payment.paymentAccountId || payment.registeredByName || '-'}</span>
+                              <span className="text-sm text-gray-500">
+                                {payment.method === 'cash'
+                                  ? payment.registeredByName || '-'
+                                  : accountLookup[payment.paymentAccountId || ''] || payment.registeredByName || '-'}
+                              </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-xs text-gray-500">Recibo</span>
