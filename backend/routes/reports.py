@@ -3,6 +3,7 @@ Rutas de reportes para GymManager
 """
 import logging
 from math import ceil
+from datetime import datetime, timezone, timedelta
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_auth, require_role, validate_branch_access
 from services.firebase_service import FirebaseService
@@ -253,7 +254,6 @@ def get_daily_income_report():
                 }), 403
         
         # Construir filtros
-        from datetime import datetime
         start_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
         end_dt = datetime.fromisoformat(end_date + 'T23:59:59').replace(tzinfo=timezone.utc)
         
@@ -525,7 +525,6 @@ def get_dashboard():
     }
     """
     try:
-        from datetime import datetime, timedelta
         from collections import defaultdict
 
         branch_id = request.args.get('branchId')
