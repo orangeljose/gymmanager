@@ -137,7 +137,7 @@ export const IncomeReportPage: React.FC = () => {
 
     const groups: Record<string, { amount: number; count: number }> = {};
     dailyData.forEach(d => {
-      const dObj = new Date(d.date + 'T00:00:00');
+      const dObj = new Date(d.date + 'T12:00:00');
       let key: string;
       if (groupLabel === 'semanal') {
         // Agrupar por inicio de semana (lunes)
@@ -145,7 +145,7 @@ export const IncomeReportPage: React.FC = () => {
         dObj.setDate(dObj.getDate() - day + 1);
         key = dObj.toISOString().split('T')[0];
       } else {
-        // Mensual
+        // Mensual - usar YYYY-MM
         key = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}`;
       }
       if (!groups[key]) groups[key] = { amount: 0, count: 0 };
@@ -158,7 +158,7 @@ export const IncomeReportPage: React.FC = () => {
       .map(([key, v]) => ({
         date: key,
         label: groupLabel === 'mensual'
-          ? new Date(key + '-01').toLocaleDateString('es-VE', { month: 'short', year: 'numeric' })
+          ? new Date(key + '-01T12:00:00').toLocaleDateString('es-VE', { month: 'short', year: 'numeric' })
           : `${formatDateLabel(key)} —`,
         amount: v.amount,
         paymentsCount: v.count
