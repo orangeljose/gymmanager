@@ -34,7 +34,7 @@ export const IncomeReportPage: React.FC = () => {
   const accountLookup = Object.fromEntries(accounts.map(a => [a.id, a.label || a.type]));
   const [branches, setBranches] = useState<Branch[]>([]);
   const [filterBranch, setFilterBranch] = useState<string>('');
-  const [dateRange, setDateRange] = useState<'7' | '30' | '90' | 'custom'>('30');
+  const [dateRange, setDateRange] = useState<'7' | '30' | '90' | 'year' | 'custom'>('30');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -74,6 +74,10 @@ export const IncomeReportPage: React.FC = () => {
 
     if (range === 'custom' && start && end) {
       return { startDate: start, endDate: end };
+    }
+    if (range === 'year') {
+      const year = new Date().getFullYear();
+      return { startDate: `${year}-01-01`, endDate: endDateStr };
     }
 
     const days = parseInt(range) || 30;
@@ -225,6 +229,7 @@ export const IncomeReportPage: React.FC = () => {
               <option value="7">7 días</option>
               <option value="30">30 días</option>
               <option value="90">90 días</option>
+              <option value="year">Este año</option>
               <option value="custom">Personalizado</option>
             </select>
           </div>
