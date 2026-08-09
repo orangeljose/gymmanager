@@ -86,8 +86,9 @@ export const ClientFormPage: React.FC = () => {
   const handlePlanSelect = (planId: string) => {
     const plan = plans.find(p => p.id === planId);
     setClientData(prev => ({ ...prev, membershipPlanId: planId }));
-    setPaymentData(prev => ({ ...prev, membershipPlanId: planId, amount: plan?.price || 0 }));
-    setStep(2);
+    if (plan) {
+      setPaymentData(prev => ({ ...prev, membershipPlanId: planId, amount: plan.price || 0 }));
+    }
   };
 
   const handlePaymentMethodChange = (method: string) => {
@@ -100,7 +101,7 @@ export const ClientFormPage: React.FC = () => {
 
   const handleSubmitClient = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientData.name || !clientData.email || !clientData.phone || !clientData.branchId || !clientData.membershipPlanId) {
+    if (!clientData.name || !clientData.email || !clientData.phone || !clientData.branchId || !clientData.documentId) {
       toast.error('Completa todos los campos requeridos');
       return;
     }
@@ -131,7 +132,7 @@ export const ClientFormPage: React.FC = () => {
 
   const handleSubmitWithPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientData.name || !clientData.email || !clientData.phone || !clientData.branchId || !clientData.membershipPlanId || !clientData.documentId) {
+    if (!clientData.name || !clientData.email || !clientData.phone || !clientData.branchId || !clientData.documentId) {
       toast.error('Completa todos los campos requeridos');
       return;
     }
@@ -274,12 +275,11 @@ export const ClientFormPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Plan de Membresía *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Plan de Membresía</label>
               <select
                 value={clientData.membershipPlanId}
                 onChange={e => handlePlanSelect(e.target.value)}
                 className="input"
-                required
               >
                 <option value="">Seleccionar plan</option>
                 {plans.map(plan => (
@@ -311,7 +311,7 @@ export const ClientFormPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-if (!clientData.name || !clientData.email || !clientData.phone || !clientData.branchId || !clientData.membershipPlanId || !clientData.documentId) {
+if (!clientData.name || !clientData.email || !clientData.phone || !clientData.branchId || !clientData.documentId) {
                     toast.error('Completa todos los campos requeridos');
                     return;
                   }

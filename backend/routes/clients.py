@@ -286,17 +286,19 @@ def create_client():
                     }
                 }), 409
         
-        # Validar que el plan de membresía exista
+        # Validar que el plan de membresía exista (si se proporciona)
         membership_service = MembershipService()
-        plan = membership_service.get_plan_by_id(client_data.get('membershipPlanId'))
-        if not plan:
-            return jsonify({
-                'success': False,
-                'error': {
-                    'code': 404,
-                    'message': 'Plan de membresía no encontrado'
-                }
-            }), 404
+        plan_id = client_data.get('membershipPlanId')
+        if plan_id:
+            plan = membership_service.get_plan_by_id(plan_id)
+            if not plan:
+                return jsonify({
+                    'success': False,
+                    'error': {
+                        'code': 404,
+                        'message': 'Plan de membresía no encontrado'
+                    }
+                }), 404
         
         # Agregar información adicional
         user_role = g.current_user.get('role')
