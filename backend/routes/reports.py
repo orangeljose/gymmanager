@@ -273,12 +273,14 @@ def get_daily_income_report():
         
         # Obtener pagos
         firebase_service = FirebaseService()
+        logger.info(f"[DEBUG income] filters: {filters}")
         payments = firebase_service.query_firestore(
             'payments',
             filters=filters,
             order_by='createdAt',
             direction='ASC'
         )
+        logger.info(f"[DEBUG income] found {len(payments)} payments")
         
         # Agrupar por día
         from collections import defaultdict
