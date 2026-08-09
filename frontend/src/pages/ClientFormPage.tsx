@@ -159,7 +159,8 @@ export const ClientFormPage: React.FC = () => {
         membershipPlanId: paymentData.membershipPlanId || clientData.membershipPlanId,
         branchId: clientData.branchId,
         methodDetails: paymentData.methodDetails || {},
-        paymentDate
+        paymentDate,
+        paymentAccountId: (paymentData.methodDetails as any)?.destinationAccountId || undefined
       };
 
       const paymentRes = await apiService.createPayment(paymentPayload);
