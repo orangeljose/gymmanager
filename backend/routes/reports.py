@@ -254,8 +254,8 @@ def get_daily_income_report():
         
         # Construir filtros
         from datetime import datetime
-        start_dt = datetime.fromisoformat(start_date)
-        end_dt = datetime.fromisoformat(end_date + 'T23:59:59')
+        start_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+        end_dt = datetime.fromisoformat(end_date + 'T23:59:59').replace(tzinfo=timezone.utc)
         filters = [
             {'field': 'createdAt', 'operator': '>=', 'value': start_dt},
             {'field': 'createdAt', 'operator': '<=', 'value': end_dt}
