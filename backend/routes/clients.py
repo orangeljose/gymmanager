@@ -312,9 +312,11 @@ def create_client():
         # Calcular fechas de membresía
         now_utc = datetime.now(timezone.utc)
         
-        # Al crear sin pago, la membresía empieza y vence hoy (expirará hasta que se registre pago)
-        client_data['membershipStart'] = now_utc
-        client_data['membershipEnd'] = now_utc
+        # Sin pago: membresía vencida desde el inicio
+        from datetime import timedelta
+        client_data['membershipStart'] = now_utc - timedelta(days=1)
+        client_data['membershipEnd'] = now_utc - timedelta(days=1)
+        client_data['status'] = 'expired'
         
         # Crear cliente
         firebase_service = FirebaseService()
