@@ -195,6 +195,7 @@ export interface IncomeByMethodReport {
     amount: number;
     percentage: number;
     count: number;
+    accounts?: Record<string, { amount: number; count: number }>;
   };
 }
 

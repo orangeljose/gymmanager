@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import { apiService } from '@/services/api';
 import type { Branch } from '@/types';
 import toast from 'react-hot-toast';
@@ -29,6 +30,8 @@ export const IncomeReportPage: React.FC = () => {
   };
   const getMethodLabel = (method: string) => methodLabels[method] || method;
   const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
+  const { accounts } = usePaymentAccounts(effectiveBusinessId);
+  const accountLookup = Object.fromEntries(accounts.map(a => [a.id, a.label || a.type]));
   const [branches, setBranches] = useState<Branch[]>([]);
   const [filterBranch, setFilterBranch] = useState<string>('');
   const [dateRange, setDateRange] = useState<'7' | '30' | '90' | 'custom'>('30');
@@ -36,7 +39,7 @@ export const IncomeReportPage: React.FC = () => {
   const [endDate, setEndDate] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [dailyData, setDailyData] = useState<{ date: string; amount: number; paymentsCount: number }[]>([]);
-  const [methodData, setMethodData] = useState<Record<string, { amount: number; percentage: number; count: number }>>({});
+  const [methodData, setMethodData] = useState<Record<string, { amount: number; percentage: number; count: number; accounts?: Record<string, { amount: number; count: number }> }>>({});
   const [totalPeriod, setTotalPeriod] = useState<number>(0);
 
   // Filtros aplicados (solo cambian al hacer clic en "Aplicar")
@@ -326,8 +329,52 @@ export const IncomeReportPage: React.FC = () => {
               </div>
             ) : (
               <p className="text-gray-500 text-center py-8">No hay datos por método</p>
-            )}
+)}
           </div>
+
+          {/* Desglose por cuenta */}
+          {methodEntries.some(([, d]) => d.accounts && Object.keys(d.accounts).length > 0) && (
+            <div className="card">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Desglose por Cuenta</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-gray-500">
+                      <th className="text-left py-1 font-medium">Método / Cuenta</th>
+                      <th className="text-right py-1 font-medium">Pagos</th>
+                      <th className="text-right py-1 font-medium">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {methodEntries.map(([method, data]) => {
+                      const accounts = data.accounts || {};
+                      const accountEntries: [string, { amount: number; count: number }][] = Object.entries(accounts).sort(([, a], [, b]) => b.amount - a.amount);
+                      if (accountEntries.length === 0 && method !== 'cash') return null;
+                      return (
+                        <React.Fragment key={method}>
+                          <tr className="border-b border-gray-200 bg-gray-50">
+                            <td className="py-2 flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full" style={{ background: METHOD_COLORS[method] || '#6b7280' }} />
+                              <span className="font-medium">{getMethodLabel(method)}</span>
+                            </td>
+                            <td className="py-2 text-right">{data.count}</td>
+                            <td className="py-2 text-right font-medium">{formatCurrency(data.amount)}</td>
+                          </tr>
+                          {accountEntries.map(([accId, acc]: [string, { amount: number; count: number }]) => (
+                            <tr key={accId} className="border-b border-gray-100">
+                              <td className="py-1.5 pl-8 text-gray-600 text-xs">{accountLookup[accId] || accId}</td>
+                              <td className="py-1.5 text-right text-xs">{acc.count}</td>
+                              <td className="py-1.5 text-right text-xs">{formatCurrency(acc.amount)}</td>
+                            </tr>
+                          ))}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -460,17 +460,23 @@ def get_income_by_method_report():
                     continue
             payments.append(p)
         
-        # Agrupar por método
+        # Agrupar por método y por cuenta
         from collections import defaultdict
-        method_data = defaultdict(lambda: {'amount': 0, 'count': 0})
+        method_data = defaultdict(lambda: {'amount': 0, 'count': 0, 'accounts': defaultdict(lambda: {'amount': 0, 'count': 0})})
         
         total_amount = 0
         for payment in payments:
             method = payment.get('method', 'other')
             amount = payment.get('amount', 0)
+            account_id = payment.get('paymentAccountId')
             
             method_data[method]['amount'] += amount
             method_data[method]['count'] += 1
+            
+            if account_id:
+                method_data[method]['accounts'][account_id]['amount'] += amount
+                method_data[method]['accounts'][account_id]['count'] += 1
+            
             total_amount += amount
         
         # Calcular porcentajes
@@ -480,7 +486,8 @@ def get_income_by_method_report():
             result[method] = {
                 'amount': data['amount'],
                 'percentage': round(percentage, 1),
-                'count': data['count']
+                'count': data['count'],
+                'accounts': {k: {'amount': v['amount'], 'count': v['count']} for k, v in data['accounts'].items()}
             }
         
         logger.info(f"Reporte de ingresos por método: {len(result)} métodos")
