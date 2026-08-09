@@ -118,6 +118,55 @@ export const IncomeReportPage: React.FC = () => {
     return date.toLocaleDateString('es-VE', { day: '2-digit', month: 'short' });
   };
 
+  // Determinar agrupación según rango
+  const getGroupLabel = () => {
+    const days = parseInt(dateRange) || (startDate && endDate
+      ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000)
+      : 30);
+    if (days <= 30) return 'diario';
+    if (days <= 90) return 'semanal';
+    return 'mensual';
+  };
+
+  const groupLabel = getGroupLabel();
+
+  // Agrupar datos diarios según el tipo
+  const groupedChartData = React.useMemo(() => {
+    if (dailyData.length === 0) return [];
+    if (groupLabel === 'diario') return dailyData.map(d => ({ ...d, label: formatDateLabel(d.date) }));
+
+    const groups: Record<string, { amount: number; count: number }> = {};
+    dailyData.forEach(d => {
+      const dObj = new Date(d.date + 'T00:00:00');
+      let key: string;
+      if (groupLabel === 'semanal') {
+        // Agrupar por inicio de semana (lunes)
+        const day = dObj.getDay() || 7;
+        dObj.setDate(dObj.getDate() - day + 1);
+        key = dObj.toISOString().split('T')[0];
+      } else {
+        // Mensual
+        key = `${dObj.getFullYear()}-${String(dObj.getMonth() + 1).padStart(2, '0')}`;
+      }
+      if (!groups[key]) groups[key] = { amount: 0, count: 0 };
+      groups[key].amount += d.amount;
+      groups[key].count += d.paymentsCount || 0;
+    });
+
+    return Object.entries(groups)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, v]) => ({
+        date: key,
+        label: groupLabel === 'mensual'
+          ? new Date(key + '-01').toLocaleDateString('es-VE', { month: 'short', year: 'numeric' })
+          : `${formatDateLabel(key)} —`,
+        amount: v.amount,
+        paymentsCount: v.count
+      }));
+  }, [dailyData, groupLabel]);
+
+  const methodEntries = Object.entries(methodData).sort(([, a], [, b]) => b.amount - a.amount);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -195,37 +244,76 @@ export const IncomeReportPage: React.FC = () => {
       ) : (
         <div className="space-y-6">
           <div className="card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Ingresos Diarios</h3>
-            <div className="text-2xl font-bold text-primary-600 mb-4">{formatCurrency(totalPeriod)}</div>
-            {dailyData.length > 0 ? (
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Ingresos ({groupLabel})</h3>
+              <span className="text-xl font-bold text-primary-600">{formatCurrency(totalPeriod)}</span>
+            </div>
+            {groupedChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={dailyData}>
+                <BarChart data={groupedChartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tickFormatter={formatDateLabel} fontSize={11} />
-                  <YAxis tickFormatter={v => `$${(v / 100).toFixed(0)}`} fontSize={11} />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} labelFormatter={formatDateLabel} />
+                  <XAxis dataKey="label" fontSize={10} interval={groupLabel === 'diario' ? 2 : 0} />
+                  <YAxis tickFormatter={v => `$${(v / 100).toFixed(0)}`} fontSize={10} />
+                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
                   <Bar dataKey="amount" fill="#6366f1" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-gray-500 text-center py-8">No hay datos diarios</p>
+              <p className="text-gray-500 text-center py-8">No hay datos para el período</p>
             )}
           </div>
 
           <div className="card">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Por Método de Pago</h3>
-            {Object.keys(methodData).length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie data={Object.entries(methodData).map(([k, v]) => ({ name: k, value: v.amount }))}
-                    dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                    {Object.keys(methodData).map(k => (
-                      <Cell key={k} fill={METHOD_COLORS[k] || '#6b7280'} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                </PieChart>
-              </ResponsiveContainer>
+            {methodEntries.length > 0 ? (
+              <div className="flex flex-col lg:flex-row gap-6">
+                <div className="lg:w-1/2">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={methodEntries.map(([k, v]) => ({ name: k, value: v.amount }))}
+                        dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                        {methodEntries.map(([k]) => (
+                          <Cell key={k} fill={METHOD_COLORS[k] || '#6b7280'} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="lg:w-1/2">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-gray-500">
+                        <th className="text-left py-1 font-medium">Método</th>
+                        <th className="text-right py-1 font-medium">Pagos</th>
+                        <th className="text-right py-1 font-medium">Monto</th>
+                        <th className="text-right py-1 font-medium">%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {methodEntries.map(([method, data]) => (
+                        <tr key={method} className="border-b border-gray-100">
+                          <td className="py-2 flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ background: METHOD_COLORS[method] || '#6b7280' }} />
+                            <span className="capitalize">{method.replace('_', ' ')}</span>
+                          </td>
+                          <td className="py-2 text-right">{data.count}</td>
+                          <td className="py-2 text-right font-medium">{formatCurrency(data.amount)}</td>
+                          <td className="py-2 text-right text-gray-500">{data.percentage.toFixed(1)}%</td>
+                        </tr>
+                      ))}
+                      <tr className="font-semibold border-t border-gray-300">
+                        <td className="py-2">Total</td>
+                        <td className="py-2 text-right">{methodEntries.reduce((s, [, d]) => s + d.count, 0)}</td>
+                        <td className="py-2 text-right">{formatCurrency(totalPeriod)}</td>
+                        <td className="py-2 text-right">100%</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             ) : (
               <p className="text-gray-500 text-center py-8">No hay datos por método</p>
             )}
