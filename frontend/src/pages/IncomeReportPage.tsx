@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import type { Branch } from '@/types';
 import toast from 'react-hot-toast';
-import { ArrowLeft, DollarSign, Calendar, TrendingUp, CreditCard } from 'lucide-react';
+import { ArrowLeft, DollarSign, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const METHOD_COLORS: Record<string, string> = {
@@ -29,13 +29,18 @@ export const IncomeReportPage: React.FC = () => {
   const [methodData, setMethodData] = useState<Record<string, { amount: number; percentage: number; count: number }>>({});
   const [totalPeriod, setTotalPeriod] = useState<number>(0);
 
+  // Filtros aplicados (solo cambian al hacer clic en "Aplicar")
+  const [appliedFilter, setAppliedFilter] = useState<{ range: string; start: string; end: string; branch: string }>({
+    range: '30', start: '', end: '', branch: ''
+  });
+
   useEffect(() => {
     loadBranches();
   }, [effectiveBusinessId]);
 
   useEffect(() => {
-    loadReports();
-  }, [effectiveBusinessId, filterBranch, dateRange, startDate, endDate]);
+    if (effectiveBusinessId) loadReports();
+  }, [effectiveBusinessId, appliedFilter]);
 
   const loadBranches = async () => {
     if (!effectiveBusinessId) return;
@@ -49,39 +54,36 @@ export const IncomeReportPage: React.FC = () => {
     }
   };
 
-  const getDateRange = () => {
-    const end = new Date();
-    const start = new Date();
-    end.setHours(23, 59, 59, 999);
+  const getDateRange = (range: string, start: string, end: string) => {
+    const now = new Date();
+    now.setHours(23, 59, 59, 999);
+    const endDateStr = now.toISOString().split('T')[0];
 
-    if (dateRange === 'custom' && startDate && endDate) {
-      return { startDate, endDate };
+    if (range === 'custom' && start && end) {
+      return { startDate: start, endDate: end };
     }
 
-    if (dateRange === '7') {
-      start.setDate(start.getDate() - 7);
-    } else if (dateRange === '30') {
-      start.setDate(start.getDate() - 30);
-    } else if (dateRange === '90') {
-      start.setDate(start.getDate() - 90);
-    }
-    start.setHours(0, 0, 0, 0);
-
+    const days = parseInt(range) || 30;
+    const startDateObj = new Date();
+    startDateObj.setDate(startDateObj.getDate() - days);
+    startDateObj.setHours(0, 0, 0, 0);
     return {
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0]
+      startDate: startDateObj.toISOString().split('T')[0],
+      endDate: endDateStr
     };
   };
 
   const loadReports = async () => {
     if (!effectiveBusinessId) return;
+    setLoading(true);
     try {
-      setLoading(true);
-      const { startDate: sDate, endDate: eDate } = getDateRange();
+      const { startDate: s, endDate: e } = getDateRange(appliedFilter.range, appliedFilter.start, appliedFilter.end);
+      const params: any = { startDate: s, endDate: e };
+      if (appliedFilter.branch) params.branchId = appliedFilter.branch;
 
       const [dailyRes, methodRes] = await Promise.all([
-        apiService.getIncomeDailyReport(sDate, eDate, filterBranch || undefined),
-        apiService.getIncomeByMethodReport(sDate, eDate, filterBranch || undefined)
+        apiService.getIncomeDailyReport(s, e, params.branchId),
+        apiService.getIncomeByMethodReport(s, e, params.branchId)
       ]);
 
       if (dailyRes.success && dailyRes.data) {
@@ -89,39 +91,32 @@ export const IncomeReportPage: React.FC = () => {
         setTotalPeriod(dailyRes.data.totalPeriod || 0);
       }
       if (methodRes.success && methodRes.data) {
-        setMethodData(methodRes.data);
+        setMethodData(methodRes.data as any);
       }
-    } catch (error) {
-      toast.error('Error cargando reporte');
+    } catch (err) {
+      toast.error('Error cargando reportes');
     } finally {
       setLoading(false);
     }
   };
 
-  const formatCurrency = (cents: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(cents / 100);
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('es-VE', {
-      day: '2-digit',
-      month: 'short'
+  const handleApplyFilters = () => {
+    setAppliedFilter({
+      range: dateRange,
+      start: startDate,
+      end: endDate,
+      branch: filterBranch
     });
   };
 
-  const totalPayments = Object.values(methodData).reduce((acc, m) => acc + m.count, 0);
+  const formatCurrency = (cents: number) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+  };
 
-  const pieChartData = Object.entries(methodData)
-    .filter(([_, data]) => data.count > 0)
-    .map(([method, data]) => ({
-      name: method.charAt(0).toUpperCase() + method.slice(1).replace('_', ' '),
-      value: data.amount,
-      count: data.count,
-      color: METHOD_COLORS[method] || '#6b7280'
-    }));
+  const formatDateLabel = (d: string) => {
+    const date = new Date(d + 'T00:00:00');
+    return date.toLocaleDateString('es-VE', { day: '2-digit', month: 'short' });
+  };
 
   if (loading) {
     return (
@@ -132,75 +127,61 @@ export const IncomeReportPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <Link to="/reports" className="btn btn-ghost btn-sm mb-4">
-        <ArrowLeft className="h-4 w-4 mr-1" />
-        Volver a Reportes
+        <ArrowLeft className="h-4 w-4 mr-1" /> Volver a Reportes
       </Link>
 
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reporte de Ingresos</h1>
-          <p className="text-gray-600 mt-1">Resumen de pagos por período</p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm text-gray-500">Total del período</p>
-          <p className="text-2xl font-bold text-green-600">{formatCurrency(totalPeriod)}</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Reporte de Ingresos</h1>
+          <p className="text-sm text-gray-600 mt-1">Análisis de ingresos por período y método de pago</p>
         </div>
       </div>
 
+      {/* Filtros */}
       <div className="card mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 mb-3">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              <Calendar className="h-4 w-4 inline mr-1" />
-              Período
-            </label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Sucursal</label>
+            <select
+              value={filterBranch}
+              onChange={e => setFilterBranch(e.target.value)}
+              className="input text-sm"
+            >
+              <option value="">Todas</option>
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Período</label>
             <select
               value={dateRange}
-              onChange={(e) => setDateRange(e.target.value as any)}
-              className="input w-full"
+              onChange={e => { setDateRange(e.target.value as any); if (e.target.value !== 'custom') { setStartDate(''); setEndDate(''); }}}
+              className="input text-sm w-32"
             >
-              <option value="7">Últimos 7 días</option>
-              <option value="30">Últimos 30 días</option>
-              <option value="90">Últimos 90 días</option>
+              <option value="7">7 días</option>
+              <option value="30">30 días</option>
+              <option value="90">90 días</option>
               <option value="custom">Personalizado</option>
             </select>
           </div>
           {dateRange === 'custom' && (
             <>
-              <div className="w-full sm:w-40">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="input w-full"
-                />
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Desde</label>
+                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="input text-sm w-36" />
               </div>
-              <div className="w-full sm:w-40">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="input w-full"
-                />
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Hasta</label>
+                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="input text-sm w-36" />
               </div>
             </>
           )}
-          <div className="w-full sm:w-48">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sucursal</label>
-            <select
-              value={filterBranch}
-              onChange={(e) => setFilterBranch(e.target.value)}
-              className="input w-full"
-            >
-              <option value="">Todas</option>
-              {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>{branch.name}</option>
-              ))}
-            </select>
+          <div className="flex items-end">
+            <button onClick={handleApplyFilters} className="btn btn-primary text-sm h-10 px-4">
+              <RefreshCw className="h-4 w-4 mr-1" /> Aplicar
+            </button>
           </div>
         </div>
       </div>
@@ -208,99 +189,47 @@ export const IncomeReportPage: React.FC = () => {
       {dailyData.length === 0 && Object.keys(methodData).length === 0 ? (
         <div className="card text-center py-12">
           <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Sin datos en este período</h3>
-          <p className="text-gray-600">No hay pagos registrados para el período seleccionado</p>
+          <h3 className="text-lg font-medium text-gray-900">Sin datos de ingresos</h3>
+          <p className="text-gray-600">No se encontraron pagos en el período seleccionado</p>
         </div>
       ) : (
         <div className="space-y-6">
-          {dailyData.length > 0 && (
-            <div className="card">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
-                Ingresos Diarios
-              </h3>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dailyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis
-                      dataKey="date"
-                      tickFormatter={formatDate}
-                      tick={{ fontSize: 12 }}
-                      stroke="#9ca3af"
-                    />
-                    <YAxis
-                      tickFormatter={(value) => `$${(value / 100).toFixed(0)}`}
-                      tick={{ fontSize: 12 }}
-                      stroke="#9ca3af"
-                    />
-                    <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
-                      labelFormatter={formatDate}
-                      contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                    />
-                    <Bar dataKey="amount" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
+          <div className="card">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Ingresos Diarios</h3>
+            <div className="text-2xl font-bold text-primary-600 mb-4">{formatCurrency(totalPeriod)}</div>
+            {dailyData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={dailyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tickFormatter={formatDateLabel} fontSize={11} />
+                  <YAxis tickFormatter={v => `$${(v / 100).toFixed(0)}`} fontSize={11} />
+                  <Tooltip formatter={(v: number) => formatCurrency(v)} labelFormatter={formatDateLabel} />
+                  <Bar dataKey="amount" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-gray-500 text-center py-8">No hay datos diarios</p>
+            )}
+          </div>
 
-          {pieChartData.length > 0 && (
-            <div className="card">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <CreditCard className="h-5 w-5 mr-2 text-purple-600" />
-                Distribución por Método de Pago
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieChartData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        innerRadius={50}
-                        paddingAngle={2}
-                      >
-                        {pieChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex flex-col justify-center">
-                  <div className="grid grid-cols-2 gap-3">
-                    {pieChartData.map((item) => (
-                      <div key={item.name} className="flex items-center p-2 bg-gray-50 rounded-lg">
-                        <div
-                          className="w-3 h-3 rounded-full mr-2"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {formatCurrency(item.value)} ({item.count} pagos)
-                          </p>
-                        </div>
-                      </div>
+          <div className="card">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Por Método de Pago</h3>
+            {Object.keys(methodData).length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie data={Object.entries(methodData).map(([k, v]) => ({ name: k, value: v.amount }))}
+                    dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    {Object.keys(methodData).map(k => (
+                      <Cell key={k} fill={METHOD_COLORS[k] || '#6b7280'} />
                     ))}
-                  </div>
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Total de pagos:</span>
-                      <span className="font-semibold">{totalPayments}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+                  </Pie>
+                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-gray-500 text-center py-8">No hay datos por método</p>
+            )}
+          </div>
         </div>
       )}
     </div>
