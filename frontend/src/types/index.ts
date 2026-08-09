@@ -244,6 +244,7 @@ export interface PaymentFormDataCreate {
   branchId: string;
   methodDetails?: Record<string, any>;
   paymentDate?: string;
+  paymentAccountId?: string;
 }
 
 export interface BranchFormData {

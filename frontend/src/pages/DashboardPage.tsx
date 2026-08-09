@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Users, 
-  DollarSign, 
   AlertTriangle, 
   Calendar,
   TrendingUp,
@@ -11,7 +10,6 @@ import {
   Building,
   Percent
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '@/hooks/useAuth';
 import { useOffline } from '@/hooks/useOffline';
 import { apiService } from '@/services/api';
@@ -81,27 +79,6 @@ export const DashboardPage: React.FC = () => {
     loadDashboardData();
   }, [effectiveBusinessId, selectedBranchId]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount / 100);
-  };
-
-  const formatShortCurrency = (amount: number) => {
-    return `$${(amount / 100).toFixed(0)}`;
-  };
-
-  const formatChartDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('es-VE', { day: '2-digit', month: 'short' });
-  };
-
-  const formatTooltipDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -166,7 +143,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="card border-l-4 border-primary-500">
           <div className="flex items-center">
             <div className="p-3 bg-green-100 rounded-full">
@@ -179,27 +156,13 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="card border-l-4 border-teal-500">
-          <div className="flex items-center">
-            <div className="p-3 bg-blue-100 rounded-full">
-              <DollarSign className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Ingresos Hoy</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {formatCurrency(metrics.todayIncome)}
-              </p>
-            </div>
-          </div>
-        </div>
-
         <div className="card border-l-4 border-red-500">
           <div className="flex items-center">
             <div className="p-3 bg-red-100 rounded-full">
               <AlertTriangle className="h-6 w-6 text-red-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Morosos</p>
+              <p className="text-sm font-medium text-gray-600">Vencidos</p>
               <p className="text-2xl font-bold text-gray-900">{metrics.overdueClients}</p>
             </div>
           </div>
@@ -212,14 +175,7 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Vencen esta Semana</p>
-              <div className="flex items-center gap-2">
-                <p className="text-2xl font-bold text-gray-900">{metrics.expiringThisWeek}</p>
-                {metrics.expiringThisWeek > 0 && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-500 text-white">
-                    {metrics.expiringThisWeek}
-                  </span>
-                )}
-              </div>
+              <p className="text-2xl font-bold text-gray-900">{metrics.expiringThisWeek}</p>
             </div>
           </div>
         </div>
@@ -238,39 +194,6 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Income Chart */}
-      <div className="card mb-8">
-        <div className="card-header">
-          <h3 className="card-title">Ingresos Últimos 30 Días</h3>
-          <p className="card-description">Total diario de pagos registrados</p>
-        </div>
-        <div className="card-content">
-          {metrics.incomeChart.length === 0 || metrics.incomeChart.every(p => p.amount === 0) ? (
-            <p className="text-gray-500 text-center py-12">No hay datos registrados bajo este periodo</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={metrics.incomeChart} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="date"
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={formatChartDate}
-                  interval="preserveStartEnd"
-                />
-                <YAxis 
-                  tick={{ fontSize: 11 }}
-                  tickFormatter={formatShortCurrency}
-                />
-                <Tooltip 
-                  formatter={(value: number) => [formatCurrency(value), 'Ingresos']}
-                  labelFormatter={formatTooltipDate}
-                />
-                <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* Top 5 Clients */}
         <div className="card">
