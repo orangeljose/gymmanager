@@ -256,38 +256,32 @@ def get_daily_income_report():
         from datetime import datetime
         start_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
         end_dt = datetime.fromisoformat(end_date + 'T23:59:59').replace(tzinfo=timezone.utc)
-        filters = [
-            {'field': 'createdAt', 'operator': '>=', 'value': start_dt},
-            {'field': 'createdAt', 'operator': '<=', 'value': end_dt}
-        ]
         
-        # Filtro por negocio del usuario
-        user_business_id = g.current_user.get('businessId')
-        user_role = g.current_user.get('role')
-        if user_role != 'super_admin' and user_business_id:
-            filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
-        
-        # Filtro por sede
-        if g.current_user.get('role') != 'super_admin':
-            user_branch_id = g.current_user.get('branchId')
-            filters.append({'field': 'branchId', 'operator': '==', 'value': user_branch_id})
-        elif branch_id:
-            filters.append({'field': 'branchId', 'operator': '==', 'value': branch_id})
-        
-        # Obtener pagos (filtrar en Python por paymentDate o createdAt)
+        # Obtener todos los pagos (sin filtros en Firestore para evitar índices)
         firebase_service = FirebaseService()
-        # Quitar filtro de fechas de Firestore - lo hacemos en Python
-        base_filters = [f for f in filters if f['field'] not in ('createdAt', 'paymentDate')]
-        logger.info(f"[DEBUG income] base filters: {base_filters}")
-        all_payments = firebase_service.query_firestore(
-            'payments',
-            filters=base_filters
-        )
+        all_payments = firebase_service.query_firestore('payments')
         
-        # Filtrar por fecha (paymentDate o createdAt) en Python
+        # Filtrar en Python: por negocio, sede y fecha
+        user_role = g.current_user.get('role')
+        user_business_id = g.current_user.get('businessId')
+        user_branch_id = g.current_user.get('branchId')
+        
         payments = []
         for p in all_payments:
-            # Usar paymentDate si existe, sino createdAt
+            # Filtrar por negocio
+            if user_role != 'super_admin':
+                if p.get('businessId') != user_business_id:
+                    continue
+            
+            # Filtrar por sede
+            if branch_id:
+                if p.get('branchId') != branch_id:
+                    continue
+            elif user_role != 'super_admin' and user_branch_id:
+                if p.get('branchId') != user_branch_id:
+                    continue
+            
+            # Filtrar por fecha
             pdate = p.get('paymentDate') or p.get('createdAt')
             if pdate:
                 if isinstance(pdate, str):
@@ -297,16 +291,14 @@ def get_daily_income_report():
                         continue
                 elif hasattr(pdate, 'to_datetime'):
                     pdate = pdate.to_datetime()
-                # Asegurar timezone-aware
                 if pdate.tzinfo is None:
                     pdate = pdate.replace(tzinfo=timezone.utc)
                 
                 if start_dt <= pdate <= end_dt:
-                    # Reemplazar createdAt con la fecha real para el reporte
                     p['createdAt'] = pdate.isoformat()
                     payments.append(p)
         
-        logger.info(f"[DEBUG income] found {len(payments)} payments after date filter")
+        logger.info(f"[DEBUG income] found {len(payments)} payments")
         
         # Agrupar por día
         from collections import defaultdict
@@ -425,35 +417,48 @@ def get_income_by_method_report():
                 }), 403
         
         # Construir filtros
-        filters = []
-        
-        # Filtro por negocio del usuario
-        user_business_id = g.current_user.get('businessId')
-        user_role2 = g.current_user.get('role')
-        if user_role2 != 'super_admin' and user_business_id:
-            filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
-        
-        # Filtro por sede
-        if user_role2 != 'super_admin':
-            user_branch_id = g.current_user.get('branchId')
-            filters.append({'field': 'branchId', 'operator': '==', 'value': user_branch_id})
-        elif branch_id:
-            filters.append({'field': 'branchId', 'operator': '==', 'value': branch_id})
-        
-        # Filtro por rango de fechas
-        if start_date:
-            filters.append({'field': 'createdAt', 'operator': '>=', 'value': start_date})
-        if end_date:
-            filters.append({'field': 'createdAt', 'operator': '<=', 'value': end_date + 'T23:59:59'})
-        
-        # Obtener pagos
+        # Obtener todos los pagos y filtrar en Python
         firebase_service = FirebaseService()
-        payments = firebase_service.query_firestore(
-            'payments',
-            filters=filters,
-            order_by='createdAt',
-            direction='DESC'
-        )
+        all_payments = firebase_service.query_firestore('payments')
+        
+        user_role2 = g.current_user.get('role')
+        user_business_id = g.current_user.get('businessId')
+        user_branch_id = g.current_user.get('branchId')
+        
+        payments = []
+        for p in all_payments:
+            # Filtrar por negocio
+            if user_role2 != 'super_admin':
+                if p.get('businessId') != user_business_id:
+                    continue
+            # Filtrar por sede
+            if branch_id:
+                if p.get('branchId') != branch_id:
+                    continue
+            elif user_role2 != 'super_admin' and user_branch_id:
+                if p.get('branchId') != user_branch_id:
+                    continue
+            # Filtrar por fecha
+            pdate = p.get('paymentDate') or p.get('createdAt')
+            if pdate and start_date:
+                if isinstance(pdate, str):
+                    try:
+                        pdate = datetime.fromisoformat(pdate)
+                    except:
+                        continue
+                elif hasattr(pdate, 'to_datetime'):
+                    pdate = pdate.to_datetime()
+                if pdate.tzinfo is None:
+                    pdate = pdate.replace(tzinfo=timezone.utc)
+                
+                start_dt2 = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+                end_dt2 = datetime.fromisoformat(end_date + 'T23:59:59').replace(tzinfo=timezone.utc) if end_date else None
+                
+                if pdate < start_dt2:
+                    continue
+                if end_dt2 and pdate > end_dt2:
+                    continue
+            payments.append(p)
         
         # Agrupar por método
         from collections import defaultdict
