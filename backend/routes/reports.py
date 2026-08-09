@@ -274,16 +274,39 @@ def get_daily_income_report():
         elif branch_id:
             filters.append({'field': 'branchId', 'operator': '==', 'value': branch_id})
         
-        # Obtener pagos
+        # Obtener pagos (filtrar en Python por paymentDate o createdAt)
         firebase_service = FirebaseService()
-        logger.info(f"[DEBUG income] filters: {filters}")
-        payments = firebase_service.query_firestore(
+        # Quitar filtro de fechas de Firestore - lo hacemos en Python
+        base_filters = [f for f in filters if f['field'] not in ('createdAt', 'paymentDate')]
+        logger.info(f"[DEBUG income] base filters: {base_filters}")
+        all_payments = firebase_service.query_firestore(
             'payments',
-            filters=filters,
-            order_by='createdAt',
-            direction='ASC'
+            filters=base_filters
         )
-        logger.info(f"[DEBUG income] found {len(payments)} payments")
+        
+        # Filtrar por fecha (paymentDate o createdAt) en Python
+        payments = []
+        for p in all_payments:
+            # Usar paymentDate si existe, sino createdAt
+            pdate = p.get('paymentDate') or p.get('createdAt')
+            if pdate:
+                if isinstance(pdate, str):
+                    try:
+                        pdate = datetime.fromisoformat(pdate)
+                    except:
+                        continue
+                elif hasattr(pdate, 'to_datetime'):
+                    pdate = pdate.to_datetime()
+                # Asegurar timezone-aware
+                if pdate.tzinfo is None:
+                    pdate = pdate.replace(tzinfo=timezone.utc)
+                
+                if start_dt <= pdate <= end_dt:
+                    # Reemplazar createdAt con la fecha real para el reporte
+                    p['createdAt'] = pdate.isoformat()
+                    payments.append(p)
+        
+        logger.info(f"[DEBUG income] found {len(payments)} payments after date filter")
         
         # Agrupar por día
         from collections import defaultdict
