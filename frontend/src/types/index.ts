@@ -179,7 +179,7 @@ export interface SolvencyReport {
   phone: string;
   membershipPlanId: string;
   membershipEnd: string;
-  daysOverdue: number;
+  daysRemaining: number;  // positivo = días por vencer, negativo = días vencido
   lastPaymentDate?: string;
   lastPaymentAmount?: number;
 }

@@ -20,7 +20,7 @@ The Dashboard MUST render a bar chart of daily income for the last 30 days using
 
 - GIVEN no payments exist in the last 30 days
 - WHEN the dashboard loads
-- THEN the chart SHALL render empty with a "No income data for this period" message
+- THEN the chart SHALL render empty with a "No hay datos registrados bajo este periodo" message
 
 ### Requirement: Top 5 Clients Widget
 

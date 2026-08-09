@@ -45,12 +45,16 @@ def get_solvency_report():
     }
     """
     try:
+        from datetime import timezone, datetime, timedelta
+        now = datetime.now(timezone.utc)
+        
         # Obtener parámetros de query
         branch_id = request.args.get('branchId')
         days_overdue = int(request.args.get('daysOverdue', 0))
+        user_role = g.current_user.get('role')
         
         # Validar acceso a la sede (si no es super admin)
-        if branch_id and g.current_user.get('role') != 'super_admin':
+        if branch_id and user_role != 'super_admin':
             user_branch_id = g.current_user.get('branchId')
             if branch_id != user_branch_id:
                 return jsonify({
@@ -64,28 +68,40 @@ def get_solvency_report():
         # Construir filtros
         filters = []
         
-        # Filtro por negocio del usuario
+        # Filtro por negocio
         user_business_id = g.current_user.get('businessId')
-        filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
+        if user_role != 'super_admin' and user_business_id:
+            filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
         
         # Filtro por sede
-        if g.current_user.get('role') != 'super_admin':
+        if user_role != 'super_admin':
             user_branch_id = g.current_user.get('branchId')
-            filters.append({'field': 'branchId', 'operator': '==', 'value': user_branch_id})
+            if user_branch_id:
+                filters.append({'field': 'branchId', 'operator': '==', 'value': user_branch_id})
         elif branch_id:
             filters.append({'field': 'branchId', 'operator': '==', 'value': branch_id})
         
-        # Filtro por clientes vencidos
-        from datetime import datetime, timedelta
-        cutoff_date = datetime.now() - timedelta(days=days_overdue)
-        filters.append({'field': 'membershipEnd', 'operator': '<', 'value': cutoff_date})
+        # Filtro de vencimiento
+        if days_overdue > 0:
+            # Clientes vencidos hace mas de X dias
+            cutoff_date = now - timedelta(days=days_overdue)
+            filters.append({'field': 'membershipEnd', 'operator': '<', 'value': cutoff_date})
+        elif days_overdue == 0:
+            # Clientes vencidos (cualquier dia)
+            filters.append({'field': 'membershipEnd', 'operator': '<', 'value': now})
+        elif days_overdue < 0:
+            # Proximos N dias (ej: -7 = proximos 7 dias)
+            cutoff_date = now + timedelta(days=abs(days_overdue))
+            filters.append({'field': 'membershipEnd', 'operator': '<=', 'value': cutoff_date})
+            filters.append({'field': 'membershipEnd', 'operator': '>=', 'value': now})
+        # days_overdue = -999: todos, sin filtro de fecha
         
         # Solo clientes activos
         filters.append({'field': 'isActive', 'operator': '==', 'value': True})
         
         # Ejecutar query
         firebase_service = FirebaseService()
-        overdue_clients = firebase_service.query_firestore(
+        clients = firebase_service.query_firestore(
             'clients',
             filters=filters,
             order_by='membershipEnd',
@@ -94,20 +110,25 @@ def get_solvency_report():
         
         # Enriquecer datos de los clientes
         enriched_clients = []
-        for client in overdue_clients:
+        for client in clients:
             client_id = client.get('id')
             
-            # Calcular días de vencimiento
-            membership_end_str = client.get('membershipEnd')
-            if membership_end_str:
-                if isinstance(membership_end_str, str):
-                    membership_end = datetime.fromisoformat(membership_end_str.replace('Z', '+00:00'))
+            # Calcular días restantes (negativo = vencido, positivo = por vencer)
+            membership_end = client.get('membershipEnd')
+            if membership_end:
+                if isinstance(membership_end, str):
+                    end_date = datetime.fromisoformat(membership_end.replace('Z', '+00:00'))
+                elif hasattr(membership_end, 'to_datetime'):
+                    end_date = membership_end.to_datetime()
                 else:
-                    membership_end = membership_end_str
+                    end_date = membership_end
                 
-                days_over = (datetime.now() - membership_end).days
+                if end_date.tzinfo is None:
+                    end_date = end_date.replace(tzinfo=timezone.utc)
+                
+                days_remaining = (end_date - now).days
             else:
-                days_over = 0
+                days_remaining = 0
             
             # Obtener último pago
             payments = firebase_service.query_firestore(
@@ -123,16 +144,16 @@ def get_solvency_report():
             last_payment = payments[0] if payments else None
             
             enriched_client = client.copy()
-            enriched_client['daysOverdue'] = days_over
+            enriched_client['daysRemaining'] = days_remaining
             enriched_client['lastPaymentDate'] = last_payment.get('createdAt') if last_payment else None
             enriched_client['lastPaymentAmount'] = last_payment.get('amount') if last_payment else 0
             
             enriched_clients.append(enriched_client)
         
-        # Ordenar por días de vencimiento (más vencidos primero)
-        enriched_clients.sort(key=lambda x: x['daysOverdue'], reverse=True)
+        # Ordenar: más urgentes primero (menos días restantes)
+        enriched_clients.sort(key=lambda x: x['daysRemaining'])
         
-        logger.info(f"Reporte de morosos: {len(enriched_clients)} clientes")
+        logger.info(f"Reporte de membresías: {len(enriched_clients)} clientes")
         
         return jsonify({
             'success': True,

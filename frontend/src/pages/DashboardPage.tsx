@@ -245,7 +245,7 @@ export const DashboardPage: React.FC = () => {
         </div>
         <div className="card-content">
           {metrics.incomeChart.length === 0 || metrics.incomeChart.every(p => p.amount === 0) ? (
-            <p className="text-gray-500 text-center py-12">No income data for this period</p>
+            <p className="text-gray-500 text-center py-12">No hay datos registrados bajo este periodo</p>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={metrics.incomeChart} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>

@@ -69,15 +69,15 @@ export const SolvencyReportPage: React.FC = () => {
   };
 
   const getStatusBadge = (days: number) => {
-    if (days <= 0) return { label: 'Al día', className: 'bg-green-100 text-green-800' };
-    if (days <= 7) return { label: 'Por vencer', className: 'bg-yellow-100 text-yellow-800' };
-    if (days <= 30) return { label: 'Vencido reciente', className: 'bg-orange-100 text-orange-800' };
+    if (days > 7) return { label: 'Al día', className: 'bg-green-100 text-green-800' };
+    if (days >= 1) return { label: 'Por vencer', className: 'bg-yellow-100 text-yellow-800' };
+    if (days > -30) return { label: 'Vencido reciente', className: 'bg-orange-100 text-orange-800' };
     return { label: 'Vencido', className: 'bg-red-100 text-red-800' };
   };
 
   const getStatusIcon = (days: number) => {
-    if (days <= 0) return <CheckCircle className="h-5 w-5 text-green-600" />;
-    if (days <= 7) return <Clock className="h-5 w-5 text-yellow-600" />;
+    if (days > 7) return <CheckCircle className="h-5 w-5 text-green-600" />;
+    if (days >= 0) return <Clock className="h-5 w-5 text-yellow-600" />;
     return <AlertCircle className="h-5 w-5 text-red-600" />;
   };
 
@@ -155,11 +155,11 @@ export const SolvencyReportPage: React.FC = () => {
           </div>
           <div className="space-y-3">
             {reportData.map((client) => {
-              const badge = getStatusBadge(client.daysOverdue);
+              const badge = getStatusBadge(client.daysRemaining);
               return (
                 <div key={client.id} className="card">
                   <div className="flex items-start gap-4">
-                    <div className="mt-1">{getStatusIcon(client.daysOverdue)}</div>
+                    <div className="mt-1">{getStatusIcon(client.daysRemaining)}</div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <Link to={`/clients/${client.id}`} className="font-semibold text-gray-900 hover:text-primary-600">
@@ -176,9 +176,9 @@ export const SolvencyReportPage: React.FC = () => {
                         </span>
                         <span className="flex items-center">
                           <Calendar className="h-3.5 w-3.5 mr-1" />
-                          {client.daysOverdue <= 0
-                            ? `Vence: ${formatDate(client.membershipEnd)}`
-                            : `Venció: ${formatDate(client.membershipEnd)} (${client.daysOverdue} días)`
+                          {client.daysRemaining > 0
+                            ? `Vence: ${formatDate(client.membershipEnd)} (${client.daysRemaining} días)`
+                            : `Venció: ${formatDate(client.membershipEnd)} (${Math.abs(client.daysRemaining)} días)`
                           }
                         </span>
                         {client.lastPaymentDate && (
