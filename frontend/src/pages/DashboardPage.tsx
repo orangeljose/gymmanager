@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Users, 
+  DollarSign,
   AlertTriangle, 
   Calendar,
   TrendingUp,
@@ -94,7 +95,8 @@ export const DashboardPage: React.FC = () => {
     expiringThisWeek: 0,
     incomeChart: [],
     topPayingClients: [],
-    retentionRate: 0
+    retentionRate: 0,
+    recentPayments: []
   };
 
   return (
@@ -195,34 +197,34 @@ export const DashboardPage: React.FC = () => {
 
       {/* Income Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Top 5 Clients */}
+        {/* Últimos Pagos */}
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Top Clientes</h3>
-            <p className="card-description">Mayor cantidad de pagos (30 días)</p>
+            <h3 className="card-title">Últimos Pagos</h3>
+            <p className="card-description">Recibos más recientes</p>
           </div>
           <div className="card-content">
-            {metrics.topPayingClients.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">Sin datos de pagos recientes</p>
+            {!metrics.recentPayments || metrics.recentPayments.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">No hay pagos recientes</p>
             ) : (
               <div className="space-y-3">
-                {metrics.topPayingClients.map((client, index) => (
-                  <div key={client.clientId} className="flex items-center justify-between">
+                {metrics.recentPayments.map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                        index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                        index === 1 ? 'bg-gray-200 text-gray-600' :
-                        index === 2 ? 'bg-orange-100 text-orange-700' :
-                        'bg-gray-100 text-gray-500'
-                      }`}>
-                        {index + 1}
+                      <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <DollarSign className="h-4 w-4 text-green-600" />
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">{client.clientName}</p>
+                        <p className="text-sm font-medium text-gray-900">{payment.clientName}</p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(payment.createdAt).toLocaleDateString('es-VE', { day: '2-digit', month: 'short' })}
+                          {' · '}
+                          {payment.method === 'cash' ? 'Efectivo' : payment.method === 'zelle' ? 'Zelle' : payment.method === 'pago_movil' ? 'Pago Móvil' : payment.method}
+                        </p>
                       </div>
                     </div>
                     <span className="text-sm font-semibold text-gray-900">
-                      {client.paymentCount} pagos
+                      ${(payment.amount / 100).toFixed(2)}
                     </span>
                   </div>
                 ))}

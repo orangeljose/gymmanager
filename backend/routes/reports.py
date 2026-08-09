@@ -661,6 +661,18 @@ def get_dashboard():
 
         logger.info(f"Dashboard: {active_count} activos, {overdue_count} morosos, {expiring_count} próximos, ${today_income/100:.2f} hoy")
 
+        # Recent payments (last 5)
+        recent_payments = []
+        for p in payments[:5]:
+            recent_payments.append({
+                'id': p.get('id'),
+                'clientId': p.get('clientId'),
+                'clientName': p.get('clientName', 'Cliente'),
+                'amount': p.get('amount', 0),
+                'method': p.get('method', ''),
+                'createdAt': p.get('createdAt').isoformat() if hasattr(p.get('createdAt'), 'isoformat') else str(p.get('createdAt'))
+            })
+
         return jsonify({
             'success': True,
             'data': {
@@ -670,7 +682,8 @@ def get_dashboard():
                 'expiringThisWeek': expiring_count,
                 'incomeChart': income_chart,
                 'topPayingClients': top_paying_clients,
-                'retentionRate': retention_rate
+                'retentionRate': retention_rate,
+                'recentPayments': recent_payments
             }
         }), 200
 

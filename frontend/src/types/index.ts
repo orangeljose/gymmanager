@@ -380,6 +380,16 @@ export interface DashboardData {
   incomeChart: IncomeChartPoint[];
   topPayingClients: TopPayingClient[];
   retentionRate: number;
+  recentPayments: RecentPayment[];
+}
+
+export interface RecentPayment {
+  id: string;
+  clientId: string;
+  clientName: string;
+  amount: number;
+  method: string;
+  createdAt: string;
 }
 
 export interface IncomeChartPoint {
