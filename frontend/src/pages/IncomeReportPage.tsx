@@ -137,6 +137,7 @@ export const IncomeReportPage: React.FC = () => {
 
   // Determinar agrupación según rango
   const getGroupLabel = () => {
+    if (dateRange === 'year') return 'mensual';
     const days = parseInt(dateRange) || (startDate && endDate
       ? Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000)
       : 30);
