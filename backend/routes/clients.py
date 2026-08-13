@@ -65,10 +65,11 @@ def get_clients():
         elif user_business_id:
             filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
         
-        # Filtro por sede (si el usuario no es super admin)
+        # Filtro por sede (si el usuario no es super admin y tiene sede asignada)
         if g.current_user.get('role') != 'super_admin':
             user_branch_id = g.current_user.get('branchId')
-            filters.append({'field': 'branchId', 'operator': '==', 'value': user_branch_id})
+            if user_branch_id:
+                filters.append({'field': 'branchId', 'operator': '==', 'value': user_branch_id})
         elif branch_id:
             # Validar acceso a la sede
             if not validate_branch_access(branch_id):
@@ -199,7 +200,8 @@ def get_client(client_id):
         client_branch_id = client.get('branchId')
         if g.current_user.get('role') != 'super_admin':
             user_branch_id = g.current_user.get('branchId')
-            if client_branch_id != user_branch_id:
+            # Admin sin sucursal asignada puede acceder a clientes de su negocio
+            if user_branch_id and client_branch_id != user_branch_id:
                 return jsonify({
                     'success': False,
                     'error': {
@@ -264,7 +266,8 @@ def create_client():
         branch_id = client_data.get('branchId')
         if g.current_user.get('role') != 'super_admin':
             user_branch_id = g.current_user.get('branchId')
-            if branch_id != user_branch_id:
+            # Admin sin sucursal asignada puede crear en cualquier sede de su negocio
+            if user_branch_id and branch_id != user_branch_id:
                 return jsonify({
                     'success': False,
                     'error': {
@@ -404,7 +407,7 @@ def update_client(client_id):
                 }
             }), 403
         
-        if g.current_user.get('role') != 'super_admin' and client_branch_id != user_branch_id:
+        if g.current_user.get('role') != 'super_admin' and user_branch_id and client_branch_id != user_branch_id:
             return jsonify({
                 'success': False,
                 'error': {
@@ -517,7 +520,7 @@ def get_client_payments(client_id):
                 }
             }), 403
         
-        if g.current_user.get('role') != 'super_admin' and client_branch_id != user_branch_id:
+        if g.current_user.get('role') != 'super_admin' and user_branch_id and client_branch_id != user_branch_id:
             return jsonify({
                 'success': False,
                 'error': {

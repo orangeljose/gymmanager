@@ -78,7 +78,8 @@ class PaymentService:
             
             # Validar acceso a la sede
             if current_user.get('role') != 'super_admin':
-                if branch_id != user_branch_id:
+                # Admin sin sucursal asignada puede operar en cualquier sede de su negocio
+                if user_branch_id and branch_id != user_branch_id:
                     logger.error(f"Usuario no tiene acceso a la sede: {branch_id}")
                     return None
             

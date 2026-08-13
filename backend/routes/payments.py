@@ -83,7 +83,8 @@ def register_payment():
         branch_id = payment_data.get('branchId')
         if g.current_user.get('role') != 'super_admin':
             user_branch_id = g.current_user.get('branchId')
-            if branch_id != user_branch_id:
+            # Admin sin sucursal asignada puede operar en cualquier sede de su negocio
+            if user_branch_id and branch_id != user_branch_id:
                 return jsonify({
                     'success': False,
                     'error': {
@@ -210,7 +211,8 @@ def get_payment_report():
         # Validar acceso a la sede (si no es super admin)
         if branch_id and g.current_user.get('role') != 'super_admin':
             user_branch_id = g.current_user.get('branchId')
-            if branch_id != user_branch_id:
+            # Admin sin sucursal asignada puede ver pagos de cualquier sede
+            if user_branch_id and branch_id != user_branch_id:
                 return jsonify({
                     'success': False,
                     'error': {
@@ -345,7 +347,7 @@ def get_receipts():
         filters = []
         
         # Admin (dueño) y branch_admin (encargado) solo ven su sede
-        if user_role in ['admin', 'branch_admin']:
+        if user_role in ['admin', 'branch_admin'] and user_branch_id:
             filters.append({'field': 'branchId', 'operator': '==', 'value': user_branch_id})
         elif branch_id:
             # Solo super_admin puede especificar branchId diferente
@@ -506,7 +508,8 @@ def sync_offline_payments():
             user_branch_id = g.current_user.get('branchId')
             for payment_data in validated_payments:
                 branch_id = payment_data.get('branchId')
-                if branch_id != user_branch_id:
+                # Admin sin sucursal asignada puede sincronizar pagos de cualquier sede
+                if user_branch_id and branch_id != user_branch_id:
                     return jsonify({
                         'success': False,
                         'error': {
