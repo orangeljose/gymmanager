@@ -131,6 +131,7 @@ class ApiService {
   async getClients(filters: ClientFilters = {}): Promise<ApiResponse<Client[]>> {
     const params = new URLSearchParams();
     
+    if (filters.businessId) params.append('businessId', filters.businessId);
     if (filters.branchId) params.append('branchId', filters.branchId);
     if (filters.status) params.append('status', filters.status);
     if (filters.search) params.append('search', filters.search);
