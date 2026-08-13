@@ -257,7 +257,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const hasPermission = useCallback((permission: string): boolean => {
     if (!authState.user) return false;
     if (authState.user.role === 'super_admin') return true;
-    return authState.user.permissions.includes(permission);
+    // Si permissions está vacío, usar los permisos del rol
+    const perms = authState.user.permissions;
+    if (perms && perms.length > 0) {
+      return perms.includes(permission);
+    }
+    const ROLE_PERMS: Record<string, string[]> = {
+      admin: ['read_clients', 'write_clients', 'read_payments', 'write_payments', 'read_reports', 'manage_business'],
+      branch_admin: ['read_clients', 'write_clients', 'read_payments', 'write_payments', 'read_reports'],
+      cashier: ['read_clients', 'write_payments', 'read_reports'],
+      trainer: ['read_clients']
+    };
+    return (ROLE_PERMS[authState.user.role] || []).includes(permission);
   }, [authState.user]);
 
   const canAccessResource = useCallback((businessId?: string, branchId?: string): boolean => {

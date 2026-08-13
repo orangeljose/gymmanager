@@ -7,6 +7,7 @@ from middleware.auth_middleware import require_auth, require_role
 from services.firebase_service import FirebaseService
 from services.email_service import sendInvitationEmail
 from models.invitation import InvitationModel
+from models.user import UserModel
 
 logger = logging.getLogger(__name__)
 
@@ -333,7 +334,7 @@ def accept_invitation():
             'businessId': invitation.get('businessId'),
             'branchId': invitation.get('branchId'),
             'isActive': True,
-            'permissions': [],  # Se calculan con el rol
+            'permissions': UserModel.get_permissions(invitation.get('role')),
             'createdAt': invitation.get('createdAt'),
             'invitedBy': invitation.get('invitedBy'),
             'invitedVia': 'invitation_token'
