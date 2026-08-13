@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import type { SolvencyReport, Branch } from '@/types';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Phone, Calendar, DollarSign, Filter, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Phone, Calendar, DollarSign, Filter, Search, X, Clock, AlertCircle, CheckCircle } from 'lucide-react';
 
 export const SolvencyReportPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
@@ -14,14 +14,19 @@ export const SolvencyReportPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filterBranch, setFilterBranch] = useState<string>('');
   const [daysOverdue, setDaysOverdue] = useState<number>(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     loadBranches();
   }, [effectiveBusinessId]);
 
   useEffect(() => {
-    loadReport();
-  }, [effectiveBusinessId, filterBranch, daysOverdue]);
+    const delayDebounce = setTimeout(() => {
+      loadReport();
+    }, 300);
+    return () => clearTimeout(delayDebounce);
+  }, [effectiveBusinessId, filterBranch, daysOverdue, searchTerm]);
 
   const loadBranches = async () => {
     if (!effectiveBusinessId) return;
@@ -41,6 +46,7 @@ export const SolvencyReportPage: React.FC = () => {
       setLoading(true);
       const filters: any = { daysOverdue };
       if (filterBranch) filters.branchId = filterBranch;
+      if (searchTerm.trim()) filters.search = searchTerm.trim();
 
       const response = await apiService.getSolvencyReport(filters);
       if (response.success && response.data) {
@@ -92,11 +98,10 @@ export const SolvencyReportPage: React.FC = () => {
   return (
     <div className="p-4 sm:p-6">
       <Link to="/reports" className="btn btn-ghost btn-sm mb-4">
-        <ArrowLeft className="h-4 w-4 mr-1" />
-        Volver a Reportes
+        <ArrowLeft className="h-4 w-4 mr-1" /> Volver a Reportes
       </Link>
 
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Seguimiento de Membresías</h1>
           <p className="text-sm text-gray-600 mt-1">Gestioná renovaciones y vencimientos de tus clientes</p>
@@ -104,40 +109,68 @@ export const SolvencyReportPage: React.FC = () => {
       </div>
 
       <div className="card mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              <Filter className="h-4 w-4 inline mr-1" />
-              Sucursal
-            </label>
-            <select
-              value={filterBranch}
-              onChange={(e) => setFilterBranch(e.target.value)}
-              className="input w-full"
-            >
-              <option value="">Todas las sucursales</option>
-              {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>{branch.name}</option>
-              ))}
-            </select>
+        <div className="p-4 border-b flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar por nombre, email o teléfono..."
+              className="input pl-10 w-full"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
-          <div className="w-full sm:w-56">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estado
-            </label>
-            <select
-              value={daysOverdue}
-              onChange={(e) => setDaysOverdue(Number(e.target.value))}
-              className="input w-full"
-            >
-              <option value="-999">Todos</option>
-              <option value="-7">Próximos 7 días</option>
-              <option value="0">Vencidos</option>
-              <option value="7">+7 días vencido</option>
-              <option value="30">+30 días vencido</option>
-            </select>
-          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`btn btn-outline ${showFilters ? 'bg-gray-50' : ''}`}
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filtros
+            {(filterBranch || daysOverdue !== 0) && (
+              <span className="ml-2 w-2 h-2 bg-primary-500 rounded-full" />
+            )}
+          </button>
         </div>
+
+        {showFilters && (
+          <div className="p-4 bg-gray-50 border-b flex flex-wrap gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sucursal</label>
+              <select
+                value={filterBranch}
+                onChange={(e) => setFilterBranch(e.target.value)}
+                className="input"
+              >
+                <option value="">Todas</option>
+                {branches.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+              <select
+                value={daysOverdue}
+                onChange={(e) => setDaysOverdue(Number(e.target.value))}
+                className="input"
+              >
+                <option value="-999">Todos</option>
+                <option value="-7">Próximos 7 días</option>
+                <option value="0">Vencidos</option>
+                <option value="7">+7 días vencido</option>
+                <option value="30">+30 días vencido</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {reportData.length === 0 ? (

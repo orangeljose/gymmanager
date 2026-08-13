@@ -125,6 +125,17 @@ def get_solvency_report():
             filters=filters
         )
         
+        # Búsqueda por nombre, email o teléfono (Python-side)
+        search = request.args.get('search', '').strip()
+        if search:
+            search_lower = search.lower()
+            clients = [
+                c for c in clients
+                if search_lower in (c.get('name') or '').lower()
+                or search_lower in (c.get('email') or '').lower()
+                or search_lower in (c.get('phone') or '').lower()
+            ]
+        
         # Enriquecer datos de los clientes
         enriched_clients = []
         for client in clients:
