@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Plus, Filter, ChevronLeft, ChevronRight, X, Calendar } from 'lucide-react';
+import { Search, Plus, ChevronLeft, ChevronRight, X, Calendar } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useClients } from '@/hooks/useClients';
 import { usePlans } from '@/hooks/usePlans';
@@ -16,7 +16,6 @@ export const ClientsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<ClientStatus | ''>('');
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchFilter, setBranchFilter] = useState<string>('');
-  const [showFilters, setShowFilters] = useState(false);
 
   // Build plan name lookup map
   const planNameMap = useMemo(() => {
@@ -114,26 +113,13 @@ export const ClientsPage: React.FC = () => {
               </button>
             )}
           </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`btn btn-outline ${showFilters ? 'bg-gray-50' : ''}`}
-          >
-            <Filter className="h-4 w-4 mr-2" />
-            Filtros
-            {(statusFilter || branchFilter) && (
-              <span className="ml-2 w-2 h-2 bg-primary-500 rounded-full" />
-            )}
-          </button>
-        </div>
-
-        {showFilters && (
-          <div className="p-4 bg-gray-50 border-b flex flex-wrap gap-4">
+          <div className="flex flex-wrap items-end gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
               <select
                 value={statusFilter}
                 onChange={(e) => handleStatusFilter(e.target.value as ClientStatus | '')}
-                className="input"
+                className="input w-36"
               >
                 <option value="">Todos</option>
                 <option value="active">Activos</option>
@@ -150,7 +136,7 @@ export const ClientsPage: React.FC = () => {
                     setBranchFilter(e.target.value);
                     fetchClients({ status: statusFilter || undefined, branchId: e.target.value || undefined, page: 1 });
                   }}
-                  className="input"
+                  className="input w-44"
                 >
                   <option value="">Todas</option>
                   {branches.map(b => (
@@ -160,21 +146,19 @@ export const ClientsPage: React.FC = () => {
               </div>
             )}
             {(statusFilter || branchFilter) && (
-              <div className="flex items-end">
-                <button
-                  onClick={() => {
-                    setStatusFilter('');
-                    setBranchFilter('');
-                    fetchClients({ page: 1 });
-                  }}
-                  className="btn btn-ghost text-sm"
-                >
-                  Limpiar filtros
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  setStatusFilter('');
+                  setBranchFilter('');
+                  fetchClients({ page: 1 });
+                }}
+                className="btn btn-ghost text-sm"
+              >
+                Limpiar
+              </button>
             )}
           </div>
-        )}
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center h-64">
