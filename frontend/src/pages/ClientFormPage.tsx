@@ -275,21 +275,23 @@ export const ClientFormPage: React.FC = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Plan de Membresía</label>
-              <select
-                value={clientData.membershipPlanId}
-                onChange={e => handlePlanSelect(e.target.value)}
-                className="input"
-              >
-                <option value="">Seleccionar plan</option>
-                {plans.map(plan => (
-                  <option key={plan.id} value={plan.id}>
-                    {plan.name} - ${(plan.price / 100).toFixed(2)} ({plan.durationDays} días)
-                  </option>
-                ))}
-              </select>
-            </div>
+            {!isEdit && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Plan de Membresía</label>
+                <select
+                  value={clientData.membershipPlanId}
+                  onChange={e => handlePlanSelect(e.target.value)}
+                  className="input"
+                >
+                  <option value="">Seleccionar plan</option>
+                  {plans.map(plan => (
+                    <option key={plan.id} value={plan.id}>
+                      {plan.name} - ${(plan.price / 100).toFixed(2)} ({plan.durationDays} días)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
