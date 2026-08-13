@@ -104,25 +104,26 @@ def get_solvency_report():
         # Solo clientes activos
         filters.append({'field': 'isActive', 'operator': '==', 'value': True})
         
-        # Ejecutar query base (sin filtro de fecha para evitar índices)
+        # Filtro de vencimiento en Firestore (requiere índices)
+        if days_overdue == -999:
+            # Todos los clientes, sin filtro de fecha
+            pass
+        elif days_overdue > 0:
+            cutoff_date = now - timedelta(days=days_overdue)
+            filters.append({'field': 'membershipEnd', 'operator': '<', 'value': cutoff_date})
+        elif days_overdue == 0:
+            filters.append({'field': 'membershipEnd', 'operator': '<', 'value': now})
+        elif days_overdue < 0:
+            future_cutoff = now + timedelta(days=abs(days_overdue))
+            filters.append({'field': 'membershipEnd', 'operator': '>=', 'value': now})
+            filters.append({'field': 'membershipEnd', 'operator': '<=', 'value': future_cutoff})
+        
+        # Ejecutar query (Firestore nativo)
         firebase_service = FirebaseService()
         clients = firebase_service.query_firestore(
             'clients',
             filters=filters
         )
-        
-        # Filtrar por vencimiento en Python
-        if days_overdue == -999:
-            # Todos los clientes, sin filtro de fecha
-            clients = clients
-        elif days_overdue > 0:
-            cutoff_date = now - timedelta(days=days_overdue)
-            clients = [c for c in clients if _get_membership_end(c) and _get_membership_end(c) < cutoff_date]
-        elif days_overdue == 0:
-            clients = [c for c in clients if _get_membership_end(c) and _get_membership_end(c) < now]
-        elif days_overdue < 0:
-            future_cutoff = now + timedelta(days=abs(days_overdue))
-            clients = [c for c in clients if _get_membership_end(c) and now <= _get_membership_end(c) <= future_cutoff]
         
         # Enriquecer datos de los clientes
         enriched_clients = []
