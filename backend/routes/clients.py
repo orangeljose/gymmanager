@@ -94,32 +94,36 @@ def get_clients():
                 }), 400
             filters.append({'field': 'status', 'operator': '==', 'value': status})
         
-        # Búsqueda por nombre o email (búsqueda simple)
+        # Búsqueda por nombre, email o teléfono
         if search:
-            # Firestore no soporta LIKE, así que buscamos por nombre exacto
-            # En producción, se recomienda usar Algolia o similar
-            filters.append({'field': 'name', 'operator': '>=', 'value': search})
-            filters.append({'field': 'name', 'operator': '<=', 'value': search + '\uf8ff'})
+            # Se hace en Python después de obtener los clientes base
+            pass
         
-        # Ejecutar query
+        # Ejecutar query (sin búsqueda por texto para evitar índices)
         firebase_service = FirebaseService()
-        clients = firebase_service.query_firestore(
+        all_clients = firebase_service.query_firestore(
             'clients',
-            filters=filters,
-            order_by='name',
-            limit=pagination['limit'],
-            offset=pagination['offset']
+            filters=filters
         )
         
-        # Obtener total para paginación (sin límite)
-        total_clients = firebase_service.query_firestore('clients', filters=filters)
-        total = len(total_clients)
+        # Filtrar por búsqueda en Python (nombre, email o teléfono)
+        if search:
+            search_lower = search.lower()
+            all_clients = [
+                c for c in all_clients
+                if search_lower in (c.get('name') or '').lower()
+                or search_lower in (c.get('email') or '').lower()
+                or search_lower in (c.get('phone') or '').lower()
+            ]
         
-        # Convertir timestamps en todos los clientes
-        clients = [ClientModel.from_firestore(c, c['id']) for c in clients]
+        # Ordenar por nombre
+        all_clients.sort(key=lambda c: (c.get('name') or '').lower())
         
-        # Calcular páginas totales
-        pages = (total + pagination['limit'] - 1) // pagination['limit']
+        # Paginar en Python
+        total = len(all_clients)
+        start_idx = (page - 1) * limit
+        clients = all_clients[start_idx:start_idx + limit]
+        pages = (total + limit - 1) // limit if limit > 0 else 0
         
         logger.info(f"Listados {len(clients)} clientes (página {pagination['page']})")
         
