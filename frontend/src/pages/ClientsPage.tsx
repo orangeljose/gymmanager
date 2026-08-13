@@ -94,8 +94,8 @@ export const ClientsPage: React.FC = () => {
       </div>
 
       <div className="card">
-        <div className="p-4 border-b flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
+        <div className="p-4 border-b flex flex-col md:flex-row md:items-end gap-4">
+          <div className="relative flex-1 w-full md:w-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
