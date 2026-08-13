@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import toast from 'react-hot-toast';
-import { UserPlus, Mail, Building } from 'lucide-react';
+import { UserPlus, Mail, Building, Link2, Copy, Check } from 'lucide-react';
 
 export const AddAdminPage: React.FC = () => {
   const navigate = useNavigate();
@@ -12,6 +12,8 @@ export const AddAdminPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
+  const [invitationLink, setInvitationLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const selectedBusiness = businesses.find(b => b.id === selectedBusinessId);
 
@@ -40,7 +42,8 @@ export const AddAdminPage: React.FC = () => {
       });
 
       if (response.success) {
-        toast.success(`Invitación enviada a ${email}. Recibirá un email para unirse a ${selectedBusiness?.name || 'tu negocio'}.`);
+        setInvitationLink(response.data?.invitationLink || null);
+        toast.success(`Invitación creada para ${email}`);
         // Reset form
         setEmail('');
         setName('');
@@ -51,6 +54,17 @@ export const AddAdminPage: React.FC = () => {
       toast.error(error.message || 'Error al procesar solicitud');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!invitationLink) return;
+    try {
+      await navigator.clipboard.writeText(invitationLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('No se pudo copiar el link');
     }
   };
 
@@ -132,6 +146,37 @@ export const AddAdminPage: React.FC = () => {
           </div>
         </form>
       </div>
+
+      {invitationLink && (
+        <div className="mt-6 card border-2 border-green-200 bg-green-50">
+          <div className="flex items-start space-x-3">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Link2 className="h-5 w-5 text-green-700" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-green-900 mb-1">
+                Link de invitación generado
+              </h3>
+              <p className="text-xs text-green-700 mb-2">
+                El email no se pudo enviar (dominio no verificado en Resend). Compartí este link con el nuevo admin manualmente.
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={invitationLink}
+                  className="input flex-1 bg-white text-xs"
+                  onFocus={(e) => e.target.select()}
+                />
+                <button onClick={handleCopy} className="btn btn-outline btn-sm whitespace-nowrap">
+                  {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                  {copied ? 'Copiado' : 'Copiar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 flex justify-between">
         <button
