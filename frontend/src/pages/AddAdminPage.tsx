@@ -144,7 +144,7 @@ export const AddAdminPage: React.FC = () => {
           onClick={() => navigate('/dashboard')}
           className="btn btn-ghost"
         >
-          Volver al Dashboard
+          Volver a Inicio
         </button>
       </div>
     </div>

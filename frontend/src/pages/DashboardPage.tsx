@@ -104,7 +104,7 @@ export const DashboardPage: React.FC = () => {
       <div className="mb-8">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Inicio</h1>
             <p className="text-gray-600 mt-2">
               Bienvenido, {user?.name}! Aquí está el resumen de tu gimnasio.
             </p>

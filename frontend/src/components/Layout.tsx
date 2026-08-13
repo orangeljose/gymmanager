@@ -27,7 +27,7 @@ interface SubMenuItem {
 
 const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
   {
-    label: 'Dashboard',
+    label: 'Inicio',
     href: '/dashboard',
     icon: 'Home'
   },

@@ -12,6 +12,24 @@ from utils.validators import validate_date_format
 
 logger = logging.getLogger(__name__)
 
+def _get_membership_end(client):
+    """Extrae membershipEnd como datetime timezone-aware, o None"""
+    me = client.get('membershipEnd')
+    if not me:
+        return None
+    if isinstance(me, str):
+        try:
+            d = datetime.fromisoformat(me.replace('Z', '+00:00'))
+        except:
+            return None
+    elif hasattr(me, 'to_datetime'):
+        d = me.to_datetime()
+    else:
+        d = me
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=timezone.utc)
+    return d
+
 reports_bp = Blueprint('reports', __name__, url_prefix='/api/reports')
 
 @reports_bp.route('/solvency', methods=['GET', 'OPTIONS'])
@@ -83,35 +101,28 @@ def get_solvency_report():
         elif branch_id:
             filters.append({'field': 'branchId', 'operator': '==', 'value': branch_id})
         
-        # Filtro de vencimiento
-        if days_overdue == -999:
-            # Todos los clientes, sin filtro de fecha
-            pass
-        elif days_overdue > 0:
-            # Clientes vencidos hace mas de X dias
-            cutoff_date = now - timedelta(days=days_overdue)
-            filters.append({'field': 'membershipEnd', 'operator': '<', 'value': cutoff_date})
-        elif days_overdue == 0:
-            # Clientes vencidos (cualquier dia)
-            filters.append({'field': 'membershipEnd', 'operator': '<', 'value': now})
-        elif days_overdue < 0:
-            # Proximos N dias (ej: -7 = proximos 7 dias)
-            cutoff_date = now + timedelta(days=abs(days_overdue))
-            filters.append({'field': 'membershipEnd', 'operator': '<=', 'value': cutoff_date})
-            filters.append({'field': 'membershipEnd', 'operator': '>=', 'value': now})
-        # days_overdue = -999: todos, sin filtro de fecha
-        
         # Solo clientes activos
         filters.append({'field': 'isActive', 'operator': '==', 'value': True})
         
-        # Ejecutar query
+        # Ejecutar query base (sin filtro de fecha para evitar índices)
         firebase_service = FirebaseService()
         clients = firebase_service.query_firestore(
             'clients',
             filters=filters
-            # order_by='membershipEnd',
-            # direction='ASC'
         )
+        
+        # Filtrar por vencimiento en Python
+        if days_overdue == -999:
+            # Todos los clientes, sin filtro de fecha
+            clients = clients
+        elif days_overdue > 0:
+            cutoff_date = now - timedelta(days=days_overdue)
+            clients = [c for c in clients if _get_membership_end(c) and _get_membership_end(c) < cutoff_date]
+        elif days_overdue == 0:
+            clients = [c for c in clients if _get_membership_end(c) and _get_membership_end(c) < now]
+        elif days_overdue < 0:
+            future_cutoff = now + timedelta(days=abs(days_overdue))
+            clients = [c for c in clients if _get_membership_end(c) and now <= _get_membership_end(c) <= future_cutoff]
         
         # Enriquecer datos de los clientes
         enriched_clients = []
