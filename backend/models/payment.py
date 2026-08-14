@@ -12,7 +12,7 @@ class PaymentModel:
     REQUIRED_FIELDS = ['clientId', 'amount', 'method', 'membershipPlanId', 'branchId']
 
     # Métodos de pago válidos
-    VALID_METHODS = ['cash', 'card', 'transfer', 'zelle', 'pago_movil', 'other']
+    VALID_METHODS = ['cash', 'card', 'transfer', 'zelle', 'pago_movil', 'binance', 'other']
     
     @staticmethod
     def validate_create_data(data: Dict[str, Any]) -> Dict[str, Any]:

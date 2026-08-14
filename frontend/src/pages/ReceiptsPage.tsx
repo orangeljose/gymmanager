@@ -12,6 +12,7 @@ const METHOD_OPTIONS: { value: string; label: string }[] = [
   { value: 'transfer', label: 'Transferencia' },
   { value: 'zelle', label: 'Zelle' },
   { value: 'pago_movil', label: 'Pago Móvil' },
+  { value: 'binance', label: 'Binance' },
   { value: 'other', label: 'Otro' },
 ];
 
@@ -119,6 +120,7 @@ export const ReceiptsPage: React.FC = () => {
       case 'transfer': return 'Transferencia';
       case 'zelle': return 'Zelle';
       case 'pago_movil': return 'Pago Móvil';
+      case 'binance': return 'Binance';
       default: return m;
     }
   };
@@ -130,6 +132,7 @@ export const ReceiptsPage: React.FC = () => {
       case 'transfer': return 'bg-purple-100 text-purple-700';
       case 'zelle': return 'bg-pink-100 text-pink-700';
       case 'pago_movil': return 'bg-orange-100 text-orange-700';
+      case 'binance': return 'bg-yellow-100 text-yellow-700';
       default: return 'bg-gray-100 text-gray-700';
     }
   };

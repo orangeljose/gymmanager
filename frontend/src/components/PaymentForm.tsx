@@ -173,6 +173,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
           <option value="cash">Efectivo</option>
           {accounts.filter(a => a.type === 'zelle').length > 0 && <option value="zelle">Zelle</option>}
           {accounts.filter(a => a.type === 'pago_movil').length > 0 && <option value="pago_movil">Pago Móvil</option>}
+          {accounts.filter(a => a.type === 'binance').length > 0 && <option value="binance">Binance</option>}
           {accounts.filter(a => a.type === 'bank').length > 0 && <option value="transfer">Transferencia</option>}
         </select>
       </div>
@@ -198,6 +199,34 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
             >
               <option value="">Seleccionar cuenta</option>
               {accounts.filter(a => a.type === 'zelle').map(acc => (
+                <option key={acc.id} value={acc.id}>{acc.label}</option>
+              ))}
+            </select>
+          </div>
+        </>
+      )}
+
+      {method === 'binance' && (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email / ID de quien pagó</label>
+            <input
+              type="email"
+              value={methodDetails.senderEmail || ''}
+              onChange={e => updateMethodDetail('senderEmail', e.target.value)}
+              className="input"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Cuenta Binance destino</label>
+            <select
+              value={methodDetails.destinationAccountId || ''}
+              onChange={e => updateMethodDetail('destinationAccountId', e.target.value)}
+              className="input"
+            >
+              <option value="">Seleccionar cuenta</option>
+              {accounts.filter(a => a.type === 'binance').map(acc => (
                 <option key={acc.id} value={acc.id}>{acc.label}</option>
               ))}
             </select>

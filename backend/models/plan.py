@@ -63,7 +63,7 @@ class PlanModel:
             if not isinstance(data['pricesByMethod'], dict):
                 errors.append("pricesByMethod debe ser un objeto")
             else:
-                valid_methods = ['cash', 'card', 'transfer', 'zelle', 'pago_movil', 'other']
+                valid_methods = ['cash', 'card', 'transfer', 'zelle', 'pago_movil', 'binance', 'other']
                 cleaned_prices = {}
                 for method, p in data['pricesByMethod'].items():
                     if method not in valid_methods:

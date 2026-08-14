@@ -55,7 +55,7 @@ export interface MembershipPlan {
   pricesByMethod?: Record<string, number>;
 }
 
-export type PaymentAccountType = 'zelle' | 'pago_movil' | 'bank';
+export type PaymentAccountType = 'zelle' | 'pago_movil' | 'bank' | 'binance';
 
 export interface PaymentAccount {
   id: string;
@@ -135,7 +135,7 @@ export interface Payment {
   paymentDate?: string; // Fecha real del pago (si diffiere de createdAt)
 }
 
-export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'zelle' | 'pago_movil' | 'other';
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'zelle' | 'pago_movil' | 'binance' | 'other';
 
 export interface Receipt {
   id: string;

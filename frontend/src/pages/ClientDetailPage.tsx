@@ -86,6 +86,7 @@ export const ClientDetailPage: React.FC = () => {
     transfer: 'Transferencia',
     zelle: 'Zelle',
     pago_movil: 'Pago Móvil',
+    binance: 'Binance',
     other: 'Otro'
   };
   const getMethodLabel = (m: string) => methodLabels[m] || m;

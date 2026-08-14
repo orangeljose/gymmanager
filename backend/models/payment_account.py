@@ -7,7 +7,7 @@ from typing import Dict, Any, List
 class PaymentAccountModel:
     """Modelo de cuenta de pago destino para Firestore"""
 
-    VALID_TYPES = ['zelle', 'pago_movil', 'bank']
+    VALID_TYPES = ['zelle', 'pago_movil', 'bank', 'binance']
 
     REQUIRED_FIELDS = ['type', 'identifier', 'businessId']
 

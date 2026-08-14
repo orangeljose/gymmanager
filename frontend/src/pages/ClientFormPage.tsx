@@ -365,6 +365,7 @@ if (!clientData.name || !clientData.email || !clientData.phone || !clientData.br
                 <option value="cash">Efectivo</option>
                 {accounts.filter(a => a.type === 'zelle').length > 0 && <option value="zelle">Zelle</option>}
                 {accounts.filter(a => a.type === 'pago_movil').length > 0 && <option value="pago_movil">Pago Móvil</option>}
+                {accounts.filter(a => a.type === 'binance').length > 0 && <option value="binance">Binance</option>}
                 {accounts.filter(a => a.type === 'bank').length > 0 && <option value="transfer">Transferencia</option>}
               </select>
             </div>
@@ -423,6 +424,40 @@ required
                     >
                       <option value="">Seleccionar</option>
                       {accounts.filter(a => a.type === 'zelle').map(acc => (
+                        <option key={acc.id} value={acc.id}>{acc.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {paymentData.method === 'binance' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email / ID de quien pagó</label>
+                    <input
+                      type="email"
+                      value={(paymentData.methodDetails as any)?.senderEmail || ''}
+                      onChange={e => setPaymentData(prev => ({
+                        ...prev,
+                        methodDetails: { ...prev.methodDetails, senderEmail: e.target.value }
+                      }))}
+                      className="input"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cuenta Binance</label>
+                    <select
+                      value={(paymentData.methodDetails as any)?.destinationAccountId || ''}
+                      onChange={e => setPaymentData(prev => ({
+                        ...prev,
+                        methodDetails: { ...prev.methodDetails, destinationAccountId: e.target.value }
+                      }))}
+                      className="input"
+                    >
+                      <option value="">Seleccionar</option>
+                      {accounts.filter(a => a.type === 'binance').map(acc => (
                         <option key={acc.id} value={acc.id}>{acc.label}</option>
                       ))}
                     </select>

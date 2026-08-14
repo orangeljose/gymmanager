@@ -218,7 +218,7 @@ export const DashboardPage: React.FC = () => {
                         <p className="text-xs text-gray-500">
                           {new Date(payment.createdAt).toLocaleDateString('es-VE', { day: '2-digit', month: 'short' })}
                           {' · '}
-                          {payment.method === 'cash' ? 'Efectivo' : payment.method === 'zelle' ? 'Zelle' : payment.method === 'pago_movil' ? 'Pago Móvil' : payment.method}
+                          {payment.method === 'cash' ? 'Efectivo' : payment.method === 'zelle' ? 'Zelle' : payment.method === 'pago_movil' ? 'Pago Móvil' : payment.method === 'binance' ? 'Binance' : payment.method}
                         </p>
                       </div>
                     </div>

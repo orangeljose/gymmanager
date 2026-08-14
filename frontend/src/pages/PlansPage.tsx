@@ -389,6 +389,30 @@ const openModal = (plan?: MembershipPlan) => {
                     </div>
                   )}
 
+                  {accounts.filter(a => a.type === 'binance').length > 0 && (
+                    <div className="flex items-center gap-3">
+                      <span className="w-32 text-sm text-gray-700">Binance</span>
+                      <input
+                        type="number"
+                        value={formData.pricesByMethod?.binance !== undefined ? (formData.pricesByMethod.binance / 100) : ''}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          setFormData(prev => ({
+                            ...prev,
+                            pricesByMethod: {
+                              ...prev.pricesByMethod,
+                              binance: raw === '' ? undefined : Math.round(parseFloat(raw) * 100)
+                            }
+                          }));
+                        }}
+                        className="input"
+                        placeholder="Dejar vacío = precio base"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  )}
+
                   {accounts.filter(a => a.type === 'pago_movil').length > 0 && (
                     <div className="flex items-center gap-3">
                       <span className="w-32 text-sm text-gray-700">Pago Móvil</span>

@@ -14,6 +14,7 @@ const METHOD_COLORS: Record<string, string> = {
   transfer: '#f59e0b',
   zelle: '#ec4899',
   pago_movil: '#8b5cf6',
+  binance: '#fbbf24',
   other: '#6b7280'
 };
 
@@ -26,6 +27,7 @@ export const IncomeReportPage: React.FC = () => {
     transfer: 'Transferencia',
     zelle: 'Zelle',
     pago_movil: 'Pago Móvil',
+    binance: 'Binance',
     other: 'Otro'
   };
   const getMethodLabel = (method: string) => methodLabels[method] || method;

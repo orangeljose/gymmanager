@@ -102,6 +102,8 @@ if (response.success) {
         return <Phone className="h-5 w-5" />;
       case 'bank':
         return <Building className="h-5 w-5" />;
+      case 'binance':
+        return <Building className="h-5 w-5" />;
     }
   };
 
@@ -111,6 +113,8 @@ if (response.success) {
         return 'Zelle';
       case 'pago_movil':
         return 'Pago Móvil';
+      case 'binance':
+        return 'Binance';
       // case 'bank':
       //   return 'Transferencia Bancaria';
     }
@@ -124,6 +128,8 @@ if (response.success) {
         return 'bg-green-100 text-green-700';
       case 'bank':
         return 'bg-blue-100 text-blue-700';
+      case 'binance':
+        return 'bg-yellow-100 text-yellow-700';
     }
   };
 
@@ -272,6 +278,7 @@ if (response.success) {
                 >
                   <option value="zelle">Zelle</option>
                   <option value="pago_movil">Pago Móvil</option>
+                  <option value="binance">Binance</option>
                   {/* <option value="bank">Transferencia Bancaria</option> */}
                 </select>
               </div>
@@ -312,16 +319,18 @@ if (response.success) {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {formData.type === 'zelle' ? 'Email de Zelle *' :
+                    formData.type === 'binance' ? 'Email / ID de Binance *' :
                     formData.type === 'pago_movil' ? 'Número de Teléfono *' :
                       'Número de Cuenta *'}
                 </label>
                 <input
-                  type={formData.type === 'zelle' ? 'email' : 'tel'}
+                  type={formData.type === 'zelle' || formData.type === 'binance' ? 'email' : 'tel'}
                   value={formData.identifier}
                   onChange={(e) => setFormData(prev => ({ ...prev, identifier: e.target.value }))}
                   className="input"
                   placeholder={
                     formData.type === 'zelle' ? 'correo@example.com' :
+                      formData.type === 'binance' ? 'correo@binance.com o ID' :
                       formData.type === 'pago_movil' ? '04141234567' :
                         '01234567890123456789'
                   }
