@@ -58,6 +58,25 @@ class PlanModel:
                     errors.append("No puede tener más de 20 beneficios")
                 data['benefits'] = cleaned_benefits
 
+        # Validar precios por método (opcional)
+        if 'pricesByMethod' in data and data['pricesByMethod']:
+            if not isinstance(data['pricesByMethod'], dict):
+                errors.append("pricesByMethod debe ser un objeto")
+            else:
+                valid_methods = ['cash', 'card', 'transfer', 'zelle', 'pago_movil', 'other']
+                cleaned_prices = {}
+                for method, p in data['pricesByMethod'].items():
+                    if method not in valid_methods:
+                        errors.append(f"Método de pago inválido: {method}")
+                        continue
+                    if p is None or p == '':
+                        continue
+                    if not isinstance(p, int) or p <= 0:
+                        errors.append(f"El precio para {method} debe ser un número entero positivo en cents")
+                        continue
+                    cleaned_prices[method] = p
+                data['pricesByMethod'] = cleaned_prices
+
         if errors:
             raise ValueError({"errors": errors})
 
@@ -71,7 +90,7 @@ class PlanModel:
         """Valida datos para actualizar un plan"""
         errors = []
 
-        allowed_fields = ['name', 'price', 'durationDays', 'description', 'benefits', 'isActive']
+        allowed_fields = ['name', 'price', 'durationDays', 'description', 'benefits', 'isActive', 'pricesByMethod']
         invalid_fields = [field for field in data.keys() if field not in allowed_fields]
         if invalid_fields:
             errors.append(f"Campos no permitidos: {', '.join(invalid_fields)}")

@@ -59,12 +59,22 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   const handlePlanChange = (planIdValue: string) => {
     const plan = plans.find(p => p.id === planIdValue);
     setPlanId(planIdValue);
-    if (plan) setAmount(plan.price);
+    if (plan) {
+      // Usar precio por método actual si existe
+      const methodPrice = plan.pricesByMethod?.[method];
+      setAmount(methodPrice || plan.price);
+    }
   };
 
   const handleMethodChange = (newMethod: string) => {
     setMethod(newMethod as PaymentMethod);
     setMethodDetails({});
+    // Autocompletar monto según precio por método del plan seleccionado
+    const plan = plans.find(p => p.id === planId);
+    if (plan) {
+      const methodPrice = plan.pricesByMethod?.[newMethod];
+      setAmount(methodPrice || plan.price);
+    }
   };
 
   const updateMethodDetail = (key: string, value: string) => {

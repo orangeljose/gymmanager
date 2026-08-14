@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import { usePlans } from '@/hooks/usePlans';
+import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import type { MembershipPlan, PlanFormData } from '@/types';
 import toast from 'react-hot-toast';
 import { Plus, Edit2, Trash2, X, AlertCircle } from 'lucide-react';
@@ -10,6 +11,7 @@ export const PlansPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
   const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
   const { plans, loading, setPlans } = usePlans(effectiveBusinessId);
+  const { accounts } = usePaymentAccounts(effectiveBusinessId);
   const [showModal, setShowModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState<MembershipPlan | null>(null);
   const [formData, setFormData] = useState<PlanFormData>({
@@ -18,7 +20,8 @@ export const PlansPage: React.FC = () => {
     durationDays: 30,
     description: '',
     benefits: [],
-    businessId: ''
+    businessId: '',
+    pricesByMethod: {}
   });
   // Beneficios ocultos temporalmente
   // const [benefitInput, setBenefitInput] = useState('');
@@ -33,7 +36,8 @@ const openModal = (plan?: MembershipPlan) => {
         price: plan.price,
         durationDays: plan.durationDays,
         description: plan.description || '',
-        benefits: plan.benefits || []
+        benefits: plan.benefits || [],
+        pricesByMethod: plan.pricesByMethod || {}
       });
     } else {
       setEditingPlan(null);
@@ -42,7 +46,8 @@ const openModal = (plan?: MembershipPlan) => {
         price: 0,
         durationDays: 0,
         description: '',
-        benefits: []
+        benefits: [],
+        pricesByMethod: {}
       });
     }
     setShowModal(true);
@@ -83,15 +88,21 @@ const openModal = (plan?: MembershipPlan) => {
 
     try {
       setSaving(true);
+      // Limpiar precios por método vacíos (undefined)
+      const cleanPrices = formData.pricesByMethod
+        ? Object.fromEntries(Object.entries(formData.pricesByMethod).filter(([, v]) => v !== undefined))
+        : undefined;
+      const payload = { ...formData, pricesByMethod: cleanPrices };
+
       if (editingPlan) {
-        const response = await apiService.updatePlan(editingPlan.id, formData);
+        const response = await apiService.updatePlan(editingPlan.id, payload);
         if (response.success) {
           toast.success('Plan actualizado');
           setPlans(prev => prev.map(p => p.id === editingPlan.id ? { ...p, ...response.data } : p));
           closeModal();
         }
       } else {
-        const response = await apiService.createPlan({ ...formData, businessId: effectiveBusinessId });
+        const response = await apiService.createPlan({ ...payload, businessId: effectiveBusinessId });
         if (response.success) {
           toast.success('Plan creado');
           setPlans(prev => [...prev, response.data!]);
@@ -319,6 +330,112 @@ const openModal = (plan?: MembershipPlan) => {
                     min="1"
                     required
                   />
+                </div>
+              </div>
+
+              {/* Precios por método de pago */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Precios por método de pago
+                </label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Opcional. Si no se define, se usa el precio base. Los métodos dependen de tus cuentas de pago registradas.
+                </p>
+                <div className="space-y-2">
+                  {/* Efectivo siempre disponible */}
+                  <div className="flex items-center gap-3">
+                    <span className="w-32 text-sm text-gray-700">Efectivo</span>
+                    <input
+                      type="number"
+                      value={formData.pricesByMethod?.cash !== undefined ? (formData.pricesByMethod.cash / 100) : ''}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          pricesByMethod: {
+                            ...prev.pricesByMethod,
+                            cash: raw === '' ? undefined : Math.round(parseFloat(raw) * 100)
+                          }
+                        }));
+                      }}
+                      className="input"
+                      placeholder="Dejar vacío = precio base"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+
+                  {accounts.filter(a => a.type === 'zelle').length > 0 && (
+                    <div className="flex items-center gap-3">
+                      <span className="w-32 text-sm text-gray-700">Zelle</span>
+                      <input
+                        type="number"
+                        value={formData.pricesByMethod?.zelle !== undefined ? (formData.pricesByMethod.zelle / 100) : ''}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          setFormData(prev => ({
+                            ...prev,
+                            pricesByMethod: {
+                              ...prev.pricesByMethod,
+                              zelle: raw === '' ? undefined : Math.round(parseFloat(raw) * 100)
+                            }
+                          }));
+                        }}
+                        className="input"
+                        placeholder="Dejar vacío = precio base"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  )}
+
+                  {accounts.filter(a => a.type === 'pago_movil').length > 0 && (
+                    <div className="flex items-center gap-3">
+                      <span className="w-32 text-sm text-gray-700">Pago Móvil</span>
+                      <input
+                        type="number"
+                        value={formData.pricesByMethod?.pago_movil !== undefined ? (formData.pricesByMethod.pago_movil / 100) : ''}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          setFormData(prev => ({
+                            ...prev,
+                            pricesByMethod: {
+                              ...prev.pricesByMethod,
+                              pago_movil: raw === '' ? undefined : Math.round(parseFloat(raw) * 100)
+                            }
+                          }));
+                        }}
+                        className="input"
+                        placeholder="Dejar vacío = precio base"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  )}
+
+                  {accounts.filter(a => a.type === 'bank').length > 0 && (
+                    <div className="flex items-center gap-3">
+                      <span className="w-32 text-sm text-gray-700">Transferencia</span>
+                      <input
+                        type="number"
+                        value={formData.pricesByMethod?.transfer !== undefined ? (formData.pricesByMethod.transfer / 100) : ''}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          setFormData(prev => ({
+                            ...prev,
+                            pricesByMethod: {
+                              ...prev.pricesByMethod,
+                              transfer: raw === '' ? undefined : Math.round(parseFloat(raw) * 100)
+                            }
+                          }));
+                        }}
+                        className="input"
+                        placeholder="Dejar vacío = precio base"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 

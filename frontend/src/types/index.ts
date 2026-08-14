@@ -52,6 +52,7 @@ export interface MembershipPlan {
   isActive: boolean;
   benefits?: string[];
   createdAt: string;
+  pricesByMethod?: Record<string, number>;
 }
 
 export type PaymentAccountType = 'zelle' | 'pago_movil' | 'bank';
@@ -86,6 +87,7 @@ export interface PlanFormData {
   description?: string;
   benefits: string[];
   businessId?: string; // Solo para create, no se envía en update
+  pricesByMethod?: Record<string, number | undefined>;
 }
 
 // Client Types

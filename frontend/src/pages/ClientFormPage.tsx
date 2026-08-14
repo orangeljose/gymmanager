@@ -87,7 +87,9 @@ export const ClientFormPage: React.FC = () => {
     const plan = plans.find(p => p.id === planId);
     setClientData(prev => ({ ...prev, membershipPlanId: planId }));
     if (plan) {
-      setPaymentData(prev => ({ ...prev, membershipPlanId: planId, amount: plan.price || 0 }));
+      // Usar precio por método actual si existe
+      const methodPrice = plan.pricesByMethod?.[paymentData.method];
+      setPaymentData(prev => ({ ...prev, membershipPlanId: planId, amount: methodPrice || plan.price || 0 }));
     }
   };
 
@@ -97,6 +99,15 @@ export const ClientFormPage: React.FC = () => {
       method: method as any,
       methodDetails: {}
     }));
+    // Autocompletar monto según precio por método del plan seleccionado
+    const plan = plans.find(p => p.id === paymentData.membershipPlanId || clientData.membershipPlanId);
+    if (plan) {
+      const methodPrice = plan.pricesByMethod?.[method];
+      setPaymentData(prev => ({
+        ...prev,
+        amount: methodPrice || plan.price || 0
+      }));
+    }
   };
 
   const handleSubmitClient = async (e: React.FormEvent) => {
