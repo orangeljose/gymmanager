@@ -5,7 +5,6 @@ import {
   DollarSign,
   AlertTriangle, 
   Calendar,
-  TrendingUp,
   CreditCard,
   UserCheck,
   Building,
@@ -283,7 +282,7 @@ export const DashboardPage: React.FC = () => {
       {hasPermission('write_payments') && (
         <div className="mt-8">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link
               to="/clients/new"
               className="card hover:shadow-md transition-shadow cursor-pointer"
@@ -306,19 +305,6 @@ export const DashboardPage: React.FC = () => {
                 <div>
                   <p className="font-medium text-gray-900">Registrar Pago</p>
                   <p className="text-sm text-gray-600">Cobrar membresía</p>
-                </div>
-              </div>
-            </Link>
-
-            <Link
-              to="/reports"
-              className="card hover:shadow-md transition-shadow cursor-pointer"
-            >
-              <div className="flex items-center space-x-3">
-                <TrendingUp className="h-8 w-8 text-primary-600" />
-                <div>
-                  <p className="font-medium text-gray-900">Ver Reportes</p>
-                  <p className="text-sm text-gray-600">Análisis y estadísticas</p>
                 </div>
               </div>
             </Link>
