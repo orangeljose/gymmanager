@@ -107,7 +107,7 @@ def get_users():
         # Primero determinamos qué roles puede ver este usuario
         ROLES_CAN_SEE = {
             'super_admin': ['admin', 'branch_admin', 'cashier', 'trainer'],  # ve todos menos super_admin
-            'admin': ['branch_admin', 'cashier', 'trainer'],  # no ve otros admins ni super_admin
+            'admin': ['admin', 'branch_admin', 'cashier', 'trainer'],  # ve admins del negocio y subordinados
             'branch_admin': ['cashier', 'trainer']  # solo ve subordinados
         }
 
