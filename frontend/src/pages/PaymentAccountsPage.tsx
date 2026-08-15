@@ -164,7 +164,7 @@ if (response.success) {
         <div className="card text-center py-12">
           <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No hay cuentas registradas</h3>
-          <p className="text-gray-600 mb-6">Agrega las cuentas donde recibes pagos (Zelle, Pago Móvil, Bancarias)</p>
+          <p className="text-gray-600 mb-6">Agrega las cuentas donde recibes pagos (Zelle, Pago Móvil, Binance, Bancarias)</p>
           <button onClick={() => openModal()} className="btn btn-primary">
             <Plus className="h-4 w-4 mr-2" />
             Agregar Cuenta
@@ -172,7 +172,7 @@ if (response.success) {
         </div>
       ) : (
         <div className="space-y-8">
-          {(['zelle', 'pago_movil', 'bank'] as PaymentAccountType[]).map((type) => {
+          {(['zelle', 'pago_movil', 'bank', 'binance'] as PaymentAccountType[]).map((type) => {
             const typeAccounts = accountsByType[type];
             if (!typeAccounts || typeAccounts.length === 0) return null;
 
