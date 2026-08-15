@@ -224,7 +224,7 @@ def update_plan(plan_id):
 
 @plans_bp.route('/<plan_id>', methods=['DELETE', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin'])
+@require_role(['super_admin', 'admin'])
 def delete_plan(plan_id):
     """
     Elimina un plan (soft delete: lo marca como inactivo)

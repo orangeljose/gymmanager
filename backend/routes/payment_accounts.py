@@ -217,7 +217,7 @@ def update_payment_account(account_id):
 
 @payment_accounts_bp.route('/<account_id>', methods=['DELETE', 'OPTIONS'])
 @require_auth
-@require_role(['super_admin'])
+@require_role(['super_admin', 'admin'])
 def delete_payment_account(account_id):
     """
     Elimina una cuenta de pago (soft delete)
