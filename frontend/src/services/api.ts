@@ -190,9 +190,10 @@ class ApiService {
   }
 
   // Dashboard
-  async getDashboard(params: { branchId?: string } = {}): Promise<ApiResponse<DashboardData>> {
+  async getDashboard(params: { branchId?: string; businessId?: string } = {}): Promise<ApiResponse<DashboardData>> {
     const searchParams = new URLSearchParams();
     if (params.branchId) searchParams.append('branchId', params.branchId);
+    if (params.businessId) searchParams.append('businessId', params.businessId);
     const endpoint = `/reports/dashboard${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
     return this.requestWithAuth<DashboardData>(endpoint);
   }
