@@ -39,13 +39,13 @@ def get_payment_accounts():
         if active_only:
             filters.append({'field': 'isActive', 'operator': '==', 'value': True})
 
-        if acct_type and acct_type in ['zelle', 'pago_movil', 'bank']:
+        if acct_type and acct_type in ['zelle', 'pago_movil', 'bank', 'binance']:
             filters.append({'field': 'type', 'operator': '==', 'value': acct_type})
 
+        # Sin order_by para evitar requerir índice compuesto
         accounts = firebase_service.query_firestore(
             'payment_accounts',
-            filters=filters,
-            order_by='type'
+            filters=filters
         )
 
         return jsonify({'success': True, 'data': accounts}), 200
