@@ -278,21 +278,23 @@ class ApiService {
     return this.requestWithAuth<SolvencyReport[]>(endpoint);
   }
 
-  async getIncomeDailyReport(startDate: string, endDate: string, branchId?: string): Promise<ApiResponse<{ totalPeriod: number; daily: IncomeDailyReport[] }>> {
+  async getIncomeDailyReport(startDate: string, endDate: string, branchId?: string, businessId?: string): Promise<ApiResponse<{ totalPeriod: number; daily: IncomeDailyReport[] }>> {
     const params = new URLSearchParams();
     params.append('startDate', startDate);
     params.append('endDate', endDate);
     if (branchId) params.append('branchId', branchId);
+    if (businessId) params.append('businessId', businessId);
 
     const endpoint = `/reports/income/daily?${params.toString()}`;
     return this.requestWithAuth<{ totalPeriod: number; daily: IncomeDailyReport[] }>(endpoint);
   }
 
-  async getIncomeByMethodReport(startDate?: string, endDate?: string, branchId?: string): Promise<ApiResponse<IncomeByMethodReport>> {
+  async getIncomeByMethodReport(startDate?: string, endDate?: string, branchId?: string, businessId?: string): Promise<ApiResponse<IncomeByMethodReport>> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     if (branchId) params.append('branchId', branchId);
+    if (businessId) params.append('businessId', businessId);
 
     const endpoint = `/reports/income/by-method${params.toString() ? `?${params.toString()}` : ''}`;
     return this.requestWithAuth<IncomeByMethodReport>(endpoint);

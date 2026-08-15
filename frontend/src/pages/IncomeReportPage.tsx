@@ -101,8 +101,8 @@ export const IncomeReportPage: React.FC = () => {
       if (appliedFilter.branch) params.branchId = appliedFilter.branch;
 
       const [dailyRes, methodRes] = await Promise.all([
-        apiService.getIncomeDailyReport(s, e, params.branchId),
-        apiService.getIncomeByMethodReport(s, e, params.branchId)
+        apiService.getIncomeDailyReport(s, e, params.branchId, effectiveBusinessId),
+        apiService.getIncomeByMethodReport(s, e, params.branchId, effectiveBusinessId)
       ]);
 
       if (dailyRes.success && dailyRes.data) {

@@ -49,12 +49,14 @@ export const DashboardPage: React.FC = () => {
       try {
         setLoading(true);
 
-        const branchParam = user?.role === 'super_admin' && selectedBranchId !== 'all'
-          ? { branchId: selectedBranchId }
-          : {};
+        const dashboardParams: any = {};
+        if (user?.role === 'super_admin') {
+          dashboardParams.businessId = effectiveBusinessId;
+          if (selectedBranchId !== 'all') dashboardParams.branchId = selectedBranchId;
+        }
 
         const [dashboardResponse, clientsResponse] = await Promise.all([
-          apiService.getDashboard(branchParam),
+          apiService.getDashboard(dashboardParams),
           apiService.getClients({ 
             businessId: effectiveBusinessId, 
             limit: 100 

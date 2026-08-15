@@ -288,11 +288,15 @@ def get_daily_income_report():
         user_role = g.current_user.get('role')
         user_business_id = g.current_user.get('businessId')
         user_branch_id = g.current_user.get('branchId')
+
+        # Para super_admin, usar businessId del query (selector de negocio)
+        if user_role == 'super_admin':
+            user_business_id = request.args.get('businessId')
         
         payments = []
         for p in all_payments:
             # Filtrar por negocio
-            if user_role != 'super_admin':
+            if user_business_id:
                 if p.get('businessId') != user_business_id:
                     continue
             
@@ -447,11 +451,15 @@ def get_income_by_method_report():
         user_role2 = g.current_user.get('role')
         user_business_id = g.current_user.get('businessId')
         user_branch_id = g.current_user.get('branchId')
+
+        # Para super_admin, usar businessId del query (selector de negocio)
+        if user_role2 == 'super_admin':
+            user_business_id = request.args.get('businessId')
         
         payments = []
         for p in all_payments:
             # Filtrar por negocio
-            if user_role2 != 'super_admin':
+            if user_business_id:
                 if p.get('businessId') != user_business_id:
                     continue
             # Filtrar por sede
@@ -564,6 +572,10 @@ def get_dashboard():
         user_branch_id = g.current_user.get('branchId')
         now = datetime.now()
 
+        # Para super_admin, usar businessId del query (selector de negocio)
+        if user_role == 'super_admin':
+            user_business_id = request.args.get('businessId')
+
         # Resolver branch_id efectivo
         effective_branch_id = None
         if user_role != 'super_admin':
@@ -573,7 +585,7 @@ def get_dashboard():
 
         # --- Clients ---
         client_filters = []
-        if user_role != 'super_admin' and user_business_id:
+        if user_business_id:
             client_filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
         if effective_branch_id:
             client_filters.append({'field': 'branchId', 'operator': '==', 'value': effective_branch_id})
@@ -607,7 +619,7 @@ def get_dashboard():
             {'field': 'createdAt', 'operator': '>=', 'value': thirty_days_ago},
             {'field': 'createdAt', 'operator': '<=', 'value': now}
         ]
-        if user_role != 'super_admin' and user_business_id:
+        if user_business_id:
             payment_filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
         if effective_branch_id:
             payment_filters.append({'field': 'branchId', 'operator': '==', 'value': effective_branch_id})
