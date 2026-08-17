@@ -615,22 +615,41 @@ def get_dashboard():
         thirty_days_ago = now - timedelta(days=30)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        payment_filters = [
-            {'field': 'createdAt', 'operator': '>=', 'value': thirty_days_ago},
-            {'field': 'createdAt', 'operator': '<=', 'value': now}
-        ]
+        # Traer pagos del negocio (solo filtro por businessId, single-field no requiere índice)
+        payment_filters = []
         if user_business_id:
             payment_filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
         if effective_branch_id:
             payment_filters.append({'field': 'branchId', 'operator': '==', 'value': effective_branch_id})
 
-        payments = firebase_service.query_firestore(
+        all_payments_raw = firebase_service.query_firestore(
             'payments',
-            filters=payment_filters,
-            order_by='createdAt',
-            direction='DESC',
-            limit=5000
+            filters=payment_filters
         )
+
+        # Filtrar por fecha (últimos 30 días) en Python
+        payments = []
+        for p in all_payments_raw:
+            created_at = p.get('createdAt')
+            if not created_at:
+                continue
+            if isinstance(created_at, str):
+                try:
+                    created_dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                except:
+                    continue
+            elif hasattr(created_at, 'to_datetime'):
+                created_dt = created_at.to_datetime()
+            else:
+                created_dt = created_at
+            if created_dt.tzinfo is None:
+                created_dt = created_dt.replace(tzinfo=timezone.utc)
+
+            if thirty_days_ago <= created_dt <= now:
+                payments.append(p)
+
+        # Ordenar por createdAt DESC (más reciente primero)
+        payments.sort(key=lambda p: p.get('createdAt', ''), reverse=True)
 
         # Today income
         today_income = 0
