@@ -52,7 +52,13 @@ export const ClientFormPage: React.FC = () => {
     if (effectiveBusinessId) {
       fetchPlans();
       apiService.getBranches(effectiveBusinessId).then(res => {
-        if (res.success && res.data) setBranches(res.data);
+        if (res.success && res.data) {
+          setBranches(res.data);
+          // En modo creación, preseleccionar la primera sucursal
+          if (!isEdit && !clientData.branchId && res.data.length > 0) {
+            setClientData(prev => ({ ...prev, branchId: res.data[0].id }));
+          }
+        }
       });
     }
   }, [effectiveBusinessId]);
