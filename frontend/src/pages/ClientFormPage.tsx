@@ -94,20 +94,15 @@ export const ClientFormPage: React.FC = () => {
   };
 
   const handlePaymentMethodChange = (method: string) => {
+    // Buscar plan con el método NUEVO
+    const plan = plans.find(p => p.id === paymentData.membershipPlanId || clientData.membershipPlanId);
+    const methodPrice = plan?.pricesByMethod?.[method];
     setPaymentData(prev => ({
       ...prev,
       method: method as any,
-      methodDetails: {}
+      methodDetails: {},
+      amount: methodPrice || plan?.price || prev.amount || 0
     }));
-    // Autocompletar monto según precio por método del plan seleccionado
-    const plan = plans.find(p => p.id === paymentData.membershipPlanId || clientData.membershipPlanId);
-    if (plan) {
-      const methodPrice = plan.pricesByMethod?.[method];
-      setPaymentData(prev => ({
-        ...prev,
-        amount: methodPrice || plan.price || 0
-      }));
-    }
   };
 
   const handleSubmitClient = async (e: React.FormEvent) => {
@@ -374,15 +369,22 @@ if (!clientData.name || !clientData.email || !clientData.phone || !clientData.br
               <label className="block text-sm font-medium text-gray-700 mb-1">Monto (USD)</label>
               <input
                 type="number"
-                value={(paymentData.amount || selectedPlan?.price || 0) / 100}
+                value={(paymentData.amount || 0) / 100}
                 onChange={e => setPaymentData(prev => ({
                   ...prev,
                   amount: Math.round(parseFloat(e.target.value || '0') * 100)
                 }))}
-                className="input"
+                className={`input ${selectedPlan ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 step="0.01"
-required
+                required
+                readOnly={!!selectedPlan}
+                disabled={!!selectedPlan}
               />
+              {selectedPlan && (
+                <p className="text-xs text-gray-500 mt-1">
+                  El monto se calcula según el plan y método de pago seleccionado.
+                </p>
+              )}
             </div>
 
             <div>
