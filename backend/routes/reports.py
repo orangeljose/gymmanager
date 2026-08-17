@@ -642,8 +642,9 @@ def get_dashboard():
                 created_dt = created_at.to_datetime()
             else:
                 created_dt = created_at
-            if created_dt.tzinfo is None:
-                created_dt = created_dt.replace(tzinfo=timezone.utc)
+            # Normalizar a naive para comparar con now (que es naive)
+            if created_dt.tzinfo is not None:
+                created_dt = created_dt.replace(tzinfo=None)
 
             if thirty_days_ago <= created_dt <= now:
                 payments.append(p)
