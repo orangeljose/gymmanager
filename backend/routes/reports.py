@@ -570,7 +570,7 @@ def get_dashboard():
         user_business_id = g.current_user.get('businessId')
         user_role = g.current_user.get('role')
         user_branch_id = g.current_user.get('branchId')
-        now = datetime.now()
+        now = datetime.utcnow()
 
         # Para super_admin, usar businessId del query (selector de negocio)
         if user_role == 'super_admin':
