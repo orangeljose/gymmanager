@@ -24,19 +24,23 @@ class ClientModel:
             if field not in data or not data[field]:
                 errors.append(f"El campo '{field}' es requerido")
         
-        # Validar formato de email
-        if 'email' in data:
+        # Validar formato de email (solo si tiene valor)
+        if data.get('email'):
             email = data['email'].strip()
             if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
                 errors.append("El email no tiene un formato válido")
             data['email'] = email.lower()
+        else:
+            data['email'] = data.get('email') or ''
         
-        # Validar teléfono (formato básico)
-        if 'phone' in data:
+        # Validar teléfono (solo si tiene valor)
+        if data.get('phone'):
             phone = data['phone'].strip()
             if not re.match(r'^[\d\s\-\+\(\)]+$', phone):
                 errors.append("El teléfono solo puede contener dígitos, espacios, guiones y +")
             data['phone'] = phone
+        else:
+            data['phone'] = data.get('phone') or ''
         
         # Validar nombre
         if 'name' in data:
@@ -82,18 +86,22 @@ class ClientModel:
             if data['status'] not in valid_statuses:
                 errors.append(f"Status debe ser uno de: {', '.join(valid_statuses)}")
         
-        # Reutilizar validaciones de create
-        if 'email' in data:
+        # Reutilizar validaciones de create (solo si tienen valor)
+        if data.get('email'):
             email = data['email'].strip()
             if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
                 errors.append("El email no tiene un formato válido")
             data['email'] = email.lower()
+        else:
+            data['email'] = data.get('email') or ''
         
-        if 'phone' in data:
+        if data.get('phone'):
             phone = data['phone'].strip()
             if not re.match(r'^[\d\s\-\+\(\)]+$', phone):
                 errors.append("El teléfono solo puede contener dígitos, espacios, guiones y +")
             data['phone'] = phone
+        else:
+            data['phone'] = data.get('phone') or ''
         
         if 'name' in data:
             name = data['name'].strip()
