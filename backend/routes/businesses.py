@@ -74,7 +74,13 @@ def create_business():
         created_business = firebase_service.create_document('businesses', business_data)
 
         if created_business:
-            logger.info(f"Negocio creado: {name} (ID: {created_business.get('id')})")
+            # Si un admin crea su negocio, vincularlo a su user document
+            new_business_id = created_business.get('id')
+            if user_role == 'admin':
+                firebase_service.update_document('users', user_uid, {'businessId': new_business_id})
+                logger.info(f"Admin {user_uid} vinculado al negocio {new_business_id}")
+
+            logger.info(f"Negocio creado: {name} (ID: {new_business_id})")
             return jsonify({'success': True, 'data': created_business}), 201
 
         return jsonify({'success': False, 'error': {'code': 500, 'message': 'Error al crear negocio'}}), 500
