@@ -272,6 +272,22 @@ export const ClientDetailPage: React.FC = () => {
         <div className="space-y-6">
           <div className="card">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Datos Personales</h3>
+            {(() => {
+              const missing: string[] = [];
+              if (!client.email) missing.push('email');
+              if (!client.phone) missing.push('teléfono');
+              if (!client.documentId) missing.push('cédula');
+              if (missing.length > 0) {
+                return (
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-yellow-800">
+                      ⚠ A este cliente le faltan: <strong>{missing.join(', ')}</strong>. Completá estos datos cuando sea posible.
+                    </p>
+                  </div>
+                );
+              }
+              return null;
+            })()}
             <div className="space-y-3">
               <div className="flex items-center">
                 <Mail className="h-4 w-4 text-gray-400 mr-3" />

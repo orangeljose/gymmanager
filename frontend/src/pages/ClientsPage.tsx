@@ -63,6 +63,14 @@ export const ClientsPage: React.FC = () => {
     }
   };
 
+  const getMissingFields = (client: any): string[] => {
+    const missing: string[] = [];
+    if (!client.email) missing.push('email');
+    if (!client.phone) missing.push('teléfono');
+    if (!client.documentId) missing.push('cédula');
+    return missing;
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-VE', {
       day: '2-digit',
@@ -202,11 +210,18 @@ export const ClientsPage: React.FC = () => {
                       >
                         <td className="px-4 py-3">
                           <Link to={`/clients/${client.id}`} className="block">
-                            <div className="font-medium text-gray-900 hover:text-primary-600">{client.name}</div>
-                            <div className="text-sm text-gray-500">{client.email}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900 hover:text-primary-600">{client.name}</span>
+                              {getMissingFields(client).length > 0 && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-700">
+                                  ⚠ Datos incompletos
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-500">{client.email || 'Sin email'}</div>
                           </Link>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{client.phone}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{client.phone || '-'}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">
                           {planNameMap[client.membershipPlanId] || client.membershipPlanId}
                         </td>

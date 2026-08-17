@@ -129,6 +129,25 @@ class PlanModel:
             if not isinstance(data['isActive'], bool):
                 errors.append("isActive debe ser un valor booleano")
 
+        # Validar precios por método (opcional)
+        if 'pricesByMethod' in data and data['pricesByMethod'] is not None:
+            if not isinstance(data['pricesByMethod'], dict):
+                errors.append("pricesByMethod debe ser un objeto")
+            else:
+                valid_methods = ['cash', 'card', 'transfer', 'zelle', 'pago_movil', 'binance', 'other']
+                cleaned_prices = {}
+                for method, p in data['pricesByMethod'].items():
+                    if method not in valid_methods:
+                        errors.append(f"Método de pago inválido: {method}")
+                        continue
+                    if p is None or p == '':
+                        continue
+                    if not isinstance(p, int) or p <= 0:
+                        errors.append(f"El precio para {method} debe ser un número entero positivo en cents")
+                        continue
+                    cleaned_prices[method] = p
+                data['pricesByMethod'] = cleaned_prices
+
         if errors:
             raise ValueError({"errors": errors})
 

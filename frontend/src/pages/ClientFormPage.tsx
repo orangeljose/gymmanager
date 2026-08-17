@@ -94,8 +94,9 @@ export const ClientFormPage: React.FC = () => {
   };
 
   const handlePaymentMethodChange = (method: string) => {
-    // Buscar plan con el método NUEVO
-    const plan = plans.find(p => p.id === paymentData.membershipPlanId || clientData.membershipPlanId);
+    // Buscar el plan seleccionado (agrupar con paréntesis por precedencia)
+    const planId = paymentData.membershipPlanId || clientData.membershipPlanId;
+    const plan = plans.find(p => p.id === planId);
     const methodPrice = plan?.pricesByMethod?.[method];
     setPaymentData(prev => ({
       ...prev,
@@ -107,7 +108,7 @@ export const ClientFormPage: React.FC = () => {
 
   const handleSubmitClient = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientData.name || !clientData.email || !clientData.phone || !clientData.branchId || !clientData.documentId) {
+    if (!clientData.name || !clientData.branchId) {
       toast.error('Completa todos los campos requeridos');
       return;
     }
@@ -138,7 +139,7 @@ export const ClientFormPage: React.FC = () => {
 
   const handleSubmitWithPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientData.name || !clientData.email || !clientData.phone || !clientData.branchId || !clientData.documentId) {
+    if (!clientData.name || !clientData.branchId) {
       toast.error('Completa todos los campos requeridos');
       return;
     }
@@ -230,39 +231,36 @@ export const ClientFormPage: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email (opcional)</label>
                 <input
                   type="email"
                   value={clientData.email}
                   onChange={e => setClientData(prev => ({ ...prev, email: e.target.value }))}
                   className="input"
                   placeholder="juan@email.com"
-                  required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono (opcional)</label>
                 <input
                   type="tel"
                   value={clientData.phone}
                   onChange={e => setClientData(prev => ({ ...prev, phone: e.target.value }))}
                   className="input"
                   placeholder="+584141234567"
-                  required
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cédula / Documento <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cédula / Documento (opcional)</label>
                 <input
                   type="text"
                   value={clientData.documentId || ''}
                   onChange={e => setClientData(prev => ({ ...prev, documentId: e.target.value }))}
                   className="input"
                   placeholder="V-30123456"
-                  required
                 />
               </div>
               <div>
@@ -320,7 +318,7 @@ export const ClientFormPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-if (!clientData.name || !clientData.email || !clientData.phone || !clientData.branchId || !clientData.documentId) {
+if (!clientData.name || !clientData.branchId) {
                     toast.error('Completa todos los campos requeridos');
                     return;
                   }
