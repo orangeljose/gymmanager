@@ -627,6 +627,8 @@ def get_dashboard():
             filters=payment_filters
         )
 
+        logger.info(f"[DEBUG dashboard] payment_filters={payment_filters}, raw count={len(all_payments_raw)}")
+
         # Filtrar por fecha (últimos 30 días) en Python
         payments = []
         for p in all_payments_raw:
@@ -648,6 +650,8 @@ def get_dashboard():
 
             if thirty_days_ago <= created_dt <= now:
                 payments.append(p)
+
+        logger.info(f"[DEBUG dashboard] after date filter: {len(payments)} payments")
 
         # Ordenar por createdAt DESC (más reciente primero)
         payments.sort(key=lambda p: p.get('createdAt', ''), reverse=True)
