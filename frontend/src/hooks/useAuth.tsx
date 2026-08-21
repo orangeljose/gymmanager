@@ -46,11 +46,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (authState.user?.role === 'super_admin') {
       apiService.getBusinesses().then(res => {
         if (res.success && res.data) {
-          setAuthState(prev => ({
-            ...prev,
-            businesses: res.data,
-            selectedBusinessId: prev.selectedBusinessId || res.data[0]?.id || null
-          }));
+          const businessIds = res.data.map((b: any) => b.id);
+          setAuthState(prev => {
+            // Mantener selectedBusinessId solo si es válido (existe en la lista)
+            const currentValid = prev.selectedBusinessId && businessIds.includes(prev.selectedBusinessId);
+            return {
+              ...prev,
+              businesses: res.data,
+              selectedBusinessId: currentValid ? prev.selectedBusinessId : (res.data[0]?.id || null)
+            };
+          });
         }
       }).catch(console.error);
     } else if (authState.user) {
