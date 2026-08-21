@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Edit2, CreditCard, Phone, Mail, MapPin, AlertCircle, Clock } from 'lucide-react';
+import { ArrowLeft, Edit2, CreditCard, Phone, Mail, MapPin, AlertCircle, Clock, Trash2, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useClients } from '@/hooks/useClients';
 import { usePlans } from '@/hooks/usePlans';
 import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import { PaymentForm } from '@/components/PaymentForm';
+import { apiService } from '@/services/api';
 import type { Client, Payment } from '@/types';
 
 export const ClientDetailPage: React.FC = () => {
@@ -20,6 +22,10 @@ export const ClientDetailPage: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const canDeletePayment = user?.role === 'super_admin' || user?.role === 'admin' || user?.role === 'branch_admin';
 
   useEffect(() => {
     if (!id) return;
@@ -107,6 +113,30 @@ export const ClientDetailPage: React.FC = () => {
     const updatedClient = await getClient(client.id);
     if (updatedClient) setClient(updatedClient);
     setShowPaymentModal(false);
+  };
+
+  const handleDeletePayment = async () => {
+    if (!deleteTarget) return;
+    try {
+      setDeleting(true);
+      const response = await apiService.deletePayment(deleteTarget.id);
+      if (response.success) {
+        toast.success('Pago eliminado correctamente');
+        setDeleteTarget(null);
+        if (client) {
+          const updatedPayments = await getClientPayments(client.id);
+          if (updatedPayments) setPayments(updatedPayments);
+          const updatedClient = await getClient(client.id);
+          if (updatedClient) setClient(updatedClient);
+        }
+      } else {
+        toast.error(response.error?.message || 'Error al eliminar el pago');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al eliminar el pago');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -212,6 +242,9 @@ export const ClientDetailPage: React.FC = () => {
                       <th className="text-left text-xs font-medium text-gray-500 uppercase py-2 hidden sm:table-cell">Método</th>
                       <th className="text-left text-xs font-medium text-gray-500 uppercase py-2 hidden sm:table-cell">Cuenta / Registró</th>
                       <th className="text-left text-xs font-medium text-gray-500 uppercase py-2 hidden sm:table-cell">Recibo</th>
+                      {canDeletePayment && (
+                        <th className="text-right text-xs font-medium text-gray-500 uppercase py-2 hidden sm:table-cell">Acciones</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -227,8 +260,21 @@ export const ClientDetailPage: React.FC = () => {
                             : accountLookup[payment.paymentAccountId || ''] || payment.registeredByName || '-'}
                         </td>
                         <td className="py-3 text-sm text-gray-500 hidden sm:table-cell">{payment.receiptNumber}</td>
+                        {canDeletePayment && (
+                          <td className="py-3 hidden sm:table-cell">
+                            <div className="flex justify-end">
+                              <button
+                                onClick={() => setDeleteTarget(payment)}
+                                className="btn btn-ghost btn-sm text-red-600 hover:text-red-800"
+                                title="Eliminar pago"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
                         {/* Mobile card view */}
-                        <td className="py-3 sm:hidden" colSpan={6}>
+                        <td className="py-3 sm:hidden" colSpan={canDeletePayment ? 7 : 6}>
                           <div className="space-y-1">
                             <div className="flex justify-between">
                               <span className="text-xs text-gray-500">Fecha</span>
@@ -258,6 +304,16 @@ export const ClientDetailPage: React.FC = () => {
                               <span className="text-xs text-gray-500">Recibo</span>
                               <span className="text-sm text-gray-500">{payment.receiptNumber}</span>
                             </div>
+                            {canDeletePayment && (
+                              <div className="flex justify-end pt-1">
+                                <button
+                                  onClick={() => setDeleteTarget(payment)}
+                                  className="btn btn-ghost btn-sm text-red-600 hover:text-red-800"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" /> Eliminar
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -335,6 +391,43 @@ export const ClientDetailPage: React.FC = () => {
           onCancel={() => setShowPaymentModal(false)}
           isModal={true}
         />
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-lg font-semibold">Eliminar Pago</h3>
+              <button onClick={() => setDeleteTarget(null)} className="btn btn-ghost btn-sm">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <p className="text-sm text-gray-700 mb-2">
+                ¿Estás seguro de eliminar el pago de <strong>{formatCurrency(deleteTarget.amount)}</strong> del {formatDate(deleteTarget.paymentDate || deleteTarget.createdAt)}?
+              </p>
+              <p className="text-sm text-gray-500 mb-4">
+                Recibo <strong>{deleteTarget.receiptNumber}</strong> — Se recalculará la membresía del cliente.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  className="btn btn-outline"
+                  disabled={deleting}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeletePayment}
+                  disabled={deleting}
+                  className="btn btn-danger"
+                >
+                  {deleting ? 'Eliminando...' : 'Eliminar Pago'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
