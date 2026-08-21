@@ -395,11 +395,14 @@ def get_receipts():
             direction='DESC',
             limit=1000  # Un número alto pero no excesivo
         )
-        total = len(all_for_count)
+        # Excluir pagos eliminados (soft delete) en Python (Firestore where excluye docs sin el campo)
+        total = len([p for p in all_for_count if not p.get('isDeleted', False)])
         
         # Transformar al formato de tabla
         receipts = []
         for payment in all_receipts:
+            if payment.get('isDeleted', False):
+                continue
             receipts.append({
                 'id': payment.get('id'),
                 'receiptNumber': payment.get('receiptNumber'),
@@ -425,6 +428,71 @@ def get_receipts():
         
     except Exception as e:
         logger.error(f"Error obteniendo recibos: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 500,
+                'message': 'Error interno del servidor'
+            }
+        }), 500
+
+@payments_bp.route('/<payment_id>', methods=['DELETE', 'OPTIONS'])
+@require_auth
+@require_role(['super_admin', 'admin', 'branch_admin'])
+def delete_payment(payment_id):
+    """
+    Elimina (soft delete) un pago y recalcula la membresía del cliente
+
+    Path Parameters:
+        paymentId: string - ID del pago a eliminar
+
+    Response (200):
+    {
+        "success": true,
+        "data": {
+            "clientId": "client-001",
+            "membershipStart": "2026-03-01T00:00:00Z",
+            "membershipEnd": "2026-05-01T00:00:00Z",
+            "membershipPlanId": "plan-mensual",
+            "isActive": true,
+            "status": "active"
+        }
+    }
+
+    Response (404): Pago no encontrado o ya eliminado
+    Response (403): Sin acceso a la sede del pago
+    """
+    try:
+        payment_service = PaymentService()
+        result = payment_service.delete_payment(payment_id, g.current_user)
+        status = result.get('status')
+
+        if status == 'not_found':
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 404,
+                    'message': 'Pago no encontrado'
+                }
+            }), 404
+
+        if status == 'forbidden':
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 403,
+                    'message': 'No tienes acceso a esta sede'
+                }
+            }), 403
+
+        logger.info(f"Pago eliminado (soft delete): {payment_id}")
+        return jsonify({
+            'success': True,
+            'data': result.get('data')
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error eliminando pago {payment_id}: {str(e)}")
         return jsonify({
             'success': False,
             'error': {
