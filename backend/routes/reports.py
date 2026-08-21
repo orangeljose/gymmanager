@@ -158,7 +158,7 @@ def get_solvency_report():
             else:
                 days_remaining = 0
             
-            # Obtener último pago
+            # Obtener último pago (excluyendo eliminados / soft delete)
             payments = firebase_service.query_firestore(
                 'payments',
                 filters=[
@@ -169,7 +169,12 @@ def get_solvency_report():
                 limit=1
             )
             
-            last_payment = payments[0] if payments else None
+            last_payment = None
+            for pmt in payments:
+                if pmt.get('isDeleted', False):
+                    continue
+                last_payment = pmt
+                break
             
             enriched_client = client.copy()
             enriched_client['daysRemaining'] = days_remaining
@@ -295,6 +300,10 @@ def get_daily_income_report():
         
         payments = []
         for p in all_payments:
+            # Filtrar pagos eliminados (soft delete)
+            if p.get('isDeleted', False):
+                continue
+
             # Filtrar por negocio
             if user_business_id:
                 if p.get('businessId') != user_business_id:
@@ -458,6 +467,9 @@ def get_income_by_method_report():
         
         payments = []
         for p in all_payments:
+            # Filtrar pagos eliminados (soft delete)
+            if p.get('isDeleted', False):
+                continue
             # Filtrar por negocio
             if user_business_id:
                 if p.get('businessId') != user_business_id:
@@ -632,6 +644,9 @@ def get_dashboard():
         # Filtrar por fecha (últimos 30 días) en Python
         payments = []
         for p in all_payments_raw:
+            # Filtrar pagos eliminados (soft delete)
+            if p.get('isDeleted', False):
+                continue
             created_at = p.get('createdAt')
             if not created_at:
                 continue
