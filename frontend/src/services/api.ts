@@ -177,6 +177,26 @@ class ApiService {
     });
   }
 
+  async deletePayment(id: string): Promise<ApiResponse<{
+    clientId: string;
+    membershipStart: string | null;
+    membershipEnd: string | null;
+    membershipPlanId: string | null;
+    isActive: boolean;
+    status: string;
+  }>> {
+    return this.requestWithAuth<{
+      clientId: string;
+      membershipStart: string | null;
+      membershipEnd: string | null;
+      membershipPlanId: string | null;
+      isActive: boolean;
+      status: string;
+    }>(`/payments/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   async getReceipts(params: ReceiptFilters = {}): Promise<ApiResponse<{ receipts: Receipt[]; total: number }>> {
     const searchParams = new URLSearchParams();
     if (params.limit) searchParams.append('limit', params.limit.toString());

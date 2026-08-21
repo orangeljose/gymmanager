@@ -133,6 +133,7 @@ export interface Payment {
   syncedAt?: string | null;
   createdAt: string;
   paymentDate?: string; // Fecha real del pago (si diffiere de createdAt)
+  isDeleted?: boolean; // Soft delete flag (backend)
 }
 
 export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'zelle' | 'pago_movil' | 'binance' | 'other';
