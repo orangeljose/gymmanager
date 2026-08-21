@@ -73,42 +73,101 @@ class MembershipService:
             logger.error(f"Error validando monto para cliente {client_id}: {str(e)}")
             return False
     
+    @staticmethod
+    def _coerce_datetime(value: Any) -> Optional[datetime]:
+        """
+        Convierte un valor de fecha (str, Firestore Timestamp o datetime)
+        a un datetime timezone-aware en UTC.
+
+        Args:
+            value: Valor crudo a convertir
+
+        Returns:
+            datetime timezone-aware o None si no se pudo convertir
+        """
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            dt = value
+        elif isinstance(value, str):
+            dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        elif hasattr(value, 'to_datetime'):
+            # Firestore Timestamp
+            dt = value.to_datetime()
+        else:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+
+    def _advance_end(
+        self, 
+        end_date: Optional[datetime], 
+        duration_days: int, 
+        anchor_date: datetime
+    ) -> datetime:
+        """
+        Calcula un nuevo fin de membresía con re-anclaje.
+
+        Regla compartida por extend_membership y recalculate_membership:
+        el nuevo fin es max(end_date, anchor_date) + duration_days. Si el fin
+        actual no existe o ya pasó, la extensión re-ancla en anchor_date.
+
+        Args:
+            end_date: Fecha de vencimiento actual (None si no hay)
+            duration_days: Días a sumar
+            anchor_date: Fecha de anclaje (ahora o la fecha del pago)
+
+        Returns:
+            Nueva fecha de vencimiento
+        """
+        anchor = self._coerce_datetime(anchor_date) or datetime.now(timezone.utc)
+        if end_date is None:
+            base = anchor
+        else:
+            end = self._coerce_datetime(end_date) or anchor
+            base = max(end, anchor)
+        return base + timedelta(days=duration_days)
+
+    def _parse_payment_date(self, payment: Dict[str, Any]) -> datetime:
+        """
+        Obtiene la fecha efectiva de un pago: paymentDate con fallback a createdAt.
+
+        Args:
+            payment: Documento del pago
+
+        Returns:
+            datetime timezone-aware (UTC) representativo del pago
+        """
+        raw = payment.get('paymentDate') or payment.get('createdAt')
+        dt = self._coerce_datetime(raw)
+        if dt is None:
+            dt = datetime.now(timezone.utc)
+        return dt
+
     def calculate_new_end_date(
         self, 
         current_end: Optional[datetime] = None, 
         duration_days: int = 30
     ) -> datetime:
         """
-        Calcula la nueva fecha de vencimiento
-        
+        Calcula la nueva fecha de vencimiento re-anclando en "ahora"
+        cuando la membresía ya venció.
+
         Args:
             current_end: Fecha actual de vencimiento (None para usar hoy)
             duration_days: Días de duración del plan
-            
+
         Returns:
             Nueva fecha de vencimiento
         """
         try:
             now = datetime.now(timezone.utc)
-            # Usar fecha actual si no hay fecha de vencimiento
-            if current_end is None:
-                start_date = now
-            else:
-                # Asegurar que current_end sea timezone-aware
-                if current_end.tzinfo is None:
-                    current_end = current_end.replace(tzinfo=timezone.utc)
-                # Si la membresía ya venció, empezar desde hoy
-                if current_end < now:
-                    start_date = now
-                else:
-                    start_date = current_end
-            
-            # Calcular nueva fecha
-            new_end = start_date + timedelta(days=duration_days)
-            
+            new_end = self._advance_end(current_end, duration_days, now)
+
             logger.info(f"Nueva fecha de vencimiento calculada: {new_end}")
             return new_end
-            
+
         except Exception as e:
             logger.error(f"Error calculando nueva fecha de vencimiento: {str(e)}")
             raise
@@ -203,6 +262,85 @@ class MembershipService:
                 
         except Exception as e:
             logger.error(f"Error extendiendo membresía para cliente {client_id}: {str(e)}")
+            return None
+    
+    def recalculate_membership(self, client_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Reconstruye las fechas de membresía de un cliente desde sus pagos
+        no eliminados, ordenados cronológicamente (paymentDate → createdAt).
+
+        Aplica la misma regla acumulativa que extend_membership vía
+        _advance_end. Si no quedan pagos, deja al cliente sin membresía
+        (isActive: False, status: 'expired').
+
+        Args:
+            client_id: ID del cliente
+
+        Returns:
+            Dict con la membresía recalculada o None si hay error
+        """
+        try:
+            client = self.firebase_service.get_document('clients', client_id)
+            if not client:
+                logger.error(f"Cliente no encontrado para recalcular membresía: {client_id}")
+                return None
+
+            payments = self.firebase_service.query_firestore(
+                'payments',
+                filters=[{'field': 'clientId', 'operator': '==', 'value': client_id}]
+            )
+
+            active = [p for p in payments if not p.get('isDeleted', False)]
+
+            if not active:
+                update_data = {
+                    'membershipStart': None,
+                    'membershipEnd': None,
+                    'membershipPlanId': None,
+                    'isActive': False,
+                    'status': 'expired'
+                }
+                self.firebase_service.update_document('clients', client_id, update_data)
+                logger.info(f"Membresía recalculada (sin pagos) para cliente {client_id}")
+                return {'clientId': client_id, **update_data}
+
+            # Ordenar cronológicamente por fecha del pago (fallback createdAt)
+            active.sort(key=self._parse_payment_date)
+
+            running_end = None
+            last_plan_id = None
+            for payment in active:
+                plan_id = payment.get('membershipPlanId')
+                plan = self.get_plan_by_id(plan_id) if plan_id else None
+                if plan:
+                    duration_days = plan.get('durationDays', 30) * payment.get('monthsPaid', 1)
+                else:
+                    logger.warning(
+                        f"Plan no encontrado al recalcular ({plan_id}); usando 30 días por defecto"
+                    )
+                    duration_days = 30 * payment.get('monthsPaid', 1)
+                running_end = self._advance_end(
+                    running_end, duration_days, self._parse_payment_date(payment)
+                )
+                last_plan_id = plan_id
+
+            now = datetime.now(timezone.utc)
+            is_active = running_end > now
+            membership_start = self._parse_payment_date(active[0])
+
+            update_data = {
+                'membershipStart': membership_start.isoformat(),
+                'membershipEnd': running_end.isoformat(),
+                'membershipPlanId': last_plan_id,
+                'isActive': is_active,
+                'status': 'active' if is_active else 'expired'
+            }
+            self.firebase_service.update_document('clients', client_id, update_data)
+            logger.info(f"Membresía recalculada para cliente {client_id}: {update_data['status']}")
+            return {'clientId': client_id, **update_data}
+
+        except Exception as e:
+            logger.error(f"Error recalculando membresía para cliente {client_id}: {str(e)}")
             return None
     
     def get_client_membership_status(self, client_id: str) -> Optional[Dict[str, Any]]:
