@@ -377,9 +377,13 @@ def get_receipts():
         
         # Obtener pagos
         firebase_service = FirebaseService()
+        # Filtro isDeleted en Firestore (no en Python) para paginación correcta.
+        # Requiere que todos los pagos tengan el campo isDeleted (backfill manual de legacy + register_payment ya lo persiste).
+        data_filters = filters.copy()
+        data_filters.append({'field': 'isDeleted', 'operator': '==', 'value': False})
         all_receipts = firebase_service.query_firestore(
             'payments',
-            filters=filters,
+            filters=data_filters,
             order_by='createdAt',
             direction='DESC',
             limit=limit,
@@ -388,6 +392,7 @@ def get_receipts():
         
         # Obtener total (sin limit/offset para saber si hay más)
         total_filters = filters.copy()  # Sin offset/limit
+        total_filters.append({'field': 'isDeleted', 'operator': '==', 'value': False})
         all_for_count = firebase_service.query_firestore(
             'payments',
             filters=total_filters,
@@ -395,7 +400,7 @@ def get_receipts():
             direction='DESC',
             limit=1000  # Un número alto pero no excesivo
         )
-        # Excluir pagos eliminados (soft delete) en Python (Firestore where excluye docs sin el campo)
+        # Excluir pagos eliminados (soft delete) en Python como fallback defensivo
         total = len([p for p in all_for_count if not p.get('isDeleted', False)])
         
         # Transformar al formato de tabla
