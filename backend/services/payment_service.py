@@ -150,7 +150,9 @@ class PaymentService:
                 'registeredByName': current_user.get('name', 'Usuario'),
                 'receiptNumber': receipt_number,
                 'syncedAt': datetime.now(),  # Online = synced immediately
-                'paymentDate': data.get('paymentDate')  # Fecha real del pago (si se especifica)
+                'paymentDate': data.get('paymentDate'),  # Fecha real del pago (si se especifica)
+                'monthsPaid': months_paid,
+                'isDeleted': False
             }
             
             # Crear pago en Firestore
@@ -168,6 +170,55 @@ class PaymentService:
         except Exception as e:
             logger.error(f"Error registrando pago: {str(e)}")
             return None
+    
+    def delete_payment(self, payment_id: str, current_user: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Elimina (soft delete) un pago y recalcula la membresía del cliente.
+
+        Args:
+            payment_id: ID del pago a eliminar
+            current_user: Información del usuario autenticado
+
+        Returns:
+            Dict con status ('not_found' | 'forbidden' | 'success') y data
+        """
+        try:
+            payment = self.firebase_service.get_document('payments', payment_id)
+            if not payment or payment.get('isDeleted', False):
+                logger.warning(f"Pago no encontrado o ya eliminado: {payment_id}")
+                return {'status': 'not_found', 'data': None}
+
+            # Verificación de sede en línea (mismo patrón que register_payment)
+            role = current_user.get('role')
+            if role != 'super_admin':
+                user_branch_id = current_user.get('branchId')
+                # Admin sin sucursal asignada puede eliminar pagos de cualquier sede
+                if user_branch_id and user_branch_id != payment.get('branchId'):
+                    logger.warning(
+                        f"Usuario sin acceso a la sede del pago {payment_id}: "
+                        f"branch {user_branch_id} != {payment.get('branchId')}"
+                    )
+                    return {'status': 'forbidden', 'data': None}
+
+            # Soft delete: marcar isDeleted y preservar el resto (audit trail)
+            success = self.firebase_service.update_document(
+                'payments', payment_id, {'isDeleted': True}
+            )
+            if not success:
+                logger.error(f"No se pudo marcar como eliminado el pago: {payment_id}")
+                return {'status': 'not_found', 'data': None}
+
+            client_id = payment.get('clientId')
+            membership = None
+            if client_id:
+                membership = self.membership_service.recalculate_membership(client_id)
+
+            logger.info(f"Pago eliminado (soft delete): {payment_id}")
+            return {'status': 'success', 'data': membership}
+
+        except Exception as e:
+            logger.error(f"Error eliminando pago {payment_id}: {str(e)}")
+            return {'status': 'not_found', 'data': None}
     
     def sync_offline_payments(
         self, 
@@ -301,6 +352,9 @@ class PaymentService:
                 limit=limit
             )
             
+            # Filtrar eliminados en Python (Firestore where excluye docs sin el campo)
+            payments = [p for p in payments if not p.get('isDeleted', False)]
+            
             logger.info(f"Obtenidos {len(payments)} pagos para cliente {client_id}")
             return payments
             
@@ -352,6 +406,9 @@ class PaymentService:
                 order_by='createdAt',
                 direction='ASC'
             )
+            
+            # Filtrar eliminados en Python (Firestore where excluye docs sin el campo)
+            payments = [p for p in payments if not p.get('isDeleted', False)]
             
             # Calcular resumen
             total_amount = sum(p.get('amount', 0) for p in payments)
