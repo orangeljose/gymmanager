@@ -107,6 +107,11 @@ def get_clients():
             filters=filters
         )
         
+        # Excluir clientes eliminados (soft delete) ANTES de búsqueda/orden/paginación
+        # para mantener meta.total correcto. Un cliente legacy sin el campo isDeleted
+        # se trata como no eliminado (cubre también la búsqueda de quick-pay).
+        all_clients = [c for c in all_clients if not c.get('isDeleted', False)]
+        
         # Filtrar por búsqueda en Python (nombre, email o teléfono)
         if search:
             search_lower = search.lower()
@@ -172,6 +177,16 @@ def get_client(client_id):
         # Obtener cliente
         client = firebase_service.get_document('clients', client_id)
         if not client:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 404,
+                    'message': 'Cliente no encontrado'
+                }
+            }), 404
+        
+        # Cliente eliminado (soft delete) se trata como no encontrado
+        if client.get('isDeleted', False):
             return jsonify({
                 'success': False,
                 'error': {
@@ -392,6 +407,16 @@ def update_client(client_id):
                 }
             }), 404
         
+        # Cliente eliminado (soft delete) no se puede actualizar
+        if client.get('isDeleted', False):
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 404,
+                    'message': 'Cliente no encontrado'
+                }
+            }), 404
+        
         # Validar acceso al negocio y sede
         client_business_id = client.get('businessId')
         client_branch_id = client.get('branchId')
@@ -472,6 +497,101 @@ def update_client(client_id):
             }
         }), 500
 
+@clients_bp.route('/<client_id>', methods=['DELETE', 'OPTIONS'])
+@require_auth
+@require_role(['super_admin', 'admin', 'branch_admin'])
+def delete_client(client_id):
+    """
+    Elimina (soft delete) un cliente sin modificar sus pagos
+    
+    Path Parameters:
+        clientId: string - ID del cliente a eliminar
+    
+    Response (200):
+    {
+        "success": true,
+        "data": {
+            "id": "client-001"
+        }
+    }
+    
+    Response (404): Cliente no encontrado o ya eliminado
+    Response (403): Sin acceso al negocio/sede del cliente
+    """
+    try:
+        firebase_service = FirebaseService()
+        
+        # Verificar que el cliente exista y no esté ya eliminado
+        client = firebase_service.get_document('clients', client_id)
+        if not client or client.get('isDeleted', False):
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 404,
+                    'message': 'Cliente no encontrado'
+                }
+            }), 404
+        
+        # Validar acceso al negocio y sede (inline: branchId se conoce tras el fetch,
+        # por lo que validate_branch_access como decorador no aplica aquí)
+        client_business_id = client.get('businessId')
+        client_branch_id = client.get('branchId')
+        user_business_id = g.current_user.get('businessId')
+        user_branch_id = g.current_user.get('branchId')
+        
+        if client_business_id != user_business_id and g.current_user.get('role') != 'super_admin':
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 403,
+                    'message': 'No tienes acceso a este cliente'
+                }
+            }), 403
+        
+        if g.current_user.get('role') != 'super_admin' and user_branch_id and client_branch_id != user_branch_id:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 403,
+                    'message': 'No tienes acceso a este cliente'
+                }
+            }), 403
+        
+        # Soft delete con campos de auditoría (los pagos del cliente NO se tocan)
+        now_iso = datetime.now(timezone.utc).isoformat()
+        success = firebase_service.update_document('clients', client_id, {
+            'isDeleted': True,
+            'deletedBy': g.current_user.get('uid'),
+            'deletedAt': now_iso
+        })
+        
+        if success:
+            logger.info(f"Cliente eliminado (soft delete): {client_id}")
+            return jsonify({
+                'success': True,
+                'data': {
+                    'id': client_id
+                }
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 500,
+                    'message': 'Error al eliminar cliente'
+                }
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Error eliminando cliente {client_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 500,
+                'message': 'Error interno del servidor'
+            }
+        }), 500
+
 @clients_bp.route('/<client_id>/payments', methods=['GET', 'OPTIONS'])
 @require_auth
 def get_client_payments(client_id):
@@ -497,6 +617,16 @@ def get_client_payments(client_id):
         firebase_service = FirebaseService()
         client = firebase_service.get_document('clients', client_id)
         if not client:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 404,
+                    'message': 'Cliente no encontrado'
+                }
+            }), 404
+        
+        # Cliente eliminado (soft delete) se trata como no encontrado
+        if client.get('isDeleted', False):
             return jsonify({
                 'success': False,
                 'error': {
