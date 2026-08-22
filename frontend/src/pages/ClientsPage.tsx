@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Plus, ChevronLeft, ChevronRight, X, Calendar } from 'lucide-react';
+import { Search, Plus, ChevronLeft, ChevronRight, X, Calendar, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useClients } from '@/hooks/useClients';
 import { usePlans } from '@/hooks/usePlans';
-import type { ClientStatus, Branch } from '@/types';
+import type { Client, ClientStatus, Branch } from '@/types';
 import { apiService } from '@/services/api';
 
 export const ClientsPage: React.FC = () => {
@@ -16,6 +17,10 @@ export const ClientsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<ClientStatus | ''>('');
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchFilter, setBranchFilter] = useState<string>('');
+  const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const canDeleteClient = user?.role === 'super_admin' || user?.role === 'admin' || user?.role === 'branch_admin';
 
   // Build plan name lookup map
   const planNameMap = useMemo(() => {
@@ -84,6 +89,25 @@ export const ClientsPage: React.FC = () => {
     const end = new Date(membershipEnd);
     const diff = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     return diff;
+  };
+
+  const handleDeleteClient = async () => {
+    if (!deleteTarget) return;
+    try {
+      setDeleting(true);
+      const response = await apiService.deleteClient(deleteTarget.id);
+      if (response.success) {
+        toast.success('Cliente eliminado correctamente');
+        setDeleteTarget(null);
+        fetchClients({ status: statusFilter || undefined, branchId: branchFilter || undefined });
+      } else {
+        toast.error(response.error?.message || 'Error al eliminar el cliente');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al eliminar el cliente');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -253,9 +277,20 @@ export const ClientsPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <Link to={`/clients/${client.id}`} className="btn btn-ghost btn-sm">
-                            Ver
-                          </Link>
+                          <div className="flex justify-end gap-1">
+                            <Link to={`/clients/${client.id}`} className="btn btn-ghost btn-sm">
+                              Ver
+                            </Link>
+                            {canDeleteClient && (
+                              <button
+                                onClick={() => setDeleteTarget(client)}
+                                className="btn btn-ghost btn-sm text-red-600 hover:text-red-800"
+                                title="Eliminar cliente"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -290,6 +325,43 @@ export const ClientsPage: React.FC = () => {
           </>
         )}
       </div>
+
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-lg font-semibold">Eliminar Cliente</h3>
+              <button onClick={() => setDeleteTarget(null)} className="btn btn-ghost btn-sm">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <p className="text-sm text-gray-700 mb-2">
+                ¿Estás seguro de eliminar al cliente <strong>{deleteTarget.name}</strong>?
+              </p>
+              <p className="text-sm text-gray-500 mb-4">
+                Los pagos del cliente se conservarán para los reportes de ingresos.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  className="btn btn-outline"
+                  disabled={deleting}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteClient}
+                  disabled={deleting}
+                  className="btn btn-danger"
+                >
+                  {deleting ? 'Eliminando...' : 'Eliminar Cliente'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

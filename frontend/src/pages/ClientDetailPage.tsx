@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Edit2, CreditCard, Phone, Mail, MapPin, AlertCircle, Clock, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,6 +12,7 @@ import type { Client, Payment } from '@/types';
 
 export const ClientDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user, selectedBusinessId } = useAuth();
   const effectiveBusinessId = selectedBusinessId || user?.businessId || "";
   const { getClient, getClientPayments } = useClients(effectiveBusinessId || '');
@@ -24,8 +25,11 @@ export const ClientDetailPage: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteClientModal, setShowDeleteClientModal] = useState(false);
+  const [deletingClient, setDeletingClient] = useState(false);
 
   const canDeletePayment = user?.role === 'super_admin' || user?.role === 'admin' || user?.role === 'branch_admin';
+  const canDeleteClient = user?.role === 'super_admin' || user?.role === 'admin' || user?.role === 'branch_admin';
 
   useEffect(() => {
     if (!id) return;
@@ -139,6 +143,25 @@ export const ClientDetailPage: React.FC = () => {
     }
   };
 
+  const handleDeleteClient = async () => {
+    if (!client) return;
+    try {
+      setDeletingClient(true);
+      const response = await apiService.deleteClient(client.id);
+      if (response.success) {
+        toast.success('Cliente eliminado correctamente');
+        setShowDeleteClientModal(false);
+        navigate('/clients');
+      } else {
+        toast.error(response.error?.message || 'Error al eliminar el cliente');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al eliminar el cliente');
+    } finally {
+      setDeletingClient(false);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="loading-spinner h-10 w-10" /></div>;
   }
@@ -186,11 +209,21 @@ export const ClientDetailPage: React.FC = () => {
               </span>
             </div>
           </div>
-          {(user?.role === 'super_admin' || user?.role === 'admin') && (
-            <Link to={`/clients/${client.id}/edit`} className="btn btn-outline">
-              <Edit2 className="h-4 w-4 mr-2" /> Editar
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            {(user?.role === 'super_admin' || user?.role === 'admin') && (
+              <Link to={`/clients/${client.id}/edit`} className="btn btn-outline">
+                <Edit2 className="h-4 w-4 mr-2" /> Editar
+              </Link>
+            )}
+            {canDeleteClient && (
+              <button
+                onClick={() => setShowDeleteClientModal(true)}
+                className="btn btn-outline text-red-600 hover:text-red-800"
+              >
+                <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -423,6 +456,42 @@ export const ClientDetailPage: React.FC = () => {
                   className="btn btn-danger"
                 >
                   {deleting ? 'Eliminando...' : 'Eliminar Pago'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showDeleteClientModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-lg font-semibold">Eliminar Cliente</h3>
+              <button onClick={() => setShowDeleteClientModal(false)} className="btn btn-ghost btn-sm">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <p className="text-sm text-gray-700 mb-2">
+                ¿Estás seguro de eliminar al cliente <strong>{client.name}</strong>?
+              </p>
+              <p className="text-sm text-gray-500 mb-4">
+                Los pagos del cliente se conservarán para los reportes de ingresos.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setShowDeleteClientModal(false)}
+                  className="btn btn-outline"
+                  disabled={deletingClient}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteClient}
+                  disabled={deletingClient}
+                  className="btn btn-danger"
+                >
+                  {deletingClient ? 'Eliminando...' : 'Eliminar Cliente'}
                 </button>
               </div>
             </div>
