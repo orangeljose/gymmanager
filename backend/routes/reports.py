@@ -125,6 +125,10 @@ def get_solvency_report():
             filters=filters
         )
         
+        # Excluir clientes eliminados (soft delete) antes del enriquecimiento.
+        # Cliente legacy sin el campo isDeleted se trata como no eliminado.
+        clients = [c for c in clients if not c.get('isDeleted', False)]
+        
         # Búsqueda por nombre, email o teléfono (Python-side)
         search = request.args.get('search', '').strip()
         if search:
@@ -603,6 +607,12 @@ def get_dashboard():
             client_filters.append({'field': 'branchId', 'operator': '==', 'value': effective_branch_id})
 
         all_clients = firebase_service.query_firestore('clients', filters=client_filters)
+
+        # Excluir clientes eliminados (soft delete) de las métricas derivadas de
+        # clientes (activeClients, overdueClients, expiringThisWeek, retentionRate).
+        # Cliente legacy sin el campo se trata como activo. Los pagos se mantienen:
+        # incomeChart/todayIncome/topPayingClients siguen incluyendo eliminados.
+        all_clients = [c for c in all_clients if not c.get('isDeleted', False)]
 
         active_clients = [c for c in all_clients if c.get('isActive', False)]
         active_count = len(active_clients)
