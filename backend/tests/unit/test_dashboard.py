@@ -44,9 +44,9 @@ def create_mock_service(role='super_admin', uid='admin-123', business_id='biz-1'
 # HELPERS - Crean datos de muestra
 # ============================================================================
 
-def make_client(client_id, name, is_active=True, membership_end=None, business_id='biz-1', branch_id='branch-1'):
+def make_client(client_id, name, is_active=True, membership_end=None, business_id='biz-1', branch_id='branch-1', is_deleted=None):
     """Factory para crear datos de cliente de muestra"""
-    return {
+    client = {
         'id': client_id,
         'name': name,
         'isActive': is_active,
@@ -54,6 +54,10 @@ def make_client(client_id, name, is_active=True, membership_end=None, business_i
         'businessId': business_id,
         'branchId': branch_id,
     }
+    # is_deleted=None -> campo ausente (cliente legacy, tratado como no eliminado)
+    if is_deleted is not None:
+        client['isDeleted'] = is_deleted
+    return client
 
 
 def make_payment(client_id, client_name, amount, created_at=None, business_id='biz-1', branch_id='branch-1'):
@@ -102,6 +106,26 @@ def _make_client(mock):
         app = create_app()
         app.config['TESTING'] = True
         return app.test_client()
+
+
+def _dashboard_with(mock):
+    """
+    Helper DETERMINISTA para los tests de exclusión de eliminados.
+
+    A diferencia de _make_client (que hace la request fuera del patch y depende
+    de bindings de módulo), aquí la request se ejecuta DENTRO de los patches de
+    los call-sites para que el test use su propio mock sin importar el orden.
+    También se parchea el atributo de módulo para que create_app() no inicie
+    Firebase real (initialize_app doble rompería el proceso).
+    """
+    with patch('services.firebase_service.FirebaseService', return_value=mock), \
+         patch('middleware.auth_middleware.FirebaseService', return_value=mock), \
+         patch('routes.reports.FirebaseService', return_value=mock):
+        from app import create_app
+        app = create_app()
+        app.config['TESTING'] = True
+        client = app.test_client()
+        return client.get('/api/reports/dashboard', headers={'Authorization': 'Bearer test-token'})
 
 
 # ============================================================================
@@ -414,3 +438,117 @@ class TestAccessControl:
         client = _make_client(mock)
         response = client.get('/api/reports/dashboard', headers={'Authorization': 'Bearer test-token'})
         assert response.status_code == 200
+
+
+class TestDeletedClientExclusion:
+    """Métricas derivadas de clientes excluyen eliminados; las de pagos los mantienen"""
+
+    def test_deleted_client_excluded_from_active_count(self):
+        """5 activos de los cuales 1 está eliminado → activeClients == 4"""
+        clients = [
+            make_client('c1', 'Activo 1', is_active=True, membership_end=_future_days(30)),
+            make_client('c2', 'Activo 2', is_active=True, membership_end=_future_days(20)),
+            make_client('c3', 'Activo 3', is_active=True, membership_end=_future_days(10)),
+            make_client('c4', 'Activo 4', is_active=True, membership_end=_future_days(5)),
+            make_client('c5', 'Activo eliminado', is_active=True, membership_end=_future_days(30), is_deleted=True),
+        ]
+
+        mock = create_mock_service()
+        mock.query_firestore.side_effect = [
+            clients,  # clients
+            [],       # payments
+        ]
+
+        response = _dashboard_with(mock)
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['data']['activeClients'] == 4
+
+    def test_deleted_client_excluded_from_overdue_count(self):
+        """5 vencidos de los cuales 1 está eliminado → overdueClients == 4"""
+        clients = [
+            make_client('c1', 'Moroso 1', is_active=True, membership_end=_past_days(10)),
+            make_client('c2', 'Moroso 2', is_active=True, membership_end=_past_days(8)),
+            make_client('c3', 'Moroso 3', is_active=True, membership_end=_past_days(6)),
+            make_client('c4', 'Moroso 4', is_active=True, membership_end=_past_days(4)),
+            make_client('c5', 'Moroso eliminado', is_active=True, membership_end=_past_days(10), is_deleted=True),
+        ]
+
+        mock = create_mock_service()
+        mock.query_firestore.side_effect = [
+            clients,  # clients
+            [],       # payments
+        ]
+
+        response = _dashboard_with(mock)
+        data = json.loads(response.data)
+        assert data['data']['overdueClients'] == 4
+
+    def test_deleted_client_excluded_from_expiring_count(self):
+        """3 vencen esta semana, 1 de ellos eliminado → expiringThisWeek == 2"""
+        # El dashboard compara contra datetime.utcnow() llamado en la request:
+        # usar fechas UTC con margen (nunca exactamente 'ahora') para no depender
+        # de la zona horaria ni de milisegundos de diferencia (gotcha del baseline).
+        utc_now = datetime.utcnow()
+        clients = [
+            make_client('c1', 'Vence pronto 1', is_active=True, membership_end=(utc_now + timedelta(days=1)).isoformat()),
+            make_client('c2', 'Vence pronto 2', is_active=True, membership_end=(utc_now + timedelta(days=3)).isoformat()),
+            make_client('c3', 'Vence pronto eliminado', is_active=True, membership_end=(utc_now + timedelta(days=5)).isoformat(), is_deleted=True),
+            make_client('c4', 'Vence lejos', is_active=True, membership_end=(utc_now + timedelta(days=30)).isoformat()),
+        ]
+
+        mock = create_mock_service()
+        mock.query_firestore.side_effect = [
+            clients,  # clients
+            [],       # payments
+        ]
+
+        response = _dashboard_with(mock)
+        data = json.loads(response.data)
+        assert data['data']['expiringThisWeek'] == 2
+
+    def test_legacy_client_without_field_counted(self):
+        """Cliente legacy sin isDeleted cuenta como activo"""
+        legacy = make_client('c1', 'Legacy', is_active=True, membership_end=_future_days(30))
+        legacy.pop('isDeleted', None)  # campo ausente
+
+        mock = create_mock_service()
+        mock.query_firestore.side_effect = [
+            [legacy],  # clients
+            [],        # payments
+        ]
+
+        response = _dashboard_with(mock)
+        data = json.loads(response.data)
+        assert data['data']['activeClients'] == 1
+
+    def test_deleted_clients_payments_kept_in_top_paying_and_income(self):
+        """Los pagos de un cliente eliminado se mantienen en topPayingClients y todayIncome"""
+        # createdAt en UTC para que todayIncome (que compara contra utcnow)
+        # sea determinista en cualquier zona horaria (gotcha del baseline).
+        utc_now = datetime.utcnow()
+        clients = [
+            make_client('c1', 'Eliminado', is_active=True, membership_end=_future_days(30), is_deleted=True),
+        ]
+        payments = [
+            make_payment('c1', 'Eliminado', 1000, created_at=utc_now) for _ in range(5)
+        ]
+
+        mock = create_mock_service()
+        mock.query_firestore.side_effect = [
+            clients,   # clients
+            payments,  # payments
+        ]
+
+        response = _dashboard_with(mock)
+        assert response.status_code == 200
+        data = json.loads(response.data)
+
+        # Métricas de clientes: excluido
+        assert data['data']['activeClients'] == 0
+
+        # Métricas de pagos: mantenido como registro histórico
+        assert data['data']['topPayingClients'] == [
+            {'clientId': 'c1', 'clientName': 'Eliminado', 'paymentCount': 5}
+        ]
+        assert data['data']['todayIncome'] == 5000
