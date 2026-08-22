@@ -169,6 +169,12 @@ class ApiService {
     return this.requestWithAuth<Payment[]>(`/clients/${id}/payments`);
   }
 
+  async deleteClient(id: string): Promise<ApiResponse<{ id: string }>> {
+    return this.requestWithAuth<{ id: string }>(`/clients/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Payments
   async createPayment(data: PaymentFormData): Promise<ApiResponse<Payment>> {
     return this.requestWithAuth<Payment>('/payments', {

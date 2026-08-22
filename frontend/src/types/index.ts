@@ -107,6 +107,7 @@ export interface Client {
   registeredBy: string;
   notes?: string | null;
   createdAt: string;
+  isDeleted?: boolean; // Soft delete flag (backend)
 }
 
 export type ClientStatus = 'active' | 'expired' | 'suspended';
