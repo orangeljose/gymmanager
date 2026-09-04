@@ -39,6 +39,7 @@ def create_invitation():
         target_role = data.get('role', '').strip()
         invited_name = data.get('name', '').strip() or None
         business_id_from_request = data.get('businessId') or None
+        branch_id_from_request = data.get('branchId') or None
 
         # Validar campos requeridos
         if not email:
@@ -104,7 +105,8 @@ def create_invitation():
             inviter_data=inviter_data,
             target_role=target_role,
             invited_name=invited_name,
-            business_id_from_request=business_id_from_request
+            business_id_from_request=business_id_from_request,
+            branch_id_from_request=branch_id_from_request
         )
 
         # Guardar en Firestore
@@ -326,10 +328,14 @@ def accept_invitation():
             }), 400
 
         # Crear documento de usuario en Firestore usando el mismo UID de Firebase
+        # Precedencia del nombre: nombre ingresado → nombre de la invitación → ''
+        entered_name = (data.get('name') or '').strip() or None
+        stored_name = entered_name or invitation.get('name') or ''
+
         user_data = {
             'id': uid,
             'email': invitation.get('email'),
-            'name': invitation.get('name') or '',
+            'name': stored_name,
             'role': invitation.get('role'),
             'businessId': invitation.get('businessId'),
             'branchId': invitation.get('branchId'),
@@ -373,7 +379,7 @@ def accept_invitation():
                 'userId': uid,
                 'email': invitation.get('email'),
                 'role': invitation.get('role'),
-                'name': invitation.get('name'),
+                'name': stored_name,
                 'businessId': invitation.get('businessId'),
                 'branchId': invitation.get('branchId')
             }
