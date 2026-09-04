@@ -10,12 +10,15 @@ class InvitationModel:
 
     # Roles que pueden invitar según jerarquía
     ROLE_CAN_INVITE = {
-        'super_admin': ['admin'],
+        'super_admin': ['admin', 'branch_admin', 'cashier', 'trainer'],
         'admin': ['branch_admin', 'cashier', 'trainer'],
         'branch_admin': [],
         'cashier': [],
         'trainer': []
     }
+
+    # Roles cuyo scope se limita a una sucursal (requieren branchId y businessId)
+    BRANCH_SCOPED_ROLES = {'branch_admin', 'cashier', 'trainer'}
 
     # Duración del link de invitación (72 horas)
     INVITATION_EXPIRY_HOURS = 72
@@ -32,7 +35,8 @@ class InvitationModel:
         inviter_data: Dict[str, Any],
         target_role: str,
         invited_name: str = None,
-        business_id_from_request: str = None
+        business_id_from_request: str = None,
+        branch_id_from_request: str = None
     ) -> Dict[str, Any]:
         """
         Crea los datos para una nueva invitación
@@ -43,6 +47,7 @@ class InvitationModel:
             target_role: Rol que se asignará al invitado
             invited_name: Nombre del invitado (opcional)
             business_id_from_request: businessId específico pasado en el request (para super_admin que invita a admin con negocio ya existente)
+            branch_id_from_request: branchId específico pasado en el request (para roles de sucursal)
 
         Returns:
             Dict con datos de la invitación
@@ -72,9 +77,18 @@ class InvitationModel:
             'createdAt': datetime.now().isoformat()
         }
 
-        # Agregar businessId y branchId según quien invite
+        # Agregar businessId y branchId según el rol objetivo
+        if target_role in InvitationModel.BRANCH_SCOPED_ROLES:
+            # Roles de sucursal: branchId y businessId requeridos
+            # Precedencia: request → datos del invitador → 400
+            branch_id = branch_id_from_request or inviter_data.get('branchId')
+            business_id = business_id_from_request or inviter_data.get('businessId')
+            if not branch_id or not business_id:
+                raise ValueError('branchId y businessId son requeridos para roles de sucursal')
+            invitation_data['branchId'] = branch_id
+            invitation_data['businessId'] = business_id
         # Si se pasa un businessId específico (desde el request), usarlo
-        if business_id_from_request:
+        elif business_id_from_request:
             invitation_data['businessId'] = business_id_from_request
             invitation_data['branchId'] = None
         elif inviter_role == 'super_admin':
