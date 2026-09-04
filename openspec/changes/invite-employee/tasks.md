@@ -37,15 +37,15 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: Frontend API Service
 
-- [ ] 3.1 `frontend/src/services/api.ts`: `createInvitation` input type `+branchId?: string` (forwarded in body)
-- [ ] 3.2 `acceptInvitation(token, uid, name?: string)`: send `name` in body
+- [x] 3.1 `frontend/src/services/api.ts`: `createInvitation` input type `+branchId?: string` (forwarded in body)
+- [x] 3.2 `acceptInvitation(token, uid, name?: string)`: send `name` in body
 
 ## Phase 4: Frontend Pages
 
-- [ ] 4.1 `UsersPage.tsx`: create path → `apiService.createInvitation` (email, name, role, branchId, businessId); drop `createUser` call
-- [ ] 4.2 Branch selector REQUIRED for branch roles; gate invite button to super_admin/admin
-- [ ] 4.3 Success → copyable-link card (AddAdminPage pattern); no user row added; edit path stays on `updateUser` (PUT /users)
-- [ ] 4.4 `InvitePage.tsx`: pass `name` state to `acceptInvitation(token, uid, name)`
+- [x] 4.1 `UsersPage.tsx`: create path → `apiService.createInvitation` (email, name, role, branchId, businessId); drop `createUser` call
+- [x] 4.2 Branch selector REQUIRED for branch roles; gate invite button to super_admin/admin
+- [x] 4.3 Success → copyable-link card (AddAdminPage pattern); no user row added; edit path stays on `updateUser` (PUT /users)
+- [x] 4.4 `InvitePage.tsx`: pass `name` state to `acceptInvitation(token, uid, name)`
 
 ## Phase 5: Tests
 
