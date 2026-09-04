@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import type { User, UserRole, Branch } from '@/types';
 import toast from 'react-hot-toast';
-import { Plus, Edit2, X, AlertCircle, Mail, Shield, Building, Users as UsersIcon } from 'lucide-react';
+import { Plus, Edit2, X, AlertCircle, Mail, Shield, Building, Users as UsersIcon, Link2, Copy, Check } from 'lucide-react';
 
 const ROLE_LABELS: Record<UserRole, string> = {
   super_admin: 'Super Admin',
@@ -37,9 +37,14 @@ export const UsersPage: React.FC = () => {
   });
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [invitationLink, setInvitationLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Effective business ID based on context
   const effectiveBusinessId = selectedBusinessId || user?.businessId || '';
+
+  // Solo super_admin y admin pueden invitar empleados
+  const canInvite = user?.role === 'super_admin' || user?.role === 'admin';
 
   useEffect(() => {
     loadBranches();
@@ -114,6 +119,8 @@ export const UsersPage: React.FC = () => {
   const closeModal = () => {
     setShowModal(false);
     setEditingUser(null);
+    setInvitationLink(null);
+    setCopied(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,17 +136,38 @@ export const UsersPage: React.FC = () => {
           closeModal();
         }
       } else {
-        const response = await apiService.createUser(formData);
+        if (!formData.branchId) {
+          toast.error('Selecciona una sucursal para el empleado');
+          return;
+        }
+        const response = await apiService.createInvitation({
+          email: formData.email,
+          name: formData.name,
+          role: formData.role,
+          businessId: formData.businessId || effectiveBusinessId,
+          branchId: formData.branchId
+        });
         if (response.success) {
-          toast.success('Usuario creado. Se envió email para crear contraseña.');
-          setUsers(prev => [...prev, response.data!]);
-          closeModal();
+          toast.success(`Invitación creada para ${formData.email}`);
+          setInvitationLink(response.data?.invitationLink || null);
+          // No se agrega a la lista: el usuario aparece cuando acepta la invitación
         }
       }
     } catch (error: any) {
       toast.error(error.message || 'Error procesando solicitud');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!invitationLink) return;
+    try {
+      await navigator.clipboard.writeText(invitationLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('No se pudo copiar el link');
     }
   };
 
@@ -177,11 +205,13 @@ if (response.success) {
           <h1 className="text-2xl font-bold text-gray-900">Usuarios</h1>
           <p className="text-gray-600 mt-1">Gestiona los empleados y sus roles</p>
         </div>
-        <button onClick={() => openModal()} className="btn btn-primary">
-          <Plus className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">Invitar Empleado</span>
-          <span className="sm:hidden">Invitar</span>
-        </button>
+        {canInvite && (
+          <button onClick={() => openModal()} className="btn btn-primary">
+            <Plus className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Invitar Empleado</span>
+            <span className="sm:hidden">Invitar</span>
+          </button>
+        )}
       </div>
 
       {users.length === 0 ? (
@@ -189,10 +219,12 @@ if (response.success) {
           <UsersIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No hay usuarios</h3>
           <p className="text-gray-600 mb-6">Invita empleados para comenzar</p>
-          <button onClick={() => openModal()} className="btn btn-primary">
-            <Plus className="h-4 w-4 mr-2" />
-            Invitar Empleado
-          </button>
+          {canInvite && (
+            <button onClick={() => openModal()} className="btn btn-primary">
+              <Plus className="h-4 w-4 mr-2" />
+              Invitar Empleado
+            </button>
+          )}
         </div>
       ) : (
         <>
@@ -353,13 +385,60 @@ if (response.success) {
           >
             <div className="flex justify-between items-center p-4 border-b flex-shrink-0">
               <h3 className="text-lg font-semibold">
-                {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+                {editingUser ? 'Editar Usuario' : 'Invitar Empleado'}
               </h3>
               <button onClick={closeModal} className="btn btn-ghost btn-sm">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
+            {invitationLink && !editingUser ? (
+              <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+                <div className="rounded-lg border-2 border-green-200 bg-green-50 p-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <Link2 className="h-5 w-5 text-green-700" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-green-900 mb-1">
+                        Link de invitación generado
+                      </h3>
+                      <p className="text-xs text-green-700 mb-2">
+                        El email se envía de forma automática; si no llega, compartí este link con el empleado manualmente.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={invitationLink}
+                          className="input flex-1 bg-white text-xs"
+                          onFocus={(e) => e.target.select()}
+                        />
+                        <button onClick={handleCopy} className="btn btn-outline btn-sm whitespace-nowrap">
+                          {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                          {copied ? 'Copiado' : 'Copiar'}
+                        </button>
+                      </div>
+                      <p className="text-xs text-green-700 mt-2">
+                        El empleado aparecerá en la lista cuando acepte la invitación.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-2 pt-4 border-t flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => { setInvitationLink(null); setCopied(false); }}
+                    className="btn btn-outline"
+                  >
+                    Crear otra invitación
+                  </button>
+                  <button type="button" onClick={closeModal} className="btn btn-primary">
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="p-4 space-y-4 flex-1 overflow-y-auto">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -411,7 +490,7 @@ if (response.success) {
                   <option value="trainer">Entrenador</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  El empleado recibirá un email para crear su contraseña
+                  El empleado recibirá un email con el link; también podrás copiarlo y compartirlo manualmente
                 </p>
               </div>
 
@@ -444,24 +523,34 @@ if (response.success) {
                 </div>
               )}
 
-              {/* Selector de Sucursal — super_admin y admin */}
+              {/* Selector de Sucursal — requerido al invitar, opcional al editar */}
               {user?.role !== 'branch_admin' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     <Building className="h-4 w-4 inline mr-1" />
-                    Sucursal asignada
+                    {editingUser ? 'Sucursal asignada' : 'Sucursal *'}
                   </label>
                   <select
                     value={formData.branchId || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, branchId: e.target.value }))}
                     className="input"
+                    required={!editingUser}
                     disabled={!!editingUser}
                   >
-                    <option value="">Sin asignar</option>
+                    {editingUser ? (
+                      <option value="">Sin asignar</option>
+                    ) : (
+                      <option value="">Seleccionar sucursal...</option>
+                    )}
                     {branches.map((branch) => (
                       <option key={branch.id} value={branch.id}>{branch.name}</option>
                     ))}
                   </select>
+                  {!editingUser && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      El empleado será asignado a esta sucursal
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -472,10 +561,11 @@ if (response.success) {
                   Cancelar
                 </button>
                 <button type="submit" disabled={saving} className="btn btn-primary">
-                  {saving ? 'Guardando...' : editingUser ? 'Actualizar' : 'Crear Usuario'}
+                  {saving ? 'Enviando...' : editingUser ? 'Actualizar' : 'Enviar Invitación'}
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
       )}
