@@ -132,7 +132,8 @@ export const InvitePage: React.FC = () => {
       // Backend will use businessId/branchId from the invitation document
       const acceptResponse = await apiService.acceptInvitation(
         token || searchParams.get('token') || '',
-        uid
+        uid,
+        name.trim()
       );
 
       if (acceptResponse.success) {

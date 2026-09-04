@@ -432,7 +432,7 @@ class ApiService {
   }
 
   // Invitations
-  async createInvitation(data: { email: string; name?: string; role: UserRole; businessId?: string }): Promise<ApiResponse<{
+  async createInvitation(data: { email: string; name?: string; role: UserRole; businessId?: string; branchId?: string }): Promise<ApiResponse<{
     invitationId: string;
     token: string;
     email: string;
@@ -471,7 +471,7 @@ class ApiService {
   }>(`/invitations/validate/${token}`);
   }
 
-  async acceptInvitation(token: string, uid: string): Promise<ApiResponse<{
+  async acceptInvitation(token: string, uid: string, name?: string): Promise<ApiResponse<{
     userId: string;
     email: string;
     role: string;
@@ -481,7 +481,7 @@ class ApiService {
   }>> {
     return this.requestWithAuth('/invitations/accept', {
       method: 'POST',
-      body: JSON.stringify({ token, uid }),
+      body: JSON.stringify({ token, uid, name }),
     });
   }
 
