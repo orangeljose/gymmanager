@@ -35,7 +35,7 @@ export default defineConfig({
           }
         ]
       },
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.svg', 'screenshots/*.png'],
       manifest: {
         name: 'GoatGym',
         short_name: 'GoatGym',
@@ -50,18 +50,36 @@ export default defineConfig({
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any'
           },
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
+          }
+        ],
+        screenshots: [
+          {
+            src: 'screenshots/dashboard-wide.png',
+            sizes: '1280x720',
+            type: 'image/png',
+            form_factor: 'wide',
+            label: 'GoatGym - Panel principal'
+          },
+          {
+            src: 'screenshots/mobile.png',
+            sizes: '390x844',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'GoatGym - Vista movil'
           }
         ]
       }
