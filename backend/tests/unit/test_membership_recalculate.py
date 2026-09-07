@@ -171,3 +171,60 @@ class TestRecalculateMembership:
         result = svc.recalculate_membership('c1')
         assert result['isActive'] is False
         assert result['status'] == 'expired'
+
+
+class TestExtendMembershipWithAnchorDate:
+    """Cubre el fix de pago retroactivo: extend_membership usa anchor_date
+    (fecha del pago) en vez de 'now' cuando se provee."""
+
+    def _setup(self, client):
+        mock = MagicMock()
+        def fake_get_document(coll, cid):
+            if coll == 'clients':
+                return client
+            if coll == 'membership_plans':
+                return plan()
+            return None
+        mock.get_document.side_effect = fake_get_document
+        mock.update_document.return_value = True
+        with patch('services.membership_service.FirebaseService', return_value=mock):
+            return MembershipService(), mock
+
+    def test_uses_anchor_date_for_new_membership(self):
+        """Cliente sin membresía: anchor_date (fecha del pago) define start y end."""
+        client = {'id': 'c1', 'name': 'Juan'}
+        svc, _ = self._setup(client)
+        anchor = dt(2026, 8, 20)  # ayer
+        result = svc.extend_membership('c1', 'plan-1', 1, anchor_date=anchor)
+        assert result['membershipStart'] == iso(anchor)
+        assert result['membershipEnd'] == dt(2026, 9, 19)  # 20/08 + 30d = 19/09
+
+    def test_anchor_date_not_now_for_recent_payment(self):
+        """El bug original: pago con paymentDate de ayer usaba 'now' como ancla."""
+        client = {'id': 'c1', 'name': 'Juan'}
+        svc, _ = self._setup(client)
+        anchor = dt(2026, 8, 20)  # ayer (paymentDate del pago)
+        result = svc.extend_membership('c1', 'plan-1', 1, anchor_date=anchor)
+        # Debe anclar en la fecha del pago, NO en now
+        assert result['membershipEnd'] == dt(2026, 9, 19)
+        assert result['membershipEnd'] != datetime.now(UTC) + timedelta(days=30)
+
+    def test_anchor_date_respects_existing_future_end(self):
+        """Si la membresía ya vence en el futuro, anchor_date no la recorta."""
+        future_end = dt(2026, 10, 1)
+        client = {'id': 'c1', 'name': 'Juan', 'membershipEnd': iso(future_end)}
+        svc, _ = self._setup(client)
+        anchor = dt(2026, 8, 20)
+        result = svc.extend_membership('c1', 'plan-1', 1, anchor_date=anchor)
+        # max(Oct1, Aug20) + 30d = Oct1 + 30d
+        assert result['membershipEnd'] == dt(2026, 10, 31)
+
+    def test_none_anchor_uses_now(self):
+        """Sin anchor_date, el comportamiento sigue siendo 'now' (backward compat)."""
+        client = {'id': 'c1', 'name': 'Juan'}
+        svc, _ = self._setup(client)
+        before = datetime.now(UTC)
+        result = svc.extend_membership('c1', 'plan-1', 1)
+        after = datetime.now(UTC)
+        # now + 30d, con tolerancia de ejecución
+        assert before + timedelta(days=30) <= result['membershipEnd'] <= after + timedelta(days=30)

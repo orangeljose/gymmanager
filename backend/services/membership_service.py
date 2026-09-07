@@ -176,15 +176,20 @@ class MembershipService:
         self, 
         client_id: str, 
         plan_id: str, 
-        months_paid: int = 1
+        months_paid: int = 1,
+        anchor_date: Optional[datetime] = None
     ) -> Optional[Dict[str, Any]]:
         """
-        Extiende la membresía de un cliente
-        
+Extiende la membresía de un cliente
+
         Args:
             client_id: ID del cliente
             plan_id: ID del plan
             months_paid: Meses pagados (para planes de múltiples meses)
+            anchor_date: Fecha de anclaje para el cálculo (fecha del pago).
+                Si es None, se usa "ahora". Permite que pagos retroactivos
+                (ej: registrados hoy con paymentDate de ayer) calculen
+                desde la fecha real del pago.
             
         Returns:
             Dict con nuevas fechas o None si hay error
@@ -222,7 +227,11 @@ class MembershipService:
                     current_end = current_end.replace(tzinfo=timezone.utc)
             
             # Calcular nueva fecha de vencimiento
-            new_end = self.calculate_new_end_date(current_end, duration_days)
+            # Si hay anchor_date (fecha del pago), usarlo en vez de "ahora"
+            if anchor_date is not None:
+                new_end = self._advance_end(current_end, duration_days, anchor_date)
+            else:
+                new_end = self.calculate_new_end_date(current_end, duration_days)
             
             # Preparar datos de actualización
             update_data = {
@@ -233,16 +242,17 @@ class MembershipService:
             }
             
             # Si es una nueva membresía o estaba vencida, actualizar start
-            now = datetime.now(timezone.utc)
+            # Usar el anchor (fecha del pago) si se provee, sino "ahora"
+            anchor_for_start = anchor_date or datetime.now(timezone.utc)
             if current_end is None:
-                update_data['membershipStart'] = now.isoformat()
+                update_data['membershipStart'] = anchor_for_start.isoformat()
             else:
                 if hasattr(current_end, 'tzinfo') and current_end.tzinfo is not None:
-                    if current_end < now:
-                        update_data['membershipStart'] = now.isoformat()
+                    if current_end < anchor_for_start:
+                        update_data['membershipStart'] = anchor_for_start.isoformat()
                 else:
-                    if current_end.replace(tzinfo=timezone.utc) < now:
-                        update_data['membershipStart'] = now.isoformat()
+                    if current_end.replace(tzinfo=timezone.utc) < anchor_for_start:
+                        update_data['membershipStart'] = anchor_for_start.isoformat()
             
             # Actualizar cliente
             success = self.firebase_service.update_document('clients', client_id, update_data)

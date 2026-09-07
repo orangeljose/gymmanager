@@ -121,7 +121,8 @@ class PaymentService:
             if not skip_extension:
                 logger.info(f"[DEBUG] No skip - calling extend_membership")
                 membership_update = self.membership_service.extend_membership(
-                    client_id, plan_id, months_paid
+                    client_id, plan_id, months_paid,
+                    anchor_date=payment_date if 'payment_date' in locals() else None
                 )
                 
                 if not membership_update:
