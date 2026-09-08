@@ -334,10 +334,11 @@ def create_client():
         # Calcular fechas de membresía
         now_utc = datetime.now(timezone.utc)
         
-        # Sin pago: membresía vencida desde el inicio
-        from datetime import timedelta
-        client_data['membershipStart'] = now_utc - timedelta(days=1)
-        client_data['membershipEnd'] = now_utc - timedelta(days=1)
+        # Sin pago: sin membresía (null). NO usar un placeholder "now - 1 día"
+        # porque contamina el cálculo de extend_membership cuando luego se
+        # registra un pago retroactivo (max(placeholder, fecha_pago) = placeholder).
+        client_data['membershipStart'] = None
+        client_data['membershipEnd'] = None
         client_data['status'] = 'expired'
         
         # Crear cliente
