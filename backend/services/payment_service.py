@@ -117,6 +117,16 @@ class PaymentService:
                             'planName': plan.get('name', 'Plan'),
                             'planPrice': plan.get('price', amount)
                         }
+                        # Escribir las fechas reales en el documento del cliente
+                        # (el pago ya venció, pero el cliente debe reflejar su vencimiento
+                        # real y no el valor por defecto de create_client "now - 1 día")
+                        self.firebase_service.update_document('clients', client_id, {
+                            'membershipStart': membership_update['membershipStart'],
+                            'membershipEnd': membership_update['membershipEnd'],
+                            'membershipPlanId': plan_id,
+                            'status': 'expired',
+                            'isActive': False
+                        })
             
             if not skip_extension:
                 logger.info(f"[DEBUG] No skip - calling extend_membership")

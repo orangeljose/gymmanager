@@ -145,3 +145,43 @@ class TestRegisterPaymentPersistence:
     def test_persists_is_deleted_false(self):
         payment_data = self._register(self._base_data(), user())
         assert payment_data['isDeleted'] is False
+
+    def test_old_payment_writes_real_dates_to_client(self):
+        """Pago antiguo (skip_extension): el cliente debe actualizarse con las
+        fechas reales del pago, no quedar con el valor por defecto 'now - 1 día'
+        que pone create_client."""
+        firebase = MagicMock()
+        firebase.get_document.return_value = {'id': 'c1', 'isActive': True, 'businessId': 'biz-1', 'name': 'Juan'}
+        firebase.query_firestore.return_value = []
+        firebase.create_document.return_value = {'id': 'p1'}
+
+        membership = MagicMock()
+        membership.validate_payment_amount.return_value = True
+        membership.get_plan_by_id.return_value = {'id': 'plan-1', 'durationDays': 1, 'name': 'Sesión', 'price': 500}
+        membership.extend_membership.return_value = {
+            'membershipStart': '2026-01-01T00:00:00+00:00',
+            'membershipEnd': '2026-01-31T00:00:00+00:00',
+            'planName': 'Mensual',
+            'planPrice': 35000,
+        }
+
+        svc, _ = make_service(firebase, membership)
+
+        data = {
+            'clientId': 'c1',
+            'amount': 500,
+            'method': 'cash',
+            'membershipPlanId': 'plan-1',
+            'branchId': 'branch-1',
+            'paymentDate': '2026-09-01',  # pago antiguo: 1/9 + 1d = 2/9 < hoy
+        }
+        svc.register_payment(data, user())
+
+        # El cliente debe actualizarse con las fechas reales del pago antiguo
+        client_update = firebase.update_document.call_args
+        assert client_update is not None
+        assert client_update.args[:2] == ('clients', 'c1')
+        assert client_update.args[2]['membershipEnd'] == '2026-09-02T00:00:00+00:00'
+        assert client_update.args[2]['membershipStart'] == '2026-09-01T00:00:00+00:00'
+        assert client_update.args[2]['status'] == 'expired'
+        assert client_update.args[2]['isActive'] is False
