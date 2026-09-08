@@ -232,7 +232,7 @@ export const ClientDetailPage: React.FC = () => {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className={`h-2 rounded-full ${daysRemaining !== null && daysRemaining < 0 ? 'bg-red-500' : daysRemaining !== null && daysRemaining <= 7 ? 'bg-yellow-500' : 'bg-gray-300'}`}
+                  className={`h-2 rounded-full ${daysRemaining !== null && daysRemaining < 0 ? 'bg-red-500' : daysRemaining !== null && daysRemaining <= 7 ? 'bg-yellow-500' : 'bg-primary-500'}`}
                   style={{ width: `${Math.min(progress, 100)}%` }}
                 />
               </div>
