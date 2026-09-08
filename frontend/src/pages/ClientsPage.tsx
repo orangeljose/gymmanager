@@ -7,7 +7,7 @@ import { useClients } from '@/hooks/useClients';
 import { usePlans } from '@/hooks/usePlans';
 import type { Client, ClientStatus, Branch } from '@/types';
 import { apiService } from '@/services/api';
-import { toLocalMidnight } from '@/utils/dates';
+import { toLocalMidnight, formatDate as formatDateUtil } from '@/utils/dates';
 
 export const ClientsPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
@@ -78,11 +78,7 @@ export const ClientsPage: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-VE', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
+    return formatDateUtil(dateString);
   };
 
   const getDaysRemaining = (membershipEnd: string) => {

@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePlans } from '@/hooks/usePlans';
 import { apiService } from '@/services/api';
 import { PaymentForm } from '@/components/PaymentForm';
-import { toLocalMidnight } from '@/utils/dates';
+import { toLocalMidnight, formatDate as formatDateUtil } from '@/utils/dates';
 import type { Client } from '@/types';
 
 export const PaymentsNewPage: React.FC = () => {
@@ -20,7 +20,7 @@ export const PaymentsNewPage: React.FC = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [receiptNumber, setReceiptNumber] = useState<string | null>(null);
 
-  const formatDate = (d: string) => new Date(d).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+  const formatDate = (d: string) => formatDateUtil(d);
 
   const getDaysRemaining = (membershipEnd: string) => {
     if (!membershipEnd) return null;

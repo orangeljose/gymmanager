@@ -8,7 +8,7 @@ import { usePlans } from '@/hooks/usePlans';
 import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import { PaymentForm } from '@/components/PaymentForm';
 import { apiService } from '@/services/api';
-import { toLocalMidnight } from '@/utils/dates';
+import { toLocalMidnight, formatDate as formatDateUtil } from '@/utils/dates';
 import type { Client, Payment } from '@/types';
 
 export const ClientDetailPage: React.FC = () => {
@@ -79,17 +79,9 @@ export const ClientDetailPage: React.FC = () => {
 
   const formatDate = (d: any) => {
     if (!d) return 'N/A';
-    let date: Date;
-    if (typeof d === 'string') {
-      // Si es solo fecha (YYYY-MM-DD), agregar T00:00 para evitar timezone shift
-      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) d = d + 'T12:00:00';
-      date = new Date(d);
-    } else if (d.seconds) {
-      date = new Date(d.seconds * 1000);
-    } else {
-      date = new Date(d);
-    }
-    return date.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+    // Firestore timestamp → Date
+    if (d.seconds) return formatDate(new Date(d.seconds * 1000));
+    return formatDateUtil(d);
   };
 
   const methodLabels: Record<string, string> = {
