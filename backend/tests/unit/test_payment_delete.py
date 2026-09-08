@@ -184,4 +184,5 @@ class TestRegisterPaymentPersistence:
         assert client_update.args[2]['membershipEnd'] == '2026-09-02T00:00:00+00:00'
         assert client_update.args[2]['membershipStart'] == '2026-09-01T00:00:00+00:00'
         assert client_update.args[2]['status'] == 'expired'
-        assert client_update.args[2]['isActive'] is False
+        # isActive NO debe tocarse: el cliente puede renovar con un nuevo pago
+        assert 'isActive' not in client_update.args[2]

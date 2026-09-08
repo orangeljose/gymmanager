@@ -119,13 +119,14 @@ class PaymentService:
                         }
                         # Escribir las fechas reales en el documento del cliente
                         # (el pago ya venció, pero el cliente debe reflejar su vencimiento
-                        # real y no el valor por defecto de create_client "now - 1 día")
+                        # real y no el valor por defecto de create_client "now - 1 día").
+                        # NO tocar isActive: un cliente con membresía vencida debe poder
+                        # renovar (registrar un nuevo pago).
                         self.firebase_service.update_document('clients', client_id, {
                             'membershipStart': membership_update['membershipStart'],
                             'membershipEnd': membership_update['membershipEnd'],
                             'membershipPlanId': plan_id,
-                            'status': 'expired',
-                            'isActive': False
+                            'status': 'expired'
                         })
             
             if not skip_extension:
