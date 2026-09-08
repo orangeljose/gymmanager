@@ -8,6 +8,7 @@ import { usePlans } from '@/hooks/usePlans';
 import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import { PaymentForm } from '@/components/PaymentForm';
 import { apiService } from '@/services/api';
+import { toLocalMidnight } from '@/utils/dates';
 import type { Client, Payment } from '@/types';
 
 export const ClientDetailPage: React.FC = () => {
@@ -55,9 +56,10 @@ export const ClientDetailPage: React.FC = () => {
   };
 
   const getDaysRemaining = (membershipEnd: any) => {
-    const today = new Date();
-    const end = toDate(membershipEnd);
-    return Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (!membershipEnd) return null;
+    const today = toLocalMidnight(new Date());
+    const end = toLocalMidnight(membershipEnd);
+    return Math.round((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   const getMembershipProgress = () => {
@@ -196,7 +198,7 @@ export const ClientDetailPage: React.FC = () => {
               }`}>
                 {client.status === 'active' ? 'Al día' : client.status === 'expired' ? 'Vencido' : 'Suspendido'}
               </span>
-              {client.status === 'active' && daysRemaining >= 0 && daysRemaining <= 7 && (
+              {client.status === 'active' && daysRemaining !== null && daysRemaining >= 0 && daysRemaining <= 7 && (
                 <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
                   daysRemaining === 0 ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'
                 }`}>
@@ -238,16 +240,17 @@ export const ClientDetailPage: React.FC = () => {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
-                  className={`h-2 rounded-full ${daysRemaining < 0 ? 'bg-red-500' : daysRemaining <= 7 ? 'bg-yellow-500' : 'bg-primary-500'}`}
+                  className={`h-2 rounded-full ${daysRemaining !== null && daysRemaining < 0 ? 'bg-red-500' : daysRemaining !== null && daysRemaining <= 7 ? 'bg-yellow-500' : 'bg-gray-300'}`}
                   style={{ width: `${Math.min(progress, 100)}%` }}
                 />
               </div>
               <div className="flex justify-between text-xs mt-1 text-gray-500">
                 <span>{formatDate(client.membershipStart)}</span>
                 <span>
-                  {daysRemaining < 0 ? `Vencio hace ${Math.abs(daysRemaining)} días` :
-                    daysRemaining === 0 ? 'Vence hoy' :
-                      `${daysRemaining} días restantes`}
+                  {daysRemaining === null ? 'Sin membresía' :
+                    daysRemaining < 0 ? `Vencio hace ${Math.abs(daysRemaining)} días` :
+                      daysRemaining === 0 ? 'Vence hoy' :
+                        `${daysRemaining} días restantes`}
                 </span>
               </div>
             </div>

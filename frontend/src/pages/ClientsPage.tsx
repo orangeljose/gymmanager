@@ -7,6 +7,7 @@ import { useClients } from '@/hooks/useClients';
 import { usePlans } from '@/hooks/usePlans';
 import type { Client, ClientStatus, Branch } from '@/types';
 import { apiService } from '@/services/api';
+import { toLocalMidnight } from '@/utils/dates';
 
 export const ClientsPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
@@ -85,10 +86,10 @@ export const ClientsPage: React.FC = () => {
   };
 
   const getDaysRemaining = (membershipEnd: string) => {
-    const today = new Date();
-    const end = new Date(membershipEnd);
-    const diff = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return diff;
+    if (!membershipEnd) return null;
+    const today = toLocalMidnight(new Date());
+    const end = toLocalMidnight(membershipEnd);
+    return Math.round((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   const handleDeleteClient = async () => {
@@ -225,8 +226,9 @@ export const ClientsPage: React.FC = () => {
                 <tbody className="divide-y divide-gray-200">
                   {clients.map((client) => {
                     const daysRemaining = getDaysRemaining(client.membershipEnd);
-                    const isExpiringSoon = daysRemaining >= 0 && daysRemaining <= 7;
-                    const isExpired = daysRemaining < 0;
+                    const isExpiringSoon = daysRemaining !== null && daysRemaining >= 0 && daysRemaining <= 7;
+                    const isExpired = daysRemaining !== null && daysRemaining < 0;
+                    const hasNoMembership = daysRemaining === null;
                     return (
                       <tr 
                         key={client.id} 
@@ -264,10 +266,11 @@ export const ClientsPage: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          <div className={`text-xs mt-1 ${isExpired ? 'text-red-600' : isExpiringSoon ? 'text-yellow-600' : 'text-gray-500'}`}>
-                            {isExpired ? `Vencido hace ${Math.abs(daysRemaining)} días` :
-                              daysRemaining === 0 ? 'Vence hoy' :
-                                `${daysRemaining} días restantes`}
+                          <div className={`text-xs mt-1 ${isExpired ? 'text-red-600' : hasNoMembership ? 'text-gray-400' : isExpiringSoon ? 'text-yellow-600' : 'text-gray-500'}`}>
+                            {hasNoMembership ? 'Sin membresía' :
+                              isExpired ? `Vencido hace ${Math.abs(daysRemaining)} días` :
+                                daysRemaining === 0 ? 'Vence hoy' :
+                                  `${daysRemaining} días restantes`}
                           </div>
                         </td>
                         <td className="px-4 py-3">

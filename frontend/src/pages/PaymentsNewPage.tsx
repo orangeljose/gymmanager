@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePlans } from '@/hooks/usePlans';
 import { apiService } from '@/services/api';
 import { PaymentForm } from '@/components/PaymentForm';
+import { toLocalMidnight } from '@/utils/dates';
 import type { Client } from '@/types';
 
 export const PaymentsNewPage: React.FC = () => {
@@ -22,9 +23,10 @@ export const PaymentsNewPage: React.FC = () => {
   const formatDate = (d: string) => new Date(d).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
 
   const getDaysRemaining = (membershipEnd: string) => {
-    const today = new Date();
-    const end = new Date(membershipEnd);
-    return Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (!membershipEnd) return null;
+    const today = toLocalMidnight(new Date());
+    const end = toLocalMidnight(membershipEnd);
+    return Math.round((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   const getPlanName = (planId: string) => {
@@ -209,7 +211,7 @@ export const PaymentsNewPage: React.FC = () => {
                     }`}>
                       {selectedClient.status === 'active' ? 'Activo' : selectedClient.status === 'expired' ? 'Vencido' : 'Suspendido'}
                     </span>
-                    {selectedClient.status === 'active' && daysRemaining >= 0 && daysRemaining <= 7 && (
+                    {selectedClient.status === 'active' && daysRemaining !== null && daysRemaining >= 0 && daysRemaining <= 7 && (
                       <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-500 text-white">
                         {daysRemaining === 0 ? 'Hoy' : `${daysRemaining}d`}
                       </span>
