@@ -522,16 +522,20 @@ class TestDeletedClientExclusion:
         data = json.loads(response.data)
         assert data['data']['activeClients'] == 1
 
-    def test_deleted_clients_payments_kept_in_top_paying_and_income(self):
-        """Los pagos de un cliente eliminado se mantienen en topPayingClients y todayIncome"""
+    def test_deleted_clients_payments_excluded_from_top_paying_and_income(self):
+        """Los pagos de un cliente eliminado se EXCLUYEN de topPayingClients y todayIncome
+        (Opción B: cliente borrado desaparece de todos los reportes)"""
         # createdAt en UTC para que todayIncome (que compara contra utcnow)
         # sea determinista en cualquier zona horaria (gotcha del baseline).
         utc_now = datetime.utcnow()
         clients = [
             make_client('c1', 'Eliminado', is_active=True, membership_end=_future_days(30), is_deleted=True),
+            make_client('c2', 'Activo', is_active=True, membership_end=_future_days(30)),
         ]
         payments = [
             make_payment('c1', 'Eliminado', 1000, created_at=utc_now) for _ in range(5)
+        ] + [
+            make_payment('c2', 'Activo', 500, created_at=utc_now)
         ]
 
         mock = create_mock_service()
@@ -545,10 +549,10 @@ class TestDeletedClientExclusion:
         data = json.loads(response.data)
 
         # Métricas de clientes: excluido
-        assert data['data']['activeClients'] == 0
+        assert data['data']['activeClients'] == 1
 
-        # Métricas de pagos: mantenido como registro histórico
+        # Métricas de pagos: el cliente eliminado NO aparece; el activo sí
         assert data['data']['topPayingClients'] == [
-            {'clientId': 'c1', 'clientName': 'Eliminado', 'paymentCount': 5}
+            {'clientId': 'c2', 'clientName': 'Activo', 'paymentCount': 1}
         ]
-        assert data['data']['todayIncome'] == 5000
+        assert data['data']['todayIncome'] == 500

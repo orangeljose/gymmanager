@@ -302,10 +302,25 @@ def get_daily_income_report():
         if user_role == 'super_admin':
             user_business_id = request.args.get('businessId')
         
+        # Excluir pagos de clientes borrados (soft delete) del reporte de ingresos
+        deleted_client_ids = set()
+        if user_business_id:
+            deleted_client_ids = {
+                c['id'] for c in firebase_service.query_firestore(
+                    'clients',
+                    filters=[{'field': 'businessId', 'operator': '==', 'value': user_business_id}]
+                )
+                if c.get('isDeleted', False)
+            }
+        
         payments = []
         for p in all_payments:
             # Filtrar pagos eliminados (soft delete)
             if p.get('isDeleted', False):
+                continue
+
+            # Filtrar pagos de clientes borrados
+            if p.get('clientId') in deleted_client_ids:
                 continue
 
             # Filtrar por negocio
@@ -469,10 +484,24 @@ def get_income_by_method_report():
         if user_role2 == 'super_admin':
             user_business_id = request.args.get('businessId')
         
+        # Excluir pagos de clientes borrados (soft delete) del reporte
+        deleted_client_ids = set()
+        if user_business_id:
+            deleted_client_ids = {
+                c['id'] for c in firebase_service.query_firestore(
+                    'clients',
+                    filters=[{'field': 'businessId', 'operator': '==', 'value': user_business_id}]
+                )
+                if c.get('isDeleted', False)
+            }
+        
         payments = []
         for p in all_payments:
             # Filtrar pagos eliminados (soft delete)
             if p.get('isDeleted', False):
+                continue
+            # Filtrar pagos de clientes borrados
+            if p.get('clientId') in deleted_client_ids:
                 continue
             # Filtrar por negocio
             if user_business_id:
@@ -610,8 +639,10 @@ def get_dashboard():
 
         # Excluir clientes eliminados (soft delete) de las métricas derivadas de
         # clientes (activeClients, overdueClients, expiringThisWeek, retentionRate).
-        # Cliente legacy sin el campo se trata como activo. Los pagos se mantienen:
-        # incomeChart/todayIncome/topPayingClients siguen incluyendo eliminados.
+        # Cliente legacy sin el campo se trata como activo.
+        # Además, excluir sus pagos de TODAS las métricas (ingresos, top, recent)
+        # para que clientes borrados no aparezcan en ningún reporte del dashboard.
+        deleted_client_ids = {c['id'] for c in all_clients if c.get('isDeleted', False)}
         all_clients = [c for c in all_clients if not c.get('isDeleted', False)]
 
         active_clients = [c for c in all_clients if c.get('isActive', False)]
@@ -656,6 +687,9 @@ def get_dashboard():
         for p in all_payments_raw:
             # Filtrar pagos eliminados (soft delete)
             if p.get('isDeleted', False):
+                continue
+            # Filtrar pagos de clientes borrados
+            if p.get('clientId') in deleted_client_ids:
                 continue
             created_at = p.get('createdAt')
             if not created_at:

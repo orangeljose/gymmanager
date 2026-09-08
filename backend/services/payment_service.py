@@ -410,7 +410,18 @@ class PaymentService:
             
             # Filtrar eliminados en Python (Firestore where excluye docs sin el campo)
             payments = [p for p in payments if not p.get('isDeleted', False)]
-            
+
+            # Excluir pagos de clientes borrados (soft delete) del reporte
+            if business_id:
+                deleted_client_ids = {
+                    c['id'] for c in self.firebase_service.query_firestore(
+                        'clients',
+                        filters=[{'field': 'businessId', 'operator': '==', 'value': business_id}]
+                    )
+                    if c.get('isDeleted', False)
+                }
+                payments = [p for p in payments if p.get('clientId') not in deleted_client_ids]
+
             # Calcular resumen
             total_amount = sum(p.get('amount', 0) for p in payments)
             total_payments = len(payments)

@@ -402,11 +402,25 @@ def get_receipts():
         )
         # Excluir pagos eliminados (soft delete) en Python como fallback defensivo
         total = len([p for p in all_for_count if not p.get('isDeleted', False)])
-        
+
+        # Excluir pagos de clientes borrados (soft delete) de los recibos
+        deleted_client_ids = set()
+        if user_business_id:
+            deleted_client_ids = {
+                c['id'] for c in firebase_service.query_firestore(
+                    'clients',
+                    filters=[{'field': 'businessId', 'operator': '==', 'value': user_business_id}]
+                )
+                if c.get('isDeleted', False)
+            }
+        total = len([p for p in all_for_count if not p.get('isDeleted', False) and p.get('clientId') not in deleted_client_ids])
+
         # Transformar al formato de tabla
         receipts = []
         for payment in all_receipts:
             if payment.get('isDeleted', False):
+                continue
+            if payment.get('clientId') in deleted_client_ids:
                 continue
             receipts.append({
                 'id': payment.get('id'),
