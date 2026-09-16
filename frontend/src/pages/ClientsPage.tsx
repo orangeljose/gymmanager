@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Plus, ChevronLeft, ChevronRight, X, Calendar, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -38,12 +38,26 @@ export const ClientsPage: React.FC = () => {
     }
   }, [effectiveBusinessId]);
 
+  // Page owns the initial + businessId-change fetch (single fetch owner)
   useEffect(() => {
+    if (effectiveBusinessId) {
+      fetchClients();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveBusinessId]);
+
+  // Debounced fetch for search/status/branch — skips first render (initial fetch already ran)
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     const delayDebounce = setTimeout(() => {
       if (searchTerm.trim()) {
         searchClients(searchTerm);
       } else {
-        fetchClients({ status: statusFilter || undefined, branchId: branchFilter || undefined });
+        fetchClients({ status: statusFilter || undefined, branchId: branchFilter || undefined, page: 1 });
       }
     }, 300);
     return () => clearTimeout(delayDebounce);
@@ -51,7 +65,6 @@ export const ClientsPage: React.FC = () => {
 
   const handleStatusFilter = (status: ClientStatus | '') => {
     setStatusFilter(status);
-    fetchClients({ status: status || undefined, branchId: branchFilter || undefined, page: 1 });
   };
 
   const handlePageChange = (newPage: number) => {
@@ -163,7 +176,6 @@ export const ClientsPage: React.FC = () => {
                   value={branchFilter}
                   onChange={(e) => {
                     setBranchFilter(e.target.value);
-                    fetchClients({ status: statusFilter || undefined, branchId: e.target.value || undefined, page: 1 });
                   }}
                   className="input w-44"
                 >
@@ -179,7 +191,6 @@ export const ClientsPage: React.FC = () => {
                 onClick={() => {
                   setStatusFilter('');
                   setBranchFilter('');
-                  fetchClients({ page: 1 });
                 }}
                 className="btn btn-ghost text-sm"
               >

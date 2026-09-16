@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { apiService } from '@/services/api';
 import { offlineService } from '@/services/offlineService';
 import type { Client, ClientFilters, ClientFormData } from '@/types';
@@ -200,11 +200,6 @@ export const useClients = (businessId: string) => {
       setLoading(false);
     }
   }, [businessId]);
-
-  // Load initial data
-  useEffect(() => {
-    fetchClients();
-  }, [businessId, fetchClients]);
 
   return {
     clients,
