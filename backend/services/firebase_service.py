@@ -199,6 +199,67 @@ class FirebaseService:
             logger.error(traceback.format_exc())
             return []
     
+    def count_firestore(
+        self, 
+        collection: str, 
+        filters: List[Dict[str, Any]] = None
+    ) -> int:
+        """
+        Cuenta documentos con la agregación count() de Firestore SIN enumerarlos.
+
+        Costo constante: 1 lectura por cada 1000 entradas de índice matcheadas,
+        independiente del número de documentos devueltos (a diferencia de
+        query_firestore + len(), que es O(N) lecturas).
+
+        Args:
+            collection: Nombre de la colección
+            filters: Lista de filtros [{'field': 'value', 'operator': '==', 'value': 'xxx'}]
+
+        Returns:
+            int: cantidad de documentos que matchean
+
+        Raises:
+            RuntimeError: si la agregación falla o el conteo alcanza el techo de
+                seguridad (>= 1000). NUNCA devuelve un número inventado: el caller
+                decide el fallback (ej: número de recibo con timestamp).
+        """
+        try:
+            query = self.db.collection(collection)
+
+            # Aplicar filtros (misma semántica que query_firestore)
+            if filters:
+                for filter_item in filters:
+                    field = filter_item.get('field')
+                    operator = filter_item.get('operator', '==')
+                    value = filter_item.get('value')
+
+                    if operator == 'array-contains':
+                        query = query.where(field, 'array-contains', value)
+                    else:
+                        query = query.where(field, operator, value)
+
+            result = query.count().get()
+            if not result:
+                raise RuntimeError(
+                    f"count() no devolvió resultados para {collection}"
+                )
+
+            count = int(result[0].value)
+
+            # Techo de seguridad: con >= 1000 pagos la secuencia XXX de 3 dígitos
+            # ya no garantiza unicidad → el caller debe usar el fallback timestamp.
+            if count >= 1000:
+                raise RuntimeError(
+                    f"Conteo en techo de seguridad ({count} >= 1000) para {collection}"
+                )
+
+            logger.info(f"Count de {collection}: {count} documentos")
+            return count
+
+        except Exception as e:
+            logger.error(f"Error en count a {collection}: {str(e)}")
+            raise
+
     def get_document(self, collection: str, doc_id: str) -> Optional[Dict[str, Any]]:
         """
         Obtiene un documento específico

@@ -22,20 +22,24 @@ class PaymentService:
         try:
             today = datetime.now()
             date_str = today.strftime('%Y%m%d')
-            
-            # Contar total de pagos del negocio como secuencia
-            payments = self.firebase_service.query_firestore(
+
+            # Secuencia vía count() de Firestore: costo constante (1 lectura por
+            # cada 1000 entradas de índice), NO enumera el historial de pagos.
+            # Sin filtro isDeleted: los soft-deleted cuentan (preserva len+1).
+            count = self.firebase_service.count_firestore(
                 'payments',
                 filters=[{'field': 'businessId', 'operator': '==', 'value': business_id}]
             )
-            seq = len(payments) + 1
+            seq = count + 1
             receipt_number = f'P-{date_str}-{seq:03d}'
-            
+
             logger.info(f"Receipt number generado: {receipt_number} para negocio {business_id}")
             return receipt_number
-            
+
         except Exception as e:
-            logger.error(f"Error generando receipt number: {str(e)}")
+            # Fallback con timestamp (único hasta milisegundos): se usa si count()
+            # falla o llega al techo. NUNCA fabricar -001 (riesgo de duplicados).
+            logger.error(f"Error generando receipt number, usando fallback timestamp: {str(e)}")
             return f'P-{datetime.now().strftime("%Y%m%d-%H%M%S%f")}'
     
     def register_payment(self, data: Dict[str, Any], current_user: Dict[str, Any]) -> Optional[Dict[str, Any]]:
