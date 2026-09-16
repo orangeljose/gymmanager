@@ -141,6 +141,43 @@ def get_solvency_report():
             ]
         
         # Enriquecer datos de los clientes
+        # Fix N+1: UNA query de pagos con el mismo alcance (negocio/sede) que la
+        # query de clientes, ordenada por createdAt DESC y agrupada en el último
+        # pago por clientId. El loop solo hace lookup O(1) en el dict (antes se
+        # ejecutaba una query de payments POR cliente).
+        payment_filters = []
+        if user_role != 'super_admin' and user_business_id:
+            payment_filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
+        if user_role != 'super_admin':
+            payments_user_branch_id = g.current_user.get('branchId')
+            if payments_user_branch_id:
+                payment_filters.append({'field': 'branchId', 'operator': '==', 'value': payments_user_branch_id})
+        elif branch_id:
+            payment_filters.append({'field': 'branchId', 'operator': '==', 'value': branch_id})
+
+        all_payments = firebase_service.query_firestore('payments', filters=payment_filters)
+
+        # Excluir pagos sin createdAt (misma semántica que el order_by de
+        # Firestore del query anterior: los docs sin el campo no se devolvían)
+        # y agrupar el ÚLTIMO pago (createdAt DESC) por clientId.
+        def _payment_sort_key(p):
+            created = p.get('createdAt')
+            if created is None:
+                return ''
+            if hasattr(created, 'isoformat'):
+                return created.isoformat()
+            return str(created)
+
+        last_by_client = {}
+        for pmt in sorted(
+            (p for p in all_payments if p.get('createdAt') is not None),
+            key=_payment_sort_key,
+            reverse=True
+        ):
+            cid = pmt.get('clientId')
+            if cid and cid not in last_by_client:
+                last_by_client[cid] = pmt
+
         enriched_clients = []
         for client in clients:
             client_id = client.get('id')
@@ -162,23 +199,12 @@ def get_solvency_report():
             else:
                 days_remaining = 0
             
-            # Obtener último pago (excluyendo eliminados / soft delete)
-            payments = firebase_service.query_firestore(
-                'payments',
-                filters=[
-                    {'field': 'clientId', 'operator': '==', 'value': client_id}
-                ],
-                order_by='createdAt',
-                direction='DESC',
-                limit=1
-            )
-            
-            last_payment = None
-            for pmt in payments:
-                if pmt.get('isDeleted', False):
-                    continue
-                last_payment = pmt
-                break
+            # Último pago pre-agrupado (lookup O(1)). Si el pago más reciente
+            # está soft-deleted se trata como "sin pago", igual que el query
+            # anterior con limit=1 (que solo alcanzaba a ver el más reciente).
+            last_payment = last_by_client.get(client_id)
+            if last_payment and last_payment.get('isDeleted', False):
+                last_payment = None
             
             enriched_client = client.copy()
             enriched_client['daysRemaining'] = days_remaining
