@@ -44,7 +44,7 @@ def create_mock_service(role='super_admin', uid='admin-123', business_id='biz-1'
 # HELPERS - Crean datos de muestra
 # ============================================================================
 
-def make_client(client_id, name, is_active=True, membership_end=None, business_id='biz-1', branch_id='branch-1', is_deleted=None):
+def make_client(client_id, name, is_active=True, membership_end=None, business_id='biz-1', branch_id='branch-1', is_deleted=None, created_at=None):
     """Factory para crear datos de cliente de muestra"""
     client = {
         'id': client_id,
@@ -53,7 +53,11 @@ def make_client(client_id, name, is_active=True, membership_end=None, business_i
         'membershipEnd': membership_end or _future_days(30),
         'businessId': business_id,
         'branchId': branch_id,
+        'email': f'{client_id}@test.com',
+        'status': 'active' if is_active else 'expired',
     }
+    if created_at is not None:
+        client['createdAt'] = created_at
     # is_deleted=None -> campo ausente (cliente legacy, tratado como no eliminado)
     if is_deleted is not None:
         client['isDeleted'] = is_deleted
@@ -556,3 +560,115 @@ class TestDeletedClientExclusion:
             {'clientId': 'c2', 'clientName': 'Activo', 'paymentCount': 1}
         ]
         assert data['data']['todayIncome'] == 500
+
+
+class TestRecentClients:
+    """recentClients: top 5 por createdAt DESC, desde la lista ya traída (0 lecturas extra)"""
+
+    def test_recent_clients_top5_desc_order(self):
+        """6 clientes → 5 más recientes, orden DESC, con los campos del contrato"""
+        now = datetime.now()
+        clients = [
+            make_client(f'c{i}', f'Cliente {i}', created_at=now - timedelta(days=i))
+            for i in range(6)
+        ]
+
+        mock = create_mock_service()
+        mock.query_firestore.side_effect = [
+            clients,  # clients
+            [],       # payments
+        ]
+
+        response = _dashboard_with(mock)
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        recent = data['data']['recentClients']
+
+        assert len(recent) == 5
+        # DESC: c0 (más reciente) primero; c5 (más viejo) excluido
+        assert [c['id'] for c in recent] == ['c0', 'c1', 'c2', 'c3', 'c4']
+        assert all(c['id'] != 'c5' for c in recent)
+        # Contrato: id, name, email, membershipEnd, status
+        for c in recent:
+            assert set(c.keys()) == {'id', 'name', 'email', 'membershipEnd', 'status'}
+        assert recent[0]['name'] == 'Cliente 0'
+        assert recent[0]['email'] == 'c0@test.com'
+
+    def test_recent_clients_deleted_excluded(self):
+        """Cliente soft-deleted (aunque sea el más reciente) NO aparece"""
+        now = datetime.now()
+        clients = [
+            make_client('c-del', 'Borrado', created_at=now, is_deleted=True),
+            make_client('c1', 'Reciente 1', created_at=now - timedelta(days=1)),
+            make_client('c2', 'Reciente 2', created_at=now - timedelta(days=2)),
+        ]
+
+        mock = create_mock_service()
+        mock.query_firestore.side_effect = [
+            clients,  # clients
+            [],       # payments
+        ]
+
+        response = _dashboard_with(mock)
+        data = json.loads(response.data)
+        recent = data['data']['recentClients']
+
+        assert [c['id'] for c in recent] == ['c1', 'c2']
+
+    def test_recent_clients_empty_when_no_clients(self):
+        """Sin clientes → recentClients == []"""
+        mock = create_mock_service()
+        mock.query_firestore.side_effect = [
+            [],  # clients
+            [],  # payments
+        ]
+
+        response = _dashboard_with(mock)
+        data = json.loads(response.data)
+        assert data['data']['recentClients'] == []
+
+    def test_legacy_client_without_created_at_sorts_last(self):
+        """Cliente legacy sin createdAt no rompe el sort y queda al final"""
+        now = datetime.now()
+        clients = [
+            make_client('c1', 'Con fecha', created_at=now - timedelta(days=1)),
+            make_client('c-legacy', 'Legacy'),  # sin createdAt
+        ]
+
+        mock = create_mock_service()
+        mock.query_firestore.side_effect = [
+            clients,  # clients
+            [],       # payments
+        ]
+
+        response = _dashboard_with(mock)
+        data = json.loads(response.data)
+        recent = data['data']['recentClients']
+
+        assert [c['id'] for c in recent] == ['c1', 'c-legacy']
+
+
+class TestPaymentsQueryWindow:
+    """El query de payments del dashboard acota la ventana createdAt en Firestore"""
+
+    def test_payments_query_has_created_at_lower_bound(self):
+        """El 2do call (payments) incluye createdAt >= (now - 30d) + businessId"""
+        # admin (no super_admin): businessId se toma del usuario, no del query param
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        mock.query_firestore.side_effect = [
+            [],  # clients
+            [],  # payments
+        ]
+
+        response = _dashboard_with(mock)
+        assert response.status_code == 200
+
+        payments_call = mock.query_firestore.call_args_list[1]
+        assert payments_call.args[0] == 'payments'
+        filters = payments_call.kwargs['filters']
+
+        # businessId + ventana createdAt >=
+        assert {'field': 'businessId', 'operator': '==', 'value': 'biz-1'} in filters
+        window = [f for f in filters if f['field'] == 'createdAt' and f['operator'] == '>=']
+        assert len(window) == 1
+        assert isinstance(window[0]['value'], datetime)

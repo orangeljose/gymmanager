@@ -32,7 +32,7 @@ Chain strategy: pending
 - [x] 2.1 `backend/services/payment_service.py` `generate_receipt_number` (L20): replace scan with `count_firestore(payments, businessId==)` + 1 → `P-YYYYMMDD-XXX`; on error/ceiling fallback `P-YYYYMMDD-HHMMSSfff` (never `-001`)
 - [x] 2.2 `backend/routes/reports.py` `get_daily_income_report` (L217): Firestore query with `businessId==`, `createdAt>=start`, `createdAt<=end`, `branchId==` when effective (super_admin: businessId from request param); keep Python isDeleted + deleted-client + date filter
 - [x] 2.3 `backend/routes/reports.py` `get_income_by_method_report` (L409): same filters as 2.2
-- [ ] 2.4 `backend/routes/reports.py` `get_dashboard` (L589): payments query adds `createdAt >= now-30d`; compute `recentClients` (top 5 by createdAt DESC from already-fetched clients, deleted excluded) into response — zero extra reads
+- [x] 2.4 `backend/routes/reports.py` `get_dashboard` (L589): payments query adds `createdAt >= now-30d`; compute `recentClients` (top 5 by createdAt DESC from already-fetched clients, deleted excluded) into response — zero extra reads
 
 ## Phase 3: Frontend
 
@@ -43,9 +43,9 @@ Chain strategy: pending
 
 ## Phase 4: Tests (backend)
 
-- [ ] 4.1 Create `backend/tests/unit/test_receipt_number.py`: seq = count+1; timestamp fallback on error/ceiling; count query has NO isDeleted filter (spec: Quota-efficient, Gaps, Aggregation failure)
-- [ ] 4.2 Create `backend/tests/unit/test_reports_income.py`: query args (biz/branch/createdAt bounds); super_admin businessId from param; Python isDeleted + deleted-client exclusion (spec: Report reads, Branch filter, Deleted payments)
-- [ ] 4.3 Extend `backend/tests/unit/test_dashboard.py`: recentClients ≤5, DESC order, deleted excluded, empty array; payments query called with `createdAt>=` (existing reset-singleton pattern)
+- [x] 4.1 Create `backend/tests/unit/test_receipt_number.py`: seq = count+1; timestamp fallback on error/ceiling; count query has NO isDeleted filter (spec: Quota-efficient, Gaps, Aggregation failure)
+- [x] 4.2 Create `backend/tests/unit/test_reports_income.py`: query args (biz/branch/createdAt bounds); super_admin businessId from param; Python isDeleted + deleted-client exclusion (spec: Report reads, Branch filter, Deleted payments)
+- [x] 4.3 Extend `backend/tests/unit/test_dashboard.py`: recentClients ≤5, DESC order, deleted excluded, empty array; payments query called with `createdAt>=` (existing reset-singleton pattern)
 
 ## Phase 5: Manual — Firestore Composite Indexes (BEFORE deploy)
 

@@ -709,12 +709,16 @@ def get_dashboard():
         thirty_days_ago = now - timedelta(days=30)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        # Traer pagos del negocio (solo filtro por businessId, single-field no requiere índice)
+        # Traer pagos del negocio (últimos 30 días). Los filtros businessId/branchId
+        # ya existían; se agrega el bound createdAt >= now-30d para que las lecturas
+        # no crezcan con el historial. Requiere índices compuestos (businessId,
+        # createdAt) y (businessId, branchId, createdAt).
         payment_filters = []
         if user_business_id:
             payment_filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
         if effective_branch_id:
             payment_filters.append({'field': 'branchId', 'operator': '==', 'value': effective_branch_id})
+        payment_filters.append({'field': 'createdAt', 'operator': '>=', 'value': thirty_days_ago})
 
         all_payments_raw = firebase_service.query_firestore(
             'payments',
@@ -818,6 +822,28 @@ def get_dashboard():
         # Retention rate
         retention_rate = round((active_count / total_count * 100), 1) if total_count > 0 else 0.0
 
+        # Recent clients (top 5 por createdAt DESC). Se calcula desde la lista de
+        # clientes YA traída (cero lecturas extra); los soft-deleted ya fueron
+        # excluidos de all_clients arriba.
+        def _client_created_key(c):
+            created = c.get('createdAt')
+            if created is None:
+                return ''
+            if hasattr(created, 'isoformat'):
+                return created.isoformat()
+            return str(created)
+
+        recent_clients = [
+            {
+                'id': c.get('id'),
+                'name': c.get('name', ''),
+                'email': c.get('email', ''),
+                'membershipEnd': c.get('membershipEnd'),
+                'status': c.get('status', ''),
+            }
+            for c in sorted(all_clients, key=_client_created_key, reverse=True)[:5]
+        ]
+
         logger.info(f"Dashboard: {active_count} activos, {overdue_count} morosos, {expiring_count} próximos, ${today_income/100:.2f} hoy")
 
         # Recent payments (last 5)
@@ -842,6 +868,7 @@ def get_dashboard():
                 'incomeChart': income_chart,
                 'topPayingClients': top_paying_clients,
                 'retentionRate': retention_rate,
+                'recentClients': recent_clients,
                 'recentPayments': recent_payments
             }
         }), 200
