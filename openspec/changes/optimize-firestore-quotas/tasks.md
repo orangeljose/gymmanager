@@ -36,10 +36,10 @@ Chain strategy: pending
 
 ## Phase 3: Frontend
 
-- [ ] 3.1 `frontend/src/types/index.ts`: add `RecentClient` + `DashboardData.recentClients`
-- [ ] 3.2 `frontend/src/pages/DashboardPage.tsx`: drop `getClients({limit:100})`; render "Clientes Recientes" from payload `recentClients` incl. empty state
-- [ ] 3.3 `frontend/src/hooks/useClients.ts`: remove mount effect (shared by 3 pages; ClientForm/Detail never read `clients`)
-- [ ] 3.4 `frontend/src/pages/ClientsPage.tsx`: page owns initial + businessId-change fetch (`useEffect` on `effectiveBusinessId`); debounce effect gets first-render `useRef` guard + `page: 1`; status/branch/Limpiar handlers state-only; page-change/delete keep explicit `fetchClients`
+- [x] 3.1 `frontend/src/types/index.ts`: add `RecentClient` + `DashboardData.recentClients`
+- [x] 3.2 `frontend/src/pages/DashboardPage.tsx`: drop `getClients({limit:100})`; render "Clientes Recientes" from payload `recentClients` incl. empty state
+- [x] 3.3 `frontend/src/hooks/useClients.ts`: remove mount effect (shared by 3 pages; ClientForm/Detail never read `clients`)
+- [x] 3.4 `frontend/src/pages/ClientsPage.tsx`: page owns initial + businessId-change fetch (`useEffect` on `effectiveBusinessId`); debounce effect gets first-render `useRef` guard + `page: 1`; status/branch/Limpiar handlers state-only; page-change/delete keep explicit `fetchClients`
 
 ## Phase 4: Tests (backend)
 
