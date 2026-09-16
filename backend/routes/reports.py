@@ -289,11 +289,7 @@ def get_daily_income_report():
         start_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
         end_dt = datetime.fromisoformat(end_date + 'T23:59:59').replace(tzinfo=timezone.utc)
         
-        # Obtener todos los pagos (sin filtros en Firestore para evitar índices)
-        firebase_service = FirebaseService()
-        all_payments = firebase_service.query_firestore('payments')
-        
-        # Filtrar en Python: por negocio, sede y fecha
+        # Resolver negocio y sede efectivos
         user_role = g.current_user.get('role')
         user_business_id = g.current_user.get('businessId')
         user_branch_id = g.current_user.get('branchId')
@@ -301,7 +297,28 @@ def get_daily_income_report():
         # Para super_admin, usar businessId del query (selector de negocio)
         if user_role == 'super_admin':
             user_business_id = request.args.get('businessId')
-        
+
+        # Sede efectiva: el rol no super_admin opera en su sede; super_admin usa el param
+        effective_branch_id = None
+        if user_role != 'super_admin':
+            effective_branch_id = user_branch_id
+        elif branch_id:
+            effective_branch_id = branch_id
+
+        # Push de filtros a Firestore: businessId ==, branchId == (si aplica),
+        # createdAt >= start, createdAt <= end. Requiere índices compuestos
+        # (businessId, createdAt) y (businessId, branchId, createdAt).
+        payment_filters = []
+        if user_business_id:
+            payment_filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
+        if effective_branch_id:
+            payment_filters.append({'field': 'branchId', 'operator': '==', 'value': effective_branch_id})
+        payment_filters.append({'field': 'createdAt', 'operator': '>=', 'value': start_dt})
+        payment_filters.append({'field': 'createdAt', 'operator': '<=', 'value': end_dt})
+
+        firebase_service = FirebaseService()
+        all_payments = firebase_service.query_firestore('payments', filters=payment_filters)
+
         # Excluir pagos de clientes borrados (soft delete) del reporte de ingresos
         deleted_client_ids = set()
         if user_business_id:
@@ -471,19 +488,43 @@ def get_income_by_method_report():
                     }
                 }), 403
         
-        # Construir filtros
-        # Obtener todos los pagos y filtrar en Python
-        firebase_service = FirebaseService()
-        all_payments = firebase_service.query_firestore('payments')
-        
-        user_role2 = g.current_user.get('role')
+        # Resolver negocio y sede efectivos (misma semántica que el reporte diario)
+        user_role = g.current_user.get('role')
         user_business_id = g.current_user.get('businessId')
         user_branch_id = g.current_user.get('branchId')
 
         # Para super_admin, usar businessId del query (selector de negocio)
-        if user_role2 == 'super_admin':
+        if user_role == 'super_admin':
             user_business_id = request.args.get('businessId')
-        
+
+        # Sede efectiva: el rol no super_admin opera en su sede; super_admin usa el param
+        effective_branch_id = None
+        if user_role != 'super_admin':
+            effective_branch_id = user_branch_id
+        elif branch_id:
+            effective_branch_id = branch_id
+
+        # Push de filtros a Firestore: businessId ==, branchId == (si aplica),
+        # createdAt >= start / <= end cuando las fechas se proveen (aquí son opcionales).
+        payment_filters = []
+        if user_business_id:
+            payment_filters.append({'field': 'businessId', 'operator': '==', 'value': user_business_id})
+        if effective_branch_id:
+            payment_filters.append({'field': 'branchId', 'operator': '==', 'value': effective_branch_id})
+        if start_date:
+            payment_filters.append({
+                'field': 'createdAt', 'operator': '>=',
+                'value': datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+            })
+        if end_date:
+            payment_filters.append({
+                'field': 'createdAt', 'operator': '<=',
+                'value': datetime.fromisoformat(end_date + 'T23:59:59').replace(tzinfo=timezone.utc)
+            })
+
+        firebase_service = FirebaseService()
+        all_payments = firebase_service.query_firestore('payments', filters=payment_filters)
+
         # Excluir pagos de clientes borrados (soft delete) del reporte
         deleted_client_ids = set()
         if user_business_id:
@@ -511,7 +552,7 @@ def get_income_by_method_report():
             if branch_id:
                 if p.get('branchId') != branch_id:
                     continue
-            elif user_role2 != 'super_admin' and user_branch_id:
+            elif user_role != 'super_admin' and user_branch_id:
                 if p.get('branchId') != user_branch_id:
                     continue
             # Filtrar por fecha

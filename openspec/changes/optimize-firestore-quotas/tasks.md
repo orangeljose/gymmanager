@@ -30,8 +30,8 @@ Chain strategy: pending
 ## Phase 2: Backend Core
 
 - [x] 2.1 `backend/services/payment_service.py` `generate_receipt_number` (L20): replace scan with `count_firestore(payments, businessId==)` + 1 → `P-YYYYMMDD-XXX`; on error/ceiling fallback `P-YYYYMMDD-HHMMSSfff` (never `-001`)
-- [ ] 2.2 `backend/routes/reports.py` `get_daily_income_report` (L217): Firestore query with `businessId==`, `createdAt>=start`, `createdAt<=end`, `branchId==` when effective (super_admin: businessId from request param); keep Python isDeleted + deleted-client + date filter
-- [ ] 2.3 `backend/routes/reports.py` `get_income_by_method_report` (L409): same filters as 2.2
+- [x] 2.2 `backend/routes/reports.py` `get_daily_income_report` (L217): Firestore query with `businessId==`, `createdAt>=start`, `createdAt<=end`, `branchId==` when effective (super_admin: businessId from request param); keep Python isDeleted + deleted-client + date filter
+- [x] 2.3 `backend/routes/reports.py` `get_income_by_method_report` (L409): same filters as 2.2
 - [ ] 2.4 `backend/routes/reports.py` `get_dashboard` (L589): payments query adds `createdAt >= now-30d`; compute `recentClients` (top 5 by createdAt DESC from already-fetched clients, deleted excluded) into response — zero extra reads
 
 ## Phase 3: Frontend
