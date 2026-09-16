@@ -4,6 +4,8 @@ Tests unitarios para MembershipService.recalculate_membership y _advance_end.
 Cubre la paridad con extend_membership (misma primitiva _advance_end) y los
 escenarios de recálculo: sin pagos, único pago, acumulativo, gap con re-anclaje,
 monthsPaid, exclusión de eliminados y fallback paymentDate -> createdAt.
+También cubre el fix N+1: los planes se cargan UNA sola vez (query_firestore
+sobre membership_plans) y get_plan_by_id NO se llama por pago.
 """
 import sys
 import os
@@ -85,10 +87,16 @@ class TestRecalculateMembership:
     def _setup(self, payments):
         firebase = MagicMock()
         firebase.get_document.return_value = {'id': 'c1', 'isActive': True}
-        firebase.query_firestore.return_value = payments
+
+        def fake_query(coll, **kwargs):
+            if coll == 'payments':
+                return payments
+            if coll == 'membership_plans':
+                return [plan()]
+            return []
+        firebase.query_firestore.side_effect = fake_query
         firebase.update_document.return_value = True
         svc = make_service(firebase)
-        svc.get_plan_by_id = lambda pid: plan() if pid == 'plan-1' else None
         return svc, firebase
 
     def test_no_payments_expires(self):
@@ -171,6 +179,67 @@ class TestRecalculateMembership:
         result = svc.recalculate_membership('c1')
         assert result['isActive'] is False
         assert result['status'] == 'expired'
+
+
+class TestRecalculateLoadsPlansOnce:
+    """Fix N+1: los planes se cargan UNA sola vez, no se leen por pago."""
+
+    def _setup(self, payments, plans):
+        firebase = MagicMock()
+        firebase.get_document.return_value = {'id': 'c1', 'isActive': True}
+
+        def fake_query(coll, **kwargs):
+            if coll == 'payments':
+                return payments
+            if coll == 'membership_plans':
+                return plans
+            return []
+        firebase.query_firestore.side_effect = fake_query
+        firebase.update_document.return_value = True
+        svc = make_service(firebase)
+        return svc, firebase
+
+    def test_plans_loaded_once_and_get_plan_by_id_not_called(self):
+        plans = [
+            {'id': 'plan-a', 'name': 'Mensual', 'price': 35000, 'durationDays': 30},
+            {'id': 'plan-b', 'name': 'Bimestral', 'price': 60000, 'durationDays': 60},
+        ]
+        payments = [
+            payment('p1', iso(dt(2026, 1, 1)), plan_id='plan-a'),
+            payment('p2', iso(dt(2026, 2, 1)), plan_id='plan-b'),
+            payment('p3', iso(dt(2026, 3, 1)), plan_id='plan-a'),
+        ]
+        svc, firebase = self._setup(payments, plans)
+        svc.get_plan_by_id = MagicMock(return_value=None)
+
+        result = svc.recalculate_membership('c1')
+
+        # get_plan_by_id NO se llama por pago (el N+1 eliminado)
+        svc.get_plan_by_id.assert_not_called()
+        # membership_plans se consulta exactamente UNA vez
+        plan_calls = [c for c in firebase.query_firestore.call_args_list
+                      if c.args[0] == 'membership_plans']
+        assert len(plan_calls) == 1
+        # Las duraciones de los planes se usaron (plan-b = 60 días):
+        # Jan1+30=Jan31; max(Jan31,Feb1)+60=Apr2; max(Apr2,Mar1)+30=May2.
+        # Si todo cayera al fallback de 30 días, el fin sería Apr2 — este
+        # assert también detecta una regresión al N+1 (get_plan_by_id None).
+        assert result['membershipStart'] == iso(dt(2026, 1, 1))
+        assert result['membershipEnd'] == iso(dt(2026, 5, 2))
+
+    def test_missing_plan_falls_back_to_30_days(self):
+        plans = [{'id': 'plan-a', 'name': 'Mensual', 'price': 35000, 'durationDays': 30}]
+        payments = [
+            payment('p1', iso(dt(2026, 1, 1)), plan_id='plan-a'),
+            payment('p2', iso(dt(2026, 2, 1)), plan_id='plan-inexistente'),
+        ]
+        svc, _ = self._setup(payments, plans)
+
+        result = svc.recalculate_membership('c1')
+
+        # plan-inexistente → fallback 30 días (mismo comportamiento previo):
+        # Jan1+30=Jan31; max(Jan31,Feb1)+30=Mar3
+        assert result['membershipEnd'] == iso(dt(2026, 3, 3))
 
 
 class TestExtendMembershipWithAnchorDate:

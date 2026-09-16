@@ -317,11 +317,19 @@ Extiende la membresía de un cliente
             # Ordenar cronológicamente por fecha del pago (fallback createdAt)
             active.sort(key=self._parse_payment_date)
 
+            # Fix N+1: cargar todos los planes UNA sola vez y hacer lookup en el
+            # loop (antes get_plan_by_id hacía una lectura de documento POR pago).
+            plans_by_id = {
+                p.get('id'): p
+                for p in self.firebase_service.query_firestore('membership_plans')
+                if p.get('id')
+            }
+
             running_end = None
             last_plan_id = None
             for payment in active:
                 plan_id = payment.get('membershipPlanId')
-                plan = self.get_plan_by_id(plan_id) if plan_id else None
+                plan = plans_by_id.get(plan_id) if plan_id else None
                 if plan:
                     duration_days = plan.get('durationDays', 30) * payment.get('monthsPaid', 1)
                 else:
