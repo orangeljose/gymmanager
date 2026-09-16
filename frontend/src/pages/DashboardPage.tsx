@@ -13,7 +13,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useOffline } from '@/hooks/useOffline';
 import { apiService } from '@/services/api';
-import type { DashboardData, Client, Branch } from '@/types';
+import type { DashboardData, Branch } from '@/types';
 
 export const DashboardPage: React.FC = () => {
   const { user, hasPermission, selectedBusinessId } = useAuth();
@@ -21,7 +21,6 @@ export const DashboardPage: React.FC = () => {
   const effectiveBusinessId = selectedBusinessId || user?.businessId || '';
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [recentClients, setRecentClients] = useState<Client[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
 
@@ -55,20 +54,10 @@ export const DashboardPage: React.FC = () => {
           if (selectedBranchId !== 'all') dashboardParams.branchId = selectedBranchId;
         }
 
-        const [dashboardResponse, clientsResponse] = await Promise.all([
-          apiService.getDashboard(dashboardParams),
-          apiService.getClients({ 
-            businessId: effectiveBusinessId, 
-            limit: 100 
-          })
-        ]);
+        const dashboardResponse = await apiService.getDashboard(dashboardParams);
 
         if (dashboardResponse.success && dashboardResponse.data) {
           setDashboardData(dashboardResponse.data);
-        }
-
-        if (clientsResponse.success && clientsResponse.data) {
-          setRecentClients(clientsResponse.data.slice(0, 5));
         }
 
       } catch (error) {
@@ -97,7 +86,8 @@ export const DashboardPage: React.FC = () => {
     incomeChart: [],
     topPayingClients: [],
     retentionRate: 0,
-    recentPayments: []
+    recentPayments: [],
+    recentClients: []
   };
 
   return (
@@ -241,11 +231,11 @@ export const DashboardPage: React.FC = () => {
             <p className="card-description">Últimos clientes registrados</p>
           </div>
           <div className="card-content">
-            {recentClients.length === 0 ? (
+            {metrics.recentClients.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No hay clientes recientes</p>
             ) : (
               <div className="space-y-4">
-                {recentClients.map((client) => (
+                {metrics.recentClients.map((client) => (
                   <div key={client.id} className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="h-8 w-8 bg-primary-100 rounded-full flex items-center justify-center">

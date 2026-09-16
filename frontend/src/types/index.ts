@@ -385,6 +385,15 @@ export interface DashboardData {
   topPayingClients: TopPayingClient[];
   retentionRate: number;
   recentPayments: RecentPayment[];
+  recentClients: RecentClient[];
+}
+
+export interface RecentClient {
+  id: string;
+  name: string;
+  email: string;
+  membershipEnd: string;
+  status: string;
 }
 
 export interface RecentPayment {
