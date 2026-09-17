@@ -2,7 +2,7 @@
 Rutas de gestión de clientes para GymManager
 """
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_auth, require_role, validate_branch_access
 from services.firebase_service import FirebaseService
@@ -22,7 +22,9 @@ def get_clients():
     
     Query Parameters:
         branchId: string (optional) - Filtrar por sede
-        status: string (optional) - active, expired, suspended
+        status: string (optional) - active, expired
+        expiringSoon: boolean (optional) - true para clientes con membresía
+            venciendo en los próximos 7 días (tiene precedencia sobre status)
         search: string (optional) - Buscar por nombre o email
         page: integer (optional) - Número de página (default: 1)
         limit: integer (optional) - Items por página (default: 20, max: 100)
@@ -44,6 +46,23 @@ def get_clients():
         branch_id = request.args.get('branchId')
         status = request.args.get('status')
         search = request.args.get('search', '').strip()
+
+        # expiringSoon: solo acepta true/false (o 1/0). Cualquier otro valor → 400.
+        expiring_soon_raw = request.args.get('expiringSoon', '').strip().lower()
+        expiring_soon = None
+        if expiring_soon_raw:
+            if expiring_soon_raw in ('true', '1'):
+                expiring_soon = True
+            elif expiring_soon_raw in ('false', '0'):
+                expiring_soon = False
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': {
+                        'code': 400,
+                        'message': 'expiringSoon debe ser true o false'
+                    }
+                }), 400
         
         # Validar paginación
         page = int(request.args.get('page', 1))
@@ -82,9 +101,9 @@ def get_clients():
                 }), 403
             filters.append({'field': 'branchId', 'operator': '==', 'value': branch_id})
         
-        # Filtro por status
-        if status:
-            valid_statuses = ['active', 'expired', 'suspended']
+        # Filtro por status (solo si expiringSoon no está activo — tiene precedencia)
+        if expiring_soon is not True and status:
+            valid_statuses = ['active', 'expired']
             if status not in valid_statuses:
                 return jsonify({
                     'success': False,
@@ -94,6 +113,14 @@ def get_clients():
                     }
                 }), 400
             filters.append({'field': 'status', 'operator': '==', 'value': status})
+
+        # Filtro expiringSoon: membershipEnd dentro de [now, now + 7 días] en Firestore.
+        # Requiere los índices compuestos (businessId, membershipEnd) y
+        # (businessId, branchId, membershipEnd) — ver design D2.
+        if expiring_soon is True:
+            now = datetime.now(timezone.utc)
+            filters.append({'field': 'membershipEnd', 'operator': '>=', 'value': now})
+            filters.append({'field': 'membershipEnd', 'operator': '<=', 'value': now + timedelta(days=7)})
         
         # Búsqueda por nombre, email o teléfono
         if search:
@@ -392,7 +419,7 @@ def update_client(client_id):
         "name": "María García López",
         "phone": "+1234567893",
         "notes": "Cambió de horario",
-        "status": "suspended"
+        "status": "expired"
     }
     """
     try:

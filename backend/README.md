@@ -95,7 +95,7 @@ python app.py
 - `POST /api/auth/verify` - Verificar token Firebase
 
 ### Clientes
-- `GET /api/clients` - Listar clientes (filtros: branchId, status, search, page, limit)
+- `GET /api/clients` - Listar clientes (filtros: branchId, status, expiringSoon, search, page, limit)
 - `GET /api/clients/<id>` - Obtener cliente por ID
 - `POST /api/clients` - Crear cliente (requiere admin+)
 - `PUT /api/clients/<id>` - Actualizar cliente (requiere admin+)

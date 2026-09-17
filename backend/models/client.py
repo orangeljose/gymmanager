@@ -82,7 +82,7 @@ class ClientModel:
         
         # Validar status si está presente
         if 'status' in data:
-            valid_statuses = ['active', 'expired', 'suspended']
+            valid_statuses = ['active', 'expired']
             if data['status'] not in valid_statuses:
                 errors.append(f"Status debe ser uno de: {', '.join(valid_statuses)}")
         

@@ -212,9 +212,17 @@ class TestClientModelValidateUpdateData:
 
     def test_valid_status_update(self):
         """Actualización válida de status"""
-        data = {'status': 'suspended'}
+        data = {'status': 'expired'}
         result = ClientModel.validate_update_data(data)
-        assert result['status'] == 'suspended'
+        assert result['status'] == 'expired'
+
+    def test_update_rejects_suspended_status(self):
+        """'suspended' ya no es un status válido"""
+        data = {'status': 'suspended'}
+        with pytest.raises(ValueError) as exc_info:
+            ClientModel.validate_update_data(data)
+        errors = exc_info.value.args[0]['errors']
+        assert any("status" in e.lower() for e in errors)
 
     def test_update_with_invalid_status(self):
         """Actualización con status inválido"""
