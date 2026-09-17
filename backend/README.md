@@ -107,7 +107,6 @@ python app.py
 - `POST /api/payments/sync` - Sincronizar pagos offline (requiere cajero+)
 
 ### Reportes
-- `GET /api/reports/solvency` - Clientes morosos (requiere admin+)
 - `GET /api/reports/income/daily` - Ingresos diarios (requiere admin+)
 - `GET /api/reports/income/by-method` - Ingresos por método (requiere admin+)
 

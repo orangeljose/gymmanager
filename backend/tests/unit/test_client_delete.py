@@ -7,7 +7,6 @@ Cubre (patrón test_dashboard.py: mock de FirebaseService + Flask test client):
 - DELETE /api/clients/:id: 404 missing / 404 ya-eliminado / 403 cross-branch /
   success escribe isDeleted + deletedBy + deletedAt y NUNCA toca la colección payments
 - PUT /api/clients/:id devuelve 404 para eliminados
-- GET /api/reports/solvency excluye eliminados
 
 NOTA sobre el patrón de patch: la request se ejecuta DENTRO de los patches de los
 call-sites (middleware.auth_middleware, routes.clients, routes.reports) para que cada
@@ -241,25 +240,3 @@ class TestUpdateDeleted:
         assert response.status_code == 404
         assert json.loads(response.data)['success'] is False
         mock.update_document.assert_not_called()
-
-
-class TestSolvencyExcludesDeleted:
-    def test_solvency_excludes_deleted_clients(self, auth_header):
-        deleted = make_client('c-del', is_deleted=True)
-        active = make_client('c-ok')
-
-        mock = create_mock_service()
-        # 1ra llamada: query de clientes; 2da: query de pagos del cliente sobreviviente
-        mock.query_firestore.side_effect = [
-            [deleted, active],
-            [],
-        ]
-
-        response = _request(mock, 'GET', '/api/reports/solvency', headers=auth_header)
-
-        assert response.status_code == 200
-        data = json.loads(response.data)
-        assert data['success'] is True
-        ids = [c['id'] for c in data['data']]
-        assert ids == ['c-ok']
-        assert data['meta']['total'] == 1
