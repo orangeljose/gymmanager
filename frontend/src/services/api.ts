@@ -12,10 +12,8 @@ import type {
   BranchFormData,
   Business,
   MembershipPlan,
-  SolvencyReport,
   IncomeDailyReport,
   IncomeByMethodReport,
-  ReportFilters,
   PaymentAccount,
   PaymentAccountFormData,
   PlanFormData,
@@ -295,16 +293,6 @@ class ApiService {
   }
 
   // Reports
-  async getSolvencyReport(filters: ReportFilters): Promise<ApiResponse<SolvencyReport[]>> {
-    const params = new URLSearchParams();
-    
-    if (filters.branchId) params.append('branchId', filters.branchId);
-    if (filters.daysOverdue) params.append('daysOverdue', filters.daysOverdue.toString());
-
-    const endpoint = `/reports/solvency${params.toString() ? `?${params.toString()}` : ''}`;
-    return this.requestWithAuth<SolvencyReport[]>(endpoint);
-  }
-
   async getIncomeDailyReport(startDate: string, endDate: string, branchId?: string, businessId?: string): Promise<ApiResponse<{ totalPeriod: number; daily: IncomeDailyReport[] }>> {
     const params = new URLSearchParams();
     params.append('startDate', startDate);

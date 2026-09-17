@@ -177,17 +177,6 @@ export interface ApiError {
 }
 
 // Report Types
-export interface SolvencyReport {
-  id: string;
-  name: string;
-  phone: string;
-  membershipPlanId: string;
-  membershipEnd: string;
-  daysRemaining: number;  // positivo = días por vencer, negativo = días vencido
-  lastPaymentDate?: string;
-  lastPaymentAmount?: number;
-}
-
 export interface IncomeDailyReport {
   date: string;
   amount: number;
@@ -307,13 +296,6 @@ export interface PaymentFilters {
   endDate?: string;
   page?: number;
   limit?: number;
-}
-
-export interface ReportFilters {
-  branchId?: string;
-  startDate?: string;
-  endDate?: string;
-  daysOverdue?: number;
 }
 
 // Offline Storage Types

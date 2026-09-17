@@ -1,17 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, DollarSign } from 'lucide-react';
+import { DollarSign } from 'lucide-react';
 
 export const ReportsPage: React.FC = () => {
   const reportSections = [
-    {
-      title: 'Reporte de Membresías',
-      description: 'Clientes con membresías vencidas o por vencer',
-      href: '/reports/solvency',
-      icon: AlertTriangle,
-      color: 'bg-yellow-100 text-yellow-600',
-      stats: 'Estado de membresías'
-    },
     {
       title: 'Reporte de Ingresos',
       description: 'Resumen de pagos por período y método',
