@@ -110,7 +110,7 @@ export interface Client {
   isDeleted?: boolean; // Soft delete flag (backend)
 }
 
-export type ClientStatus = 'active' | 'expired' | 'suspended';
+export type ClientStatus = 'active' | 'expired';
 
 // Payment Types
 export interface Payment {
@@ -282,6 +282,7 @@ export interface ClientFilters {
   businessId?: string;
   branchId?: string;
   status?: ClientStatus;
+  expiringSoon?: boolean; // Tiene precedencia sobre status cuando es true
   search?: string;
   page?: number;
   limit?: number;

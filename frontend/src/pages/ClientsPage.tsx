@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useClients } from '@/hooks/useClients';
 import { usePlans } from '@/hooks/usePlans';
-import type { Client, ClientStatus, Branch } from '@/types';
+import type { Client, ClientFilters, ClientStatus, Branch } from '@/types';
 import { apiService } from '@/services/api';
 import { toLocalMidnight, formatDate as formatDateUtil } from '@/utils/dates';
 
@@ -15,7 +15,7 @@ export const ClientsPage: React.FC = () => {
   const { clients, loading, error, pagination, fetchClients, searchClients } = useClients(effectiveBusinessId || '');
   const { plans } = usePlans(effectiveBusinessId);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ClientStatus | ''>('');
+  const [statusFilter, setStatusFilter] = useState<ClientStatus | 'expiring' | ''>('');
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchFilter, setBranchFilter] = useState<string>('');
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
@@ -57,21 +57,30 @@ export const ClientsPage: React.FC = () => {
       if (searchTerm.trim()) {
         searchClients(searchTerm);
       } else {
-        fetchClients({ status: statusFilter || undefined, branchId: branchFilter || undefined, page: 1 });
+        fetchClients(buildClientFilters(1));
       }
     }, 300);
     return () => clearTimeout(delayDebounce);
   }, [searchTerm, statusFilter, branchFilter]);
 
-  const handleStatusFilter = (status: ClientStatus | '') => {
+  const handleStatusFilter = (status: ClientStatus | 'expiring' | '') => {
     setStatusFilter(status);
   };
 
+  // Mapea la selección del dropdown a filtros de la API: 'expiring' → expiringSoon,
+  // cualquier otro status → {status}. Nunca envía ambos.
+  const buildClientFilters = (page?: number): ClientFilters => ({
+    status: statusFilter === 'expiring' ? undefined : (statusFilter || undefined),
+    expiringSoon: statusFilter === 'expiring' ? true : undefined,
+    branchId: branchFilter || undefined,
+    page,
+  });
+
   const handlePageChange = (newPage: number) => {
-    fetchClients({ status: statusFilter || undefined, branchId: branchFilter || undefined, page: newPage });
+    fetchClients(buildClientFilters(newPage));
   };
 
-  const getStatusBadge = (status: ClientStatus) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
         return 'bg-green-100 text-green-800';
@@ -109,7 +118,7 @@ export const ClientsPage: React.FC = () => {
       if (response.success) {
         toast.success('Cliente eliminado correctamente');
         setDeleteTarget(null);
-        fetchClients({ status: statusFilter || undefined, branchId: branchFilter || undefined });
+        fetchClients(buildClientFilters());
       } else {
         toast.error(response.error?.message || 'Error al eliminar el cliente');
       }
@@ -160,13 +169,13 @@ export const ClientsPage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
               <select
                 value={statusFilter}
-                onChange={(e) => handleStatusFilter(e.target.value as ClientStatus | '')}
+                onChange={(e) => handleStatusFilter(e.target.value as ClientStatus | 'expiring' | '')}
                 className="input w-36"
               >
                 <option value="">Todos</option>
                 <option value="active">Activos</option>
                 <option value="expired">Vencidos</option>
-                <option value="suspended">Suspendidos</option>
+                <option value="expiring">Próximos 7 días</option>
               </select>
             </div>
             {user?.role === 'super_admin' && (

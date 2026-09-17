@@ -132,6 +132,7 @@ class ApiService {
     if (filters.businessId) params.append('businessId', filters.businessId);
     if (filters.branchId) params.append('branchId', filters.branchId);
     if (filters.status) params.append('status', filters.status);
+    if (filters.expiringSoon) params.append('expiringSoon', 'true');
     if (filters.search) params.append('search', filters.search);
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.limit) params.append('limit', filters.limit.toString());
