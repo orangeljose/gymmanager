@@ -31,6 +31,9 @@ class Config:
     # Rate Limiting
     RATELIMIT_PER_USER = os.environ.get('RATELIMIT_PER_USER', '100')
     
+    # Zona horaria del negocio (autoridad para el cálculo de "hoy" en asistencia)
+    TIMEZONE = os.environ.get('BUSINESS_TIMEZONE', 'America/Caracas')
+    
     @staticmethod
     def validate_required():
         """Valida que las variables requeridas estén presentes"""
