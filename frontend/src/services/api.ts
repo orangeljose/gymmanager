@@ -21,7 +21,13 @@ import type {
   Receipt,
   UserFormData,
   DashboardData,
-  ReceiptFilters
+  ReceiptFilters,
+  AttendanceRecord,
+  AttendanceStats,
+  AttendanceFilters,
+  AttendanceMethod,
+  AttendanceSummary,
+  ClientAttendanceStats
 } from '@/types';
 
 class ApiService {
@@ -212,6 +218,51 @@ class ApiService {
     if (params.endDate) searchParams.append('endDate', params.endDate);
     const endpoint = `/payments/receipts${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
     return this.requestWithAuth<{ receipts: Receipt[]; total: number }>(endpoint);
+  }
+
+  // Attendance
+  async registerAttendance(data: {
+    clientId: string;
+    method?: AttendanceMethod;
+    branchId?: string;
+  }): Promise<ApiResponse<AttendanceRecord>> {
+    return this.requestWithAuth<AttendanceRecord>('/attendance', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAttendance(
+    filters: AttendanceFilters = {}
+  ): Promise<ApiResponse<AttendanceRecord[]> & { summary?: AttendanceSummary }> {
+    const params = new URLSearchParams();
+    if (filters.date) params.append('date', filters.date);
+    if (filters.businessId) params.append('businessId', filters.businessId);
+    if (filters.branchId) params.append('branchId', filters.branchId);
+    if (filters.clientId) params.append('clientId', filters.clientId);
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
+
+    const endpoint = `/attendance${params.toString() ? `?${params.toString()}` : ''}`;
+    return this.requestWithAuth<AttendanceRecord[]>(endpoint);
+  }
+
+  async getClientAttendance(
+    clientId: string
+  ): Promise<ApiResponse<AttendanceRecord[]> & { stats?: ClientAttendanceStats }> {
+    return this.requestWithAuth<AttendanceRecord[]>(`/attendance/client/${clientId}`);
+  }
+
+  async getAttendanceStats(
+    params: { date?: string; branchId?: string; businessId?: string } = {}
+  ): Promise<ApiResponse<AttendanceStats>> {
+    const searchParams = new URLSearchParams();
+    if (params.date) searchParams.append('date', params.date);
+    if (params.branchId) searchParams.append('branchId', params.branchId);
+    if (params.businessId) searchParams.append('businessId', params.businessId);
+
+    const endpoint = `/attendance/stats${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.requestWithAuth<AttendanceStats>(endpoint);
   }
 
   // Dashboard

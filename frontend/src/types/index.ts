@@ -152,6 +152,65 @@ export interface Receipt {
   registeredByName: string;
 }
 
+// Attendance Types
+export type AttendanceMethod = 'manual' | 'qr' | 'biometric';
+
+export interface AttendanceRecord {
+  id: string;
+  businessId: string;
+  branchId: string | null;
+  clientId: string;
+  clientName: string;
+  method: AttendanceMethod;
+  date: string;        // YYYY-MM-DD (zona horaria del negocio)
+  checkInAt: string;   // ISO UTC
+  registeredBy: string;
+  registeredByName: string;
+  createdAt: string;
+  alreadyCheckedIn?: boolean;
+}
+
+export interface AttendanceSeriesPoint {
+  date: string;
+  count: number;
+}
+
+export interface AttendanceTopAttendee {
+  clientId: string;
+  clientName: string;
+  count: number;
+}
+
+export interface AttendanceStats {
+  today: number;
+  week: number;
+  month: number;
+  series7: AttendanceSeriesPoint[];
+  series30: AttendanceSeriesPoint[];
+  last7Days?: AttendanceSeriesPoint[];
+  topAttendees: AttendanceTopAttendee[];
+}
+
+export interface AttendanceSummary {
+  total: number;
+  byMethod: Record<string, number>;
+}
+
+export interface ClientAttendanceStats {
+  total: number;
+  thisMonth: number;
+  lastVisit: string | null;
+}
+
+export interface AttendanceFilters {
+  date?: string;
+  businessId?: string;
+  branchId?: string;
+  clientId?: string;
+  page?: number;
+  limit?: number;
+}
+
 // API Response Types
 export interface ApiResponse<T> {
   success: boolean;
