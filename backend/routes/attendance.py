@@ -267,8 +267,10 @@ def get_attendance():
                 'error': {'code': 400, 'message': '; '.join(date_errors)}
             }), 400
 
-        page = int(request.args.get('page', 1))
-        limit = int(request.args.get('limit', 20))
+        # W-04: parseo defensivo (type=int cae al default si el valor no es
+        # numérico) para no devolver 500 ante ?page=abc / ?limit=xyz.
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 20, type=int)
         pagination = validate_pagination(page, limit)
 
         filters = []
