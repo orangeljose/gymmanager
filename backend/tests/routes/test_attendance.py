@@ -66,6 +66,27 @@ def reset_singleton():
     firebase_service.FirebaseService._reset()
 
 
+@pytest.fixture(scope='module', autouse=True)
+def prime_app_modules():
+    """
+    CRITICAL-01 (aislamiento entre archivos): el PRIMER import de `app` del
+    proceso fija el binding de `FirebaseService` en middleware/rutas para TODOS
+    los archivos que no parchean su call-site (p. ej. test_payment_delete). Este
+    archivo corre primero (alfabéticamente), así que se primea con un mock
+    super_admin bien configurado —equivalente al primer importer del baseline
+    (test_client_delete)— en vez de dejar el mock de rol específico del primer
+    test (cashier), que hacía fallar require_role en los archivos siguientes.
+
+    Cada request de este archivo igual parchea sus call-sites (services + routes
+    + middleware) con SU propio mock dentro de `make_client`.
+    """
+    with patch('services.firebase_service.FirebaseService',
+               return_value=create_mock_service(role='super_admin')):
+        from app import create_app
+        create_app()
+    yield
+
+
 @pytest.fixture
 def auth_header():
     return {'Authorization': 'Bearer test-token'}
@@ -128,6 +149,29 @@ class TestRegisterAttendance:
         args = mock.set_document.call_args
         assert args[0][0] == 'attendance'
         assert args[0][1] == f"c1_{business_today()}"
+
+        # W-02: el documento persistido debe contener TODOS los campos del modelo
+        # (Requirement: Attendance Data Model).
+        stored = args[0][2]
+        assert set(stored.keys()) == {
+            'id', 'clientId', 'clientName', 'businessId', 'branchId',
+            'date', 'checkInAt', 'method', 'registeredBy', 'registeredByName',
+            'createdAt',
+        }
+        assert stored['id'] == f"c1_{business_today()}"
+        assert stored['clientId'] == 'c1'
+        assert stored['clientName'] == 'Juan Pérez'
+        assert stored['businessId'] == 'biz-1'
+        assert stored['branchId'] == 'branch-1'
+        assert stored['date'] == business_today()
+        assert stored['method'] == 'manual'
+        assert stored['checkInAt']
+        assert stored['registeredBy'] == 'user-123'
+        assert stored['registeredByName'] == 'Cashier Test'
+        assert stored['createdAt']
+        # checkInAt y createdAt se generan con el mismo instante ISO UTC
+        assert stored['checkInAt'] == stored['createdAt']
+
         assert data['data']['date'] == business_today()
 
     def test_default_method_is_manual(self, make_client, auth_header):
@@ -142,6 +186,54 @@ class TestRegisterAttendance:
 
         assert response.status_code == 201
         assert response.get_json()['data']['method'] == 'manual'
+
+    @pytest.mark.parametrize('method', ['qr', 'biometric'])
+    def test_create_checkin_with_scanner_method_returns_201(self, make_client, auth_header, method):
+        """
+        CRITICAL-02 / Scanner Contract: un futuro lector QR/biométrico usa el
+        mismo POST y el método se persiste tal cual.
+        """
+        mock = create_mock_service(role='cashier', business_id='biz-1', branch_id='branch-1')
+        client_doc = {'id': 'c1', 'name': 'Juan Pérez', 'businessId': 'biz-1', 'branchId': 'branch-1'}
+        mock.get_document.side_effect = lambda c, i: client_doc if c == 'clients' else None
+        client = make_client(mock)
+
+        response = client.post('/api/attendance', json={'clientId': 'c1', 'method': method},
+                               headers=auth_header)
+
+        assert response.status_code == 201
+        data = response.get_json()
+        assert data['success'] is True
+        assert data['data']['method'] == method
+        _, doc_id, stored = mock.set_document.call_args[0]
+        assert doc_id == f"c1_{business_today()}"
+        assert stored['method'] == method
+
+    @pytest.mark.parametrize('method', ['qr', 'biometric'])
+    def test_repeat_same_day_scanner_method_returns_200_already_checked_in(
+        self, make_client, auth_header, method
+    ):
+        """Un segundo escaneo QR/biométrico el mismo día NO duplica y preserva el método."""
+        mock = create_mock_service()
+        existing = {
+            'id': f"c1_{business_today()}", 'clientId': 'c1', 'clientName': 'Juan',
+            'businessId': 'biz-1', 'branchId': 'branch-1', 'date': business_today(),
+            'checkInAt': '2026-10-05T10:00:00+00:00', 'method': method,
+        }
+        mock.get_document.side_effect = lambda c, i: (
+            {'id': 'c1', 'name': 'Juan', 'businessId': 'biz-1', 'branchId': 'branch-1'}
+            if c == 'clients' else existing
+        )
+        client = make_client(mock)
+
+        response = client.post('/api/attendance', json={'clientId': 'c1', 'method': method},
+                               headers=auth_header)
+
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['data']['alreadyCheckedIn'] is True
+        assert data['data']['method'] == method
+        mock.set_document.assert_not_called()
 
     def test_repeat_same_day_returns_200_already_checked_in(self, make_client, auth_header):
         mock = create_mock_service()
@@ -281,6 +373,19 @@ class TestListAttendance:
         data = response.get_json()
         assert len(data['data']) == 2
         assert data['meta'] == {'total': 3, 'page': 1, 'limit': 2, 'pages': 2}
+
+    def test_non_numeric_page_and_limit_fall_back_to_defaults(self, make_client, auth_header):
+        """W-04: page/limit no numéricos no deben romper (500) sino usar defaults."""
+        mock = create_mock_service(role='admin')
+        mock.query_firestore.return_value = []
+        client = make_client(mock)
+
+        response = client.get('/api/attendance?page=abc&limit=xyz', headers=auth_header)
+
+        assert response.status_code == 200
+        meta = response.get_json()['meta']
+        assert meta['page'] == 1
+        assert meta['limit'] == 20
 
     def test_invalid_date_returns_400(self, make_client, auth_header):
         mock = create_mock_service(role='admin')
