@@ -32,6 +32,15 @@ VALID_METHODS = ['manual', 'qr', 'biometric']
 POST_ROLES = ['super_admin', 'admin', 'branch_admin', 'cashier']
 READ_ROLES = ['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer']
 
+# Colección de contadores diarios (optimización de cuota de Firestore).
+# Doc id: `{businessId}_{date}`; campos: {businessId, date, count}.
+# Los stats la leen por id directo (get) → NO requiere índice compuesto.
+DAILY_COUNTER_COLLECTION = 'attendance_daily'
+
+# Tope por defecto para el historial de asistencia por cliente (params ?limit=).
+CLIENT_HISTORY_DEFAULT_LIMIT = 100
+CLIENT_HISTORY_MAX_LIMIT = 1000
+
 # Offset fijo de respaldo por si el entorno no tiene la base de datos IANA
 # (paquete `tzdata`). Caracas no aplica DST (UTC-4 todo el año).
 _TZ_FALLBACK_OFFSETS = {
@@ -122,6 +131,48 @@ def _resolve_scope_filters(filters, date_filter=None):
             branch_scoped = True
 
     return branch_scoped
+
+
+def _resolve_business_id():
+    """
+    Devuelve el businessId concreto sobre el que se calculan los stats.
+
+    - super_admin: `businessId` opcional desde query params (puede ser None → cross-business).
+    - otros roles: forzado al del usuario autenticado.
+    """
+    if g.current_user.get('role') == 'super_admin':
+        return request.args.get('businessId')
+    return g.current_user.get('businessId')
+
+
+def _read_daily_counter(firebase_service, business_id, date_str):
+    """Lee el contador diario `attendance_daily/{businessId}_{date}` (1 lectura, por id)."""
+    doc = firebase_service.get_document(
+        DAILY_COUNTER_COLLECTION, f"{business_id}_{date_str}"
+    )
+    return int((doc or {}).get('count', 0) or 0)
+
+
+def _increment_daily_counter(firebase_service, business_id, date_str):
+    """
+    Incrementa el contador diario de asistencias (1 lectura + 1 escritura por check-in).
+
+    Nota de concurrencia: es read-modify-write, NO atómico. En la práctica el front-desk
+    registra de a un cliente a la vez; ante dos check-ins estrictamente simultáneos puede
+    perderse un incremento (last-write-wins). Aceptado como tradeoff por simplicidad
+    frente al costo despreciable (se corta la lectura O(N) de stats).
+    """
+    if not business_id:
+        return None
+    doc_id = f"{business_id}_{date_str}"
+    current = firebase_service.get_document(DAILY_COUNTER_COLLECTION, doc_id)
+    new_count = int((current or {}).get('count', 0) or 0) + 1
+    firebase_service.set_document(DAILY_COUNTER_COLLECTION, doc_id, {
+        'businessId': business_id,
+        'date': date_str,
+        'count': new_count,
+    })
+    return new_count
 
 
 @attendance_bp.route('', methods=['POST', 'OPTIONS'])
@@ -230,6 +281,16 @@ def register_attendance():
                 'error': {'code': 500, 'message': 'Error al registrar la asistencia'}
             }), 500
 
+        # 3) Contador diario (optimización de cuota): 1 lectura + 1 escritura.
+        #    Best-effort: si falla, el check-in ya quedó registrado y no se revierte.
+        try:
+            _increment_daily_counter(firebase_service, client_business_id, date_str)
+        except Exception as counter_error:
+            logger.error(
+                f"No se pudo incrementar el contador diario "
+                f"{client_business_id}_{date_str}: {counter_error}"
+            )
+
         logger.info(f"Check-in registrado: {doc_id}")
         return jsonify({
             'success': True,
@@ -335,7 +396,15 @@ def get_attendance_stats():
     """
     Agregados de asistencia: hoy / semana (7d) / mes (30d) + series + top asistentes.
 
-    UNA sola query acotada (rango 30 días) en Firestore; agrupación en Python.
+    Eficiencia de cuota (170+ clientes activos):
+      - today/week/month/series7/series30 se leen de los CONTADORES diarios
+        (`attendance_daily`, 30 gets directos por id → NO requiere índice compuesto).
+      - topAttendees SIEMPRE necesita los documentos reales (agrupación por clientId):
+        se consultan SOLO los últimos 7 días (rango acotado `date >= today-6`), no 30.
+      - super_admin sin `businessId` no tiene un negocio único por el que leer
+        contadores → fallback a UNA query de 30 días (comportamiento previo).
+      - Comportamiento definido: para branch_admin el contador es a nivel de NEGOCIO
+        (no por sede); los stats con filtro de sede usan el contador del negocio.
 
     Query Params: date (default hoy), branchId, businessId (super_admin)
     Response (200): { success, data: AttendanceStats }
@@ -357,48 +426,75 @@ def get_attendance_stats():
                 'error': {'code': 400, 'message': 'La fecha debe tener formato YYYY-MM-DD'}
             }), 400
 
-        start_month = today_dt - timedelta(days=29)
-        start_week = today_dt - timedelta(days=6)
-        start_month_str = start_month.isoformat()
-        start_week_str = start_week.isoformat()
-
-        filters = []
-        _resolve_scope_filters(filters, date_filter=None)
-        filters.append({'field': 'date', 'operator': '>=', 'value': start_month_str})
-        filters.append({'field': 'date', 'operator': '<=', 'value': date_str})
+        start_week_str = (today_dt - timedelta(days=6)).isoformat()
+        start_month_str = (today_dt - timedelta(days=29)).isoformat()
 
         firebase_service = FirebaseService()
-        try:
-            rows = firebase_service.query_firestore('attendance', filters=filters)
-        except Exception as query_error:
-            index_response = _index_error_response(query_error)
-            if index_response:
-                return index_response
-            raise
+        business_id = _resolve_business_id()
 
-        today_count = 0
-        week_count = 0
-        month_count = 0
-        daily_counts = Counter()
+        if business_id:
+            # Única query de docs reales: SOLO 7 días, para topAttendees.
+            attendee_filters = []
+            _resolve_scope_filters(attendee_filters, date_filter=None)
+            attendee_filters.append({'field': 'date', 'operator': '>=', 'value': start_week_str})
+            attendee_filters.append({'field': 'date', 'operator': '<=', 'value': date_str})
+            try:
+                attendee_rows = firebase_service.query_firestore('attendance', filters=attendee_filters)
+            except Exception as query_error:
+                index_response = _index_error_response(query_error)
+                if index_response:
+                    return index_response
+                raise
+
+            # Contadores diarios: 30 gets directos por id (1 lectura c/u).
+            daily_counts = {
+                (today_dt - timedelta(days=i)).isoformat(): _read_daily_counter(
+                    firebase_service, business_id, (today_dt - timedelta(days=i)).isoformat()
+                )
+                for i in range(30)
+            }
+            today_count = daily_counts.get(date_str, 0)
+            week_count = sum(
+                count for day, count in daily_counts.items() if start_week_str <= day <= date_str
+            )
+            month_count = sum(daily_counts.values())
+        else:
+            # Fallback super_admin cross-business: UNA query de 30 días (comportamiento previo).
+            attendee_filters = []
+            _resolve_scope_filters(attendee_filters, date_filter=None)
+            attendee_filters.append({'field': 'date', 'operator': '>=', 'value': start_month_str})
+            attendee_filters.append({'field': 'date', 'operator': '<=', 'value': date_str})
+            try:
+                attendee_rows = firebase_service.query_firestore('attendance', filters=attendee_filters)
+            except Exception as query_error:
+                index_response = _index_error_response(query_error)
+                if index_response:
+                    return index_response
+                raise
+
+            daily_counts = Counter()
+            for row in attendee_rows:
+                row_date = row.get('date') or ''
+                if row_date and start_month_str <= row_date <= date_str:
+                    daily_counts[row_date] += 1
+            today_count = daily_counts.get(date_str, 0)
+            week_count = sum(
+                count for day, count in daily_counts.items() if start_week_str <= day <= date_str
+            )
+            month_count = sum(daily_counts.values())
+
+        # topAttendees: sobre los docs consultados, restringidos a los últimos 7 días
+        # (en el fallback el rango es 30d pero se excluye lo anterior a 7 días).
         attendee_counts = Counter()
         attendee_names = {}
-
-        for row in rows:
+        for row in attendee_rows:
             row_date = row.get('date') or ''
-            if row_date:
-                daily_counts[row_date] += 1
-            if row_date == date_str:
-                today_count += 1
-            if start_week_str <= row_date <= date_str:
-                week_count += 1
-            if start_month_str <= row_date <= date_str:
-                month_count += 1
-
-            cid = row.get('clientId')
-            if cid:
-                attendee_counts[cid] += 1
-                if row.get('clientName'):
-                    attendee_names[cid] = row.get('clientName')
+            if row_date and start_week_str <= row_date <= date_str:
+                cid = row.get('clientId')
+                if cid:
+                    attendee_counts[cid] += 1
+                    if row.get('clientName'):
+                        attendee_names[cid] = row.get('clientName')
 
         series30 = [
             {'date': (today_dt - timedelta(days=i)).isoformat(),
@@ -448,9 +544,22 @@ def get_client_attendance(client_id):
     """
     Historial de asistencia de un cliente + stats (total, mes actual, última visita).
 
+    Query Params: limit (default 100, máx 1000).
+
+    Tradeoff documentado (optimización de cuota): el historial se trunca a `limit`
+    registros más recientes; `stats.total` refleja la vista acotada (los registros
+    devueltos), no el total histórico absoluto del cliente. `thisMonth`/`lastVisit`
+    se calculan sobre la misma vista acotada (con limit>=30 el mes actual queda
+    completo en la práctica para asistencia diaria).
+
     Response (200): { success, data[], stats{total, thisMonth, lastVisit} }
     """
     try:
+        limit = request.args.get('limit', CLIENT_HISTORY_DEFAULT_LIMIT, type=int)
+        if not isinstance(limit, int) or limit < 1:
+            limit = CLIENT_HISTORY_DEFAULT_LIMIT
+        limit = min(limit, CLIENT_HISTORY_MAX_LIMIT)
+
         firebase_service = FirebaseService()
 
         client = firebase_service.get_document('clients', client_id)
@@ -491,16 +600,17 @@ def get_client_attendance(client_id):
             raise
 
         history.sort(key=lambda r: r.get('checkInAt') or '', reverse=True)
+        capped_history = history[:limit]
 
         current_month = _business_today()[:7]
-        this_month = sum(1 for r in history if (r.get('date') or '').startswith(current_month))
-        last_visit = history[0].get('checkInAt') if history else None
+        this_month = sum(1 for r in capped_history if (r.get('date') or '').startswith(current_month))
+        last_visit = capped_history[0].get('checkInAt') if capped_history else None
 
         return jsonify({
             'success': True,
-            'data': history,
+            'data': capped_history,
             'stats': {
-                'total': len(history),
+                'total': len(capped_history),
                 'thisMonth': this_month,
                 'lastVisit': last_visit,
             }

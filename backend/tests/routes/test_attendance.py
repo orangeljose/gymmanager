@@ -146,8 +146,9 @@ class TestRegisterAttendance:
         assert data['data']['clientName'] == 'Juan Pérez'
         assert data['data']['method'] == 'manual'
         # Id determinístico {clientId}_{date} con la fecha en tz del negocio
-        args = mock.set_document.call_args
-        assert args[0][0] == 'attendance'
+        attendance_calls = [c for c in mock.set_document.call_args_list if c[0][0] == 'attendance']
+        assert len(attendance_calls) == 1
+        args = attendance_calls[0]
         assert args[0][1] == f"c1_{business_today()}"
 
         # W-02: el documento persistido debe contener TODOS los campos del modelo
@@ -205,7 +206,8 @@ class TestRegisterAttendance:
         data = response.get_json()
         assert data['success'] is True
         assert data['data']['method'] == method
-        _, doc_id, stored = mock.set_document.call_args[0]
+        attendance_calls = [c for c in mock.set_document.call_args_list if c[0][0] == 'attendance']
+        _, doc_id, stored = attendance_calls[0][0]
         assert doc_id == f"c1_{business_today()}"
         assert stored['method'] == method
 
@@ -254,6 +256,71 @@ class TestRegisterAttendance:
         data = response.get_json()
         assert data['data']['alreadyCheckedIn'] is True
         mock.set_document.assert_not_called()
+
+    def test_register_creates_daily_counter_when_absent(self, make_client, auth_header):
+        """OPT-01: check-in nuevo crea el contador diario con count=1."""
+        mock = create_mock_service(role='cashier', business_id='biz-1', branch_id='branch-1')
+        client_doc = {'id': 'c1', 'name': 'Juan', 'businessId': 'biz-1', 'branchId': 'branch-1'}
+
+        def get_doc(collection, doc_id):
+            return client_doc if collection == 'clients' else None  # attendance y contador inexistentes
+
+        mock.get_document.side_effect = get_doc
+        client = make_client(mock)
+
+        response = client.post('/api/attendance', json={'clientId': 'c1'}, headers=auth_header)
+
+        assert response.status_code == 201
+        daily_calls = [c for c in mock.set_document.call_args_list if c[0][0] == 'attendance_daily']
+        assert len(daily_calls) == 1
+        _, doc_id, payload = daily_calls[0][0]
+        assert doc_id == f"biz-1_{business_today()}"
+        assert payload['businessId'] == 'biz-1'
+        assert payload['date'] == business_today()
+        assert payload['count'] == 1
+
+    def test_register_increments_existing_daily_counter(self, make_client, auth_header):
+        """OPT-01: check-in nuevo incrementa el contador diario existente (4 → 5)."""
+        mock = create_mock_service(role='cashier', business_id='biz-1', branch_id='branch-1')
+        client_doc = {'id': 'c1', 'name': 'Juan', 'businessId': 'biz-1', 'branchId': 'branch-1'}
+        daily_id = f"biz-1_{business_today()}"
+
+        def get_doc(collection, doc_id):
+            if collection == 'clients':
+                return client_doc
+            if collection == 'attendance_daily' and doc_id == daily_id:
+                return {'businessId': 'biz-1', 'date': business_today(), 'count': 4}
+            return None
+
+        mock.get_document.side_effect = get_doc
+        client = make_client(mock)
+
+        response = client.post('/api/attendance', json={'clientId': 'c1'}, headers=auth_header)
+
+        assert response.status_code == 201
+        daily_calls = [c for c in mock.set_document.call_args_list if c[0][0] == 'attendance_daily']
+        assert len(daily_calls) == 1
+        assert daily_calls[0][0][2]['count'] == 5
+
+    def test_repeat_checkin_does_not_touch_daily_counter(self, make_client, auth_header):
+        """OPT-01: un check-in repetido (200 alreadyCheckedIn) NO incrementa el contador."""
+        mock = create_mock_service()
+        existing = {
+            'id': f"c1_{business_today()}", 'clientId': 'c1', 'clientName': 'Juan',
+            'businessId': 'biz-1', 'branchId': 'branch-1', 'date': business_today(),
+            'checkInAt': '2026-10-05T10:00:00+00:00', 'method': 'manual',
+        }
+        mock.get_document.side_effect = lambda c, i: (
+            {'id': 'c1', 'name': 'Juan', 'businessId': 'biz-1', 'branchId': 'branch-1'}
+            if c == 'clients' else existing
+        )
+        client = make_client(mock)
+
+        response = client.post('/api/attendance', json={'clientId': 'c1'}, headers=auth_header)
+
+        assert response.status_code == 200
+        daily_calls = [c for c in mock.set_document.call_args_list if c[0][0] == 'attendance_daily']
+        assert daily_calls == []
 
     def test_invalid_method_returns_400(self, make_client, auth_header):
         mock = create_mock_service()
@@ -410,18 +477,25 @@ class TestListAttendance:
 
 class TestAttendanceStats:
 
-    def test_stats_grouping_and_series(self, make_client, auth_header):
-        mock = create_mock_service(role='branch_admin')
-        rows = [
-            {'clientId': 'c1', 'clientName': 'Uno', 'date': '2026-10-05'},
-            {'clientId': 'c1', 'clientName': 'Uno', 'date': '2026-10-05'},
+    def test_stats_from_daily_counters_and_week_attendees(self, make_client, auth_header):
+        """OPT-01: hoy/semana/mes/series salen de los contadores diarios (30 gets por id);
+        topAttendees sale de UNA query acotada de docs reales (7 días)."""
+        mock = create_mock_service(role='branch_admin')  # business_id='biz-1', branch='branch-1'
+        counters = {'2026-10-05': 2, '2026-10-04': 1, '2026-09-26': 3}
+        today_iso = '2026-10-05'
+
+        def get_doc(collection, doc_id):
+            if collection == 'attendance_daily':
+                d = doc_id.rsplit('_', 1)[1]
+                return {'count': counters[d]} if d in counters else None
+            return None
+
+        mock.get_document.side_effect = get_doc
+        mock.query_firestore.return_value = [
+            {'clientId': 'c1', 'clientName': 'Uno', 'date': today_iso},
+            {'clientId': 'c1', 'clientName': 'Uno', 'date': today_iso},
             {'clientId': 'c2', 'clientName': 'Dos', 'date': '2026-10-04'},
-            {'clientId': 'c3', 'clientName': 'Tres', 'date': '2026-09-26'},
-            {'clientId': 'c3', 'clientName': 'Tres', 'date': '2026-09-26'},
-            {'clientId': 'c3', 'clientName': 'Tres', 'date': '2026-09-26'},
-            {'clientId': 'c4', 'clientName': 'Viejo', 'date': '2026-08-26'},  # fuera de 30d
         ]
-        mock.query_firestore.return_value = rows
         client = make_client(mock)
 
         response = client.get('/api/attendance/stats?date=2026-10-05', headers=auth_header)
@@ -430,13 +504,43 @@ class TestAttendanceStats:
         stats = response.get_json()['data']
         assert stats['today'] == 2
         assert stats['week'] == 3          # 10-05 (2) + 10-04 (1)
-        assert stats['month'] == 6         # incluye 09-26 (3); excluye 08-26
+        assert stats['month'] == 6         # incluye 09-26 (3)
         assert len(stats['series7']) == 7
         assert len(stats['series30']) == 30
         assert stats['series7'][-1] == {'date': '2026-10-05', 'count': 2}
         assert stats['series7'][-2] == {'date': '2026-10-04', 'count': 1}
-        assert stats['topAttendees'][0] == {'clientId': 'c3', 'clientName': 'Tres', 'count': 3}
-        # UNA sola query acotada
+        assert stats['topAttendees'][0] == {'clientId': 'c1', 'clientName': 'Uno', 'count': 2}
+        # 30 lecturas de contador (1 por día) + UNA query acotada de 7 días
+        assert mock.get_document.call_count == 30
+        mock.query_firestore.assert_called_once()
+
+    def test_stats_super_admin_cross_business_falls_back_to_single_bounded_query(
+        self, make_client, auth_header
+    ):
+        """OPT-01: super_admin sin businessId no tiene contador único → fallback a UNA
+        query de 30 días; topAttendees se restringe a los últimos 7 días."""
+        mock = create_mock_service(role='super_admin', business_id=None)
+        mock.query_firestore.return_value = [
+            {'clientId': 'c1', 'clientName': 'Uno', 'date': '2026-10-05'},
+            {'clientId': 'c1', 'clientName': 'Uno', 'date': '2026-10-05'},
+            {'clientId': 'c2', 'clientName': 'Dos', 'date': '2026-10-04'},
+            {'clientId': 'c3', 'clientName': 'Tres', 'date': '2026-09-26'},  # dentro de 30d
+            {'clientId': 'c4', 'clientName': 'Viejo', 'date': '2026-08-26'},  # fuera de 30d
+        ]
+        client = make_client(mock)
+
+        response = client.get('/api/attendance/stats?date=2026-10-05', headers=auth_header)
+
+        assert response.status_code == 200
+        stats = response.get_json()['data']
+        assert stats['today'] == 2
+        assert stats['week'] == 3
+        assert stats['month'] == 4         # incluye 09-26; excluye 08-26
+        assert len(stats['series7']) == 7
+        assert len(stats['series30']) == 30
+        # topAttendees solo con docs de los últimos 7 días (c3 del 09-26 queda fuera)
+        assert stats['topAttendees'][0] == {'clientId': 'c1', 'clientName': 'Uno', 'count': 2}
+        assert all(t['clientId'] != 'c3' for t in stats['topAttendees'])
         mock.query_firestore.assert_called_once()
 
     def test_stats_single_query_even_with_top_attendees(self, make_client, auth_header):
@@ -477,6 +581,34 @@ class TestClientAttendance:
         assert data['stats']['total'] == 2
         assert data['stats']['thisMonth'] == 1
         assert data['stats']['lastVisit'].startswith(this_month)
+
+    def test_client_history_capped_by_default_limit_and_limit_param(self, make_client, auth_header):
+        """OPT-04: el historial se trunca a `limit` (default 100) y total refleja la
+        vista acotada; se conservan los más recientes (orden DESC por checkInAt)."""
+        mock = create_mock_service(role='trainer', business_id='biz-1', branch_id='branch-1')
+        mock.get_document.return_value = {'id': 'c1', 'name': 'Juan', 'businessId': 'biz-1',
+                                          'branchId': 'branch-1'}
+        iso = '2026-10-05T0{}:00:00+00:00'
+        mock.query_firestore.return_value = [
+            {'id': f'r{i}', 'clientId': 'c1', 'date': f'2026-01-{(i % 28) + 1:02d}',
+             'checkInAt': iso.format(i % 10)} for i in range(150)
+        ]
+        client = make_client(mock)
+
+        # Default: 100 más recientes
+        response = client.get('/api/attendance/client/c1', headers=auth_header)
+        assert response.status_code == 200
+        data = response.get_json()
+        assert len(data['data']) == 100
+        assert data['stats']['total'] == 100
+
+        # limit explícito
+        response = client.get('/api/attendance/client/c1?limit=5', headers=auth_header)
+        assert response.status_code == 200
+        data = response.get_json()
+        assert len(data['data']) == 5
+        assert data['stats']['total'] == 5
+        assert data['stats']['lastVisit'] == iso.format(9)  # el más reciente (mayor hora)
 
     def test_client_not_found_returns_404(self, make_client, auth_header):
         mock = create_mock_service(role='admin')
