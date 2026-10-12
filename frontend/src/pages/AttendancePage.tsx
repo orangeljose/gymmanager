@@ -67,12 +67,61 @@ export const AttendancePage: React.FC = () => {
   const [todayRecords, setTodayRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Optimización de cuota: caché local de clientes del negocio. Se carga UNA vez
+  // al montar la página; la búsqueda filtra en memoria (sin request por tecla).
+  // Si la carga falla o hay >= 500 clientes (resultado incompleto), la caché queda
+  // vacía y se cae al buscador del servidor.
+  const [allClients, setAllClients] = useState<Client[]>([]);
+  const CLIENTS_CACHE_LIMIT = 500;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await apiService.getClients({
+          businessId: effectiveBusinessId || undefined,
+          limit: CLIENTS_CACHE_LIMIT,
+        });
+        if (
+          !cancelled &&
+          response.success &&
+          Array.isArray(response.data) &&
+          response.data.length < CLIENTS_CACHE_LIMIT
+        ) {
+          setAllClients(response.data);
+        }
+      } catch (err) {
+        console.error('Error loading clients cache:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveBusinessId]);
+
   const searchClients = useCallback(async (term: string) => {
     if (!term || term.length < 2) {
       setClients([]);
       setShowDropdown(false);
       return;
     }
+
+    // Búsqueda local sobre la caché (case-insensitive por nombre/email/teléfono).
+    if (allClients.length > 0) {
+      const q = term.trim().toLowerCase();
+      const matches = allClients
+        .filter((client) =>
+          (client.name || '').toLowerCase().includes(q) ||
+          (client.email || '').toLowerCase().includes(q) ||
+          (client.phone || '').toLowerCase().includes(q)
+        )
+        .slice(0, 10);
+      setClients(matches);
+      setShowDropdown(matches.length > 0);
+      return;
+    }
+
+    // Fallback: búsqueda en el servidor (caché no disponible / incompleta).
     setSearching(true);
     try {
       const response = await apiService.getClients({
@@ -90,7 +139,7 @@ export const AttendancePage: React.FC = () => {
     } finally {
       setSearching(false);
     }
-  }, [effectiveBusinessId]);
+  }, [effectiveBusinessId, allClients]);
 
   // Debounced search
   useEffect(() => {
@@ -146,13 +195,39 @@ export const AttendancePage: React.FC = () => {
         clientId: selectedClient.id,
         method: 'manual',
       });
+
       if (response.data?.alreadyCheckedIn) {
         toast('Ya registrado hoy', { icon: '⚠️' });
       } else {
         toast.success(`Asistencia registrada: ${selectedClient.name}`);
+
+        // Optimización de cuota: actualización optimista LOCAL en vez de refetch
+        // (loadToday + loadStats = miles de lecturas de Firestore por sesión).
+        const newRecord = response.data;
+        if (newRecord) {
+          setTodayRecords((prev) => [newRecord, ...prev]);
+        }
+        setStats((prev) => {
+          if (!prev) return prev;
+          const series7 = prev.series7 ? [...prev.series7] : prev.series7;
+          if (series7 && series7.length > 0) {
+            const lastIndex = series7.length - 1;
+            series7[lastIndex] = {
+              ...series7[lastIndex],
+              count: series7[lastIndex].count + 1,
+            };
+          }
+          return {
+            ...prev,
+            today: prev.today + 1,
+            week: prev.week + 1,
+            month: prev.month + 1,
+            series7,
+          };
+        });
       }
+
       setSelectedClient(null);
-      await Promise.all([loadToday(), loadStats()]);
     } catch (err: any) {
       toast.error(err?.message || 'Error al registrar la asistencia');
     } finally {
