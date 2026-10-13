@@ -34,15 +34,15 @@ Chain strategy: pending
 
 ## Phase 2: Frontend Foundation
 
-- [ ] 2.1 `frontend/src/types/index.ts`: add `MachineKind`, `'accessory'` to `MachineCategory`, `kind?`/`quantity?`/`weightKg?` on `Machine` + `MachineFormData`; add `items:{itemTypes,totalUnits}` to `MachinesSummary`; add `kind?:MachineKind|''` to `MachineFilters`.
-- [ ] 2.2 `frontend/src/services/api.ts`: append `kind` param in `getMachines`.
+- [x] 2.1 `frontend/src/types/index.ts`: add `MachineKind`, `'accessory'` to `MachineCategory`, `kind?`/`quantity?`/`weightKg?` on `Machine` + `MachineFormData`; add `items:{itemTypes,totalUnits}` to `MachinesSummary`; add `kind?:MachineKind|''` to `MachineFilters`.
+- [x] 2.2 `frontend/src/services/api.ts`: append `kind` param in `getMachines`.
 
 ## Phase 3: Frontend UI
 
-- [ ] 3.1 `frontend/src/components/MachineForm.tsx`: accept `kind`; item → name, item-category set, `quantity`, `weightKg`, hide status/dates; machine → unchanged.
-- [ ] 3.2 `frontend/src/pages/MachinesPage.tsx`: tab state `'machines'|'items'`; items tab calls `getMachines({kind:'item'})`; per-tab summary cards (items: tipos/unidades); "+ Agregar" passes `kind`.
-- [ ] 3.3 `frontend/src/pages/MachineDetailPage.tsx`: for `_kind==='item'` hide Historial + maintenance modal; show `quantity`/`weightKg`.
-- [ ] 3.4 `frontend/src/components/Layout.tsx`: nav label "Máquinas" → "Equipamiento".
+- [x] 3.1 `frontend/src/components/MachineForm.tsx`: accept `kind`; item → name, item-category set, `quantity`, `weightKg`, hide status/dates; machine → unchanged.
+- [x] 3.2 `frontend/src/pages/MachinesPage.tsx`: tab state `'machines'|'items'`; items tab calls `getMachines({kind:'item'})`; per-tab summary cards (items: tipos/unidades); "+ Agregar" passes `kind`.
+- [x] 3.3 `frontend/src/pages/MachineDetailPage.tsx`: for `_kind==='item'` hide Historial + maintenance modal; show `quantity`/`weightKg`.
+- [x] 3.4 `frontend/src/components/Layout.tsx`: nav label "Máquinas" → "Equipamiento".
 
 ## Phase 4: Backend Tests (`backend/tests/routes/test_machines.py`)
 
@@ -54,5 +54,5 @@ Chain strategy: pending
 
 ## Phase 5: Verification
 
-- [ ] 5.1 Run `pytest backend/tests/routes/test_machines.py`; run `npm run build` in frontend.
+- [x] 5.1 Run `pytest backend/tests/routes/test_machines.py`; run `npm run build` in frontend.
 - [ ] 5.2 Verify spec scenarios end-to-end (both tabs, kind filter, summary split) — requires live Firebase.

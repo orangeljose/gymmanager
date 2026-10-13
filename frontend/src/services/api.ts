@@ -490,6 +490,7 @@ class ApiService {
     const params = new URLSearchParams();
     if (filters.businessId) params.append('businessId', filters.businessId);
     if (filters.branchId) params.append('branchId', filters.branchId);
+    if (filters.kind) params.append('kind', filters.kind);
     if (filters.category) params.append('category', filters.category);
     if (filters.status) params.append('status', filters.status);
     if (filters.search) params.append('search', filters.search);

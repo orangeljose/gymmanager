@@ -10,7 +10,7 @@ import type {
 } from '@/types';
 import {
   ArrowLeft, Dumbbell, Edit2, Trash2, Wrench, CalendarClock, X,
-  AlertTriangle, Tag, Shield, Calendar, CheckCircle2,
+  AlertTriangle, Tag, Shield, Calendar, CheckCircle2, Package, Weight,
 } from 'lucide-react';
 
 const TYPE_META: Record<MachineMaintenanceType, { label: string; badge: string }> = {
@@ -151,8 +151,8 @@ export const MachineDetailPage: React.FC = () => {
         <div className="card text-center py-12">
           <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">Máquina no encontrada</h3>
-          <p className="text-gray-600 mb-6">{error || 'La máquina que buscas no existe.'}</p>
-          <Link to="/machines" className="btn btn-primary">Volver a Máquinas</Link>
+          <p className="text-gray-600 mb-6">{error || 'El equipo que buscas no existe.'}</p>
+          <Link to="/machines" className="btn btn-primary">Volver a Equipamiento</Link>
         </div>
       </div>
     );
@@ -160,11 +160,13 @@ export const MachineDetailPage: React.FC = () => {
 
   const meta = MACHINE_STATUS_META[machine.status] || MACHINE_STATUS_META.operational;
   const isRepairCompleted = maintForm.type === 'repair' && maintForm.status === 'completed';
+  const isItem = (machine.kind ?? 'machine') === 'item';
+  const noun = isItem ? 'accesorio' : 'máquina';
 
   return (
     <div className="p-6">
       <Link to="/machines" className="inline-flex items-center text-sm text-gray-500 hover:text-primary-600 mb-4">
-        <ArrowLeft className="h-4 w-4 mr-1" /> Volver a Máquinas
+        <ArrowLeft className="h-4 w-4 mr-1" /> Volver a Equipamiento
       </Link>
 
       {/* Ficha */}
@@ -179,10 +181,12 @@ export const MachineDetailPage: React.FC = () => {
               <p className="text-gray-500 mt-1">
                 {[machine.brand, machine.model].filter(Boolean).join(' · ') || MACHINE_CATEGORY_LABELS[machine.category]}
               </p>
-              <span className={`badge ${meta.badge} mt-2`}>
-                <span className={`mr-1.5 h-2 w-2 rounded-full ${meta.dot}`} />
-                {meta.label}
-              </span>
+              {!isItem && (
+                <span className={`badge ${meta.badge} mt-2`}>
+                  <span className={`mr-1.5 h-2 w-2 rounded-full ${meta.dot}`} />
+                  {meta.label}
+                </span>
+              )}
             </div>
           </div>
 
@@ -213,24 +217,46 @@ export const MachineDetailPage: React.FC = () => {
               <p className="text-gray-900">{machine.purchaseDate || '—'}</p>
             </div>
           </div>
-          <div className="flex items-center text-sm">
-            <Shield className="h-4 w-4 mr-2 text-gray-400" />
-            <div>
-              <p className="text-xs text-gray-500">Garantía</p>
-              <p className="text-gray-900">{machine.warrantyUntil || '—'}</p>
-            </div>
-          </div>
-          <div className="flex items-center text-sm">
-            <CalendarClock className="h-4 w-4 mr-2 text-gray-400" />
-            <div>
-              <p className="text-xs text-gray-500">Próximo mantenimiento</p>
-              <p className="text-gray-900">{machine.nextMaintenanceDate || 'No programado'}</p>
-            </div>
-          </div>
+          {isItem ? (
+            <>
+              <div className="flex items-center text-sm">
+                <Package className="h-4 w-4 mr-2 text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500">Cantidad</p>
+                  <p className="text-gray-900">{machine.quantity ?? 1}</p>
+                </div>
+              </div>
+              <div className="flex items-center text-sm">
+                <Weight className="h-4 w-4 mr-2 text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500">Peso</p>
+                  <p className="text-gray-900">{machine.weightKg != null ? `${machine.weightKg} kg` : '—'}</p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center text-sm">
+                <Shield className="h-4 w-4 mr-2 text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500">Garantía</p>
+                  <p className="text-gray-900">{machine.warrantyUntil || '—'}</p>
+                </div>
+              </div>
+              <div className="flex items-center text-sm">
+                <CalendarClock className="h-4 w-4 mr-2 text-gray-400" />
+                <div>
+                  <p className="text-xs text-gray-500">Próximo mantenimiento</p>
+                  <p className="text-gray-900">{machine.nextMaintenanceDate || 'No programado'}</p>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Historial */}
+      {/* Historial (sólo máquinas: los accesorios no tienen mantenimiento) */}
+      {!isItem && (
       <div className="card">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Historial de mantenimiento</h2>
@@ -287,6 +313,7 @@ export const MachineDetailPage: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Edit modal */}
       <MachineForm
@@ -296,8 +323,8 @@ export const MachineDetailPage: React.FC = () => {
         onSaved={(updated) => setMachine((prev) => ({ ...(prev as Machine), ...updated }))}
       />
 
-      {/* Maintenance modal */}
-      {showMaint && (
+      {/* Maintenance modal (sólo máquinas) */}
+      {!isItem && showMaint && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-4 border-b">
@@ -429,9 +456,9 @@ export const MachineDetailPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6 text-center">
             <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">¿Eliminar máquina?</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">¿Eliminar {noun}?</h3>
             <p className="text-sm text-gray-600 mb-6">
-              {machine.name} quedará fuera del inventario. El historial se conserva.
+              {machine.name} quedará fuera del inventario.{isItem ? '' : ' El historial se conserva.'}
             </p>
             <div className="flex justify-center space-x-2">
               <button onClick={handleDelete} className="btn bg-red-600 text-white hover:bg-red-700">

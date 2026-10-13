@@ -410,13 +410,15 @@ export interface ReceiptFilters {
 
 // Machine / Equipment Types
 export type MachineStatus = 'operational' | 'maintenance' | 'out_of_service';
-export type MachineCategory = 'cardio' | 'strength' | 'functional' | 'free_weights' | 'other';
+export type MachineKind = 'machine' | 'item';
+export type MachineCategory = 'cardio' | 'strength' | 'functional' | 'free_weights' | 'accessory' | 'other';
 export type MachineMaintenanceType = 'preventive' | 'repair';
 export type MachineMaintenanceStatus = 'scheduled' | 'in_progress' | 'completed';
 export type MachineResolvedStatus = 'operational' | 'out_of_service';
 
 export interface Machine {
   id: string;
+  kind?: MachineKind;          // ausente en docs legacy ⇒ 'machine'
   name: string;
   brand?: string | null;
   model?: string | null;
@@ -427,6 +429,8 @@ export interface Machine {
   branchId?: string | null;
   status: MachineStatus;
   nextMaintenanceDate?: string | null;
+  quantity?: number;           // ítems, default 1
+  weightKg?: number | null;    // ítems, opcional
   isActive: boolean;
   registeredBy?: string;
   registeredByName?: string;
@@ -454,6 +458,7 @@ export interface MachineMaintenance {
 }
 
 export interface MachineFormData {
+  kind?: MachineKind;
   name: string;
   brand?: string;
   model?: string;
@@ -464,6 +469,8 @@ export interface MachineFormData {
   branchId?: string | null;
   status?: MachineStatus;
   nextMaintenanceDate?: string;
+  quantity?: number;
+  weightKg?: number | null;
 }
 
 export interface MachineMaintenanceFormData {
@@ -482,11 +489,13 @@ export interface MachinesSummary {
   byStatus: Record<MachineStatus, number>;
   upcomingMaintenance: Machine[];
   recentRepairs: MachineMaintenance[];
+  items: { itemTypes: number; totalUnits: number };
 }
 
 export interface MachineFilters {
   businessId?: string;
   branchId?: string;
+  kind?: MachineKind | '';
   category?: MachineCategory | '';
   status?: MachineStatus | '';
   search?: string;

@@ -2,11 +2,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
-import { MachineForm, MACHINE_STATUS_META, MACHINE_CATEGORY_LABELS } from '@/components/MachineForm';
-import type { Machine, MachineCategory, MachineFilters, MachineStatus, MachinesSummary } from '@/types';
+import {
+  MachineForm, MACHINE_STATUS_META, MACHINE_CATEGORY_LABELS, ITEM_CATEGORIES,
+} from '@/components/MachineForm';
+import type { Machine, MachineCategory, MachineFilters, MachineKind, MachineStatus, MachinesSummary } from '@/types';
 import {
   Plus, Search, Dumbbell, AlertTriangle, Wrench, CircleSlash,
-  CheckCircle2, CalendarClock, ChevronRight
+  CheckCircle2, CalendarClock, ChevronRight, Package,
 } from 'lucide-react';
 
 const STATUS_ICON: Record<MachineStatus, React.ElementType> = {
@@ -20,6 +22,7 @@ export const MachinesPage: React.FC = () => {
   const effectiveBusinessId = selectedBusinessId || user?.businessId || '';
   const canWrite = !!user && ['super_admin', 'admin', 'branch_admin'].includes(user.role);
 
+  const [tab, setTab] = useState<MachineKind>('machine');
   const [machines, setMachines] = useState<Machine[]>([]);
   const [summary, setSummary] = useState<MachinesSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +30,8 @@ export const MachinesPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
 
   const [filters, setFilters] = useState<MachineFilters>({ category: '', status: '', search: '' });
+
+  const isItems = tab === 'item';
 
   const loadSummary = useCallback(async () => {
     try {
@@ -45,16 +50,17 @@ export const MachinesPage: React.FC = () => {
       setError(null);
       const response = await apiService.getMachines({
         ...filters,
+        kind: tab,
         businessId: user?.role === 'super_admin' ? effectiveBusinessId : undefined,
         limit: 100,
       });
       if (response.success) setMachines(response.data);
     } catch (err: any) {
-      setError(err.message || 'Error cargando máquinas');
+      setError(err.message || 'Error cargando equipamiento');
     } finally {
       setLoading(false);
     }
-  }, [filters, user?.role, effectiveBusinessId]);
+  }, [filters, tab, user?.role, effectiveBusinessId]);
 
   useEffect(() => {
     loadMachines();
@@ -63,6 +69,13 @@ export const MachinesPage: React.FC = () => {
   useEffect(() => {
     loadSummary();
   }, [loadSummary]);
+
+  const switchTab = (next: MachineKind) => {
+    if (next === tab) return;
+    setTab(next);
+    setFilters({ category: '', status: '', search: '' });
+    setShowForm(false);
+  };
 
   const statusCount = (s: MachineStatus) => summary?.byStatus?.[s] ?? 0;
 
@@ -73,7 +86,7 @@ export const MachinesPage: React.FC = () => {
     return machine.nextMaintenanceDate <= horizon.toISOString().slice(0, 10);
   };
 
-  const cards = [
+  const machineCards = [
     { label: 'Total', value: summary?.total ?? machines.length, icon: Dumbbell, color: 'text-primary-600 bg-primary-50' },
     { label: 'Operativas', value: statusCount('operational'), icon: CheckCircle2, color: 'text-green-600 bg-green-50' },
     { label: 'En mantenimiento', value: statusCount('maintenance'), icon: Wrench, color: 'text-yellow-600 bg-yellow-50' },
@@ -81,23 +94,58 @@ export const MachinesPage: React.FC = () => {
     { label: 'Próximos (7d)', value: summary?.upcomingMaintenance?.length ?? 0, icon: CalendarClock, color: 'text-blue-600 bg-blue-50' },
   ];
 
+  const itemCards = [
+    { label: 'Tipos de accesorio', value: summary?.items?.itemTypes ?? machines.length, icon: Dumbbell, color: 'text-primary-600 bg-primary-50' },
+    { label: 'Unidades totales', value: summary?.items?.totalUnits ?? 0, icon: Package, color: 'text-blue-600 bg-blue-50' },
+  ];
+
+  const cards = isItems ? itemCards : machineCards;
+  const categoryOptions = isItems ? ITEM_CATEGORIES : (Object.keys(MACHINE_CATEGORY_LABELS) as MachineCategory[]);
+  const noun = isItems ? 'Accesorio' : 'Máquina';
+
   return (
     <div className="p-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Máquinas</h1>
-          <p className="text-gray-600 mt-1">Inventario de equipos y seguimiento de mantenimiento</p>
+          <h1 className="text-2xl font-bold text-gray-900">Equipamiento</h1>
+          <p className="text-gray-600 mt-1">Inventario de máquinas, pesas y accesorios</p>
         </div>
         {canWrite && (
           <button onClick={() => setShowForm(true)} className="btn btn-primary">
             <Plus className="h-4 w-4 mr-2" />
-            Nueva Máquina
+            Nuevo {noun}
           </button>
         )}
       </div>
 
+      {/* Tabs */}
+      <div className="flex space-x-1 border-b mb-6">
+        <button
+          type="button"
+          onClick={() => switchTab('machine')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            !isItems
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Máquinas
+        </button>
+        <button
+          type="button"
+          onClick={() => switchTab('item')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            isItems
+              ? 'border-primary-500 text-primary-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Pesas y Accesorios
+        </button>
+      </div>
+
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+      <div className={`grid grid-cols-2 gap-4 mb-6 ${isItems ? 'md:grid-cols-2 lg:grid-cols-2' : 'md:grid-cols-3 lg:grid-cols-5'}`}>
         {cards.map((card) => (
           <div key={card.label} className="card p-4 flex items-center">
             <div className={`p-2 rounded-lg ${card.color}`}>
@@ -130,20 +178,22 @@ export const MachinesPage: React.FC = () => {
             className="input"
           >
             <option value="">Todas las categorías</option>
-            {(Object.keys(MACHINE_CATEGORY_LABELS) as MachineCategory[]).map((c) => (
+            {categoryOptions.map((c) => (
               <option key={c} value={c}>{MACHINE_CATEGORY_LABELS[c]}</option>
             ))}
           </select>
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value as MachineStatus | '' }))}
-            className="input"
-          >
-            <option value="">Todos los estados</option>
-            {(Object.keys(MACHINE_STATUS_META) as MachineStatus[]).map((s) => (
-              <option key={s} value={s}>{MACHINE_STATUS_META[s].label}</option>
-            ))}
-          </select>
+          {!isItems && (
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value as MachineStatus | '' }))}
+              className="input"
+            >
+              <option value="">Todos los estados</option>
+              {(Object.keys(MACHINE_STATUS_META) as MachineStatus[]).map((s) => (
+                <option key={s} value={s}>{MACHINE_STATUS_META[s].label}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -154,18 +204,24 @@ export const MachinesPage: React.FC = () => {
       ) : error ? (
         <div className="card text-center py-12">
           <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No se pudieron cargar las máquinas</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No se pudo cargar el equipamiento</h3>
           <p className="text-gray-600">{error}</p>
         </div>
       ) : machines.length === 0 ? (
         <div className="card text-center py-12">
           <Dumbbell className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay máquinas registradas</h3>
-          <p className="text-gray-600 mb-6">Registra los equipos del gimnasio para llevar su inventario y mantenimiento.</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            {isItems ? 'No hay accesorios registrados' : 'No hay máquinas registradas'}
+          </h3>
+          <p className="text-gray-600 mb-6">
+            {isItems
+              ? 'Registra las pesas y accesorios del gimnasio para llevar su inventario.'
+              : 'Registra los equipos del gimnasio para llevar su inventario y mantenimiento.'}
+          </p>
           {canWrite && (
             <button onClick={() => setShowForm(true)} className="btn btn-primary">
               <Plus className="h-4 w-4 mr-2" />
-              Agregar Máquina
+              Agregar {noun}
             </button>
           )}
         </div>
@@ -175,6 +231,7 @@ export const MachinesPage: React.FC = () => {
             const meta = MACHINE_STATUS_META[machine.status] || MACHINE_STATUS_META.operational;
             const StatusIcon = STATUS_ICON[machine.status] || CheckCircle2;
             const upcoming = isUpcoming(machine);
+            const quantity = machine.quantity ?? 1;
             return (
               <Link
                 key={machine.id}
@@ -193,22 +250,38 @@ export const MachinesPage: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  <span className={`badge ${meta.badge} whitespace-nowrap`}>
-                    <span className={`mr-1.5 h-2 w-2 rounded-full ${meta.dot}`} />
-                    {meta.label}
-                  </span>
+                  {!isItems && (
+                    <span className={`badge ${meta.badge} whitespace-nowrap`}>
+                      <span className={`mr-1.5 h-2 w-2 rounded-full ${meta.dot}`} />
+                      {meta.label}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="inline-flex items-center text-gray-500">
-                    <StatusIcon className="h-4 w-4 mr-1 text-gray-400" />
-                    {MACHINE_CATEGORY_LABELS[machine.category]}
-                  </span>
-                  {machine.nextMaintenanceDate && (
-                    <span className={`inline-flex items-center ${upcoming ? 'text-yellow-600 font-medium' : 'text-gray-500'}`}>
-                      <CalendarClock className="h-4 w-4 mr-1" />
-                      {machine.nextMaintenanceDate}
-                    </span>
+                  {isItems ? (
+                    <>
+                      <span className="inline-flex items-center text-gray-500">
+                        <Package className="h-4 w-4 mr-1 text-gray-400" />
+                        {quantity} {quantity === 1 ? 'unidad' : 'unidades'}
+                      </span>
+                      <span className="inline-flex items-center text-gray-500">
+                        {machine.weightKg != null ? `${machine.weightKg} kg` : '—'}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="inline-flex items-center text-gray-500">
+                        <StatusIcon className="h-4 w-4 mr-1 text-gray-400" />
+                        {MACHINE_CATEGORY_LABELS[machine.category]}
+                      </span>
+                      {machine.nextMaintenanceDate && (
+                        <span className={`inline-flex items-center ${upcoming ? 'text-yellow-600 font-medium' : 'text-gray-500'}`}>
+                          <CalendarClock className="h-4 w-4 mr-1" />
+                          {machine.nextMaintenanceDate}
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -221,6 +294,7 @@ export const MachinesPage: React.FC = () => {
 
       <MachineForm
         open={showForm}
+        kind={tab}
         businessId={effectiveBusinessId}
         onClose={() => setShowForm(false)}
         onSaved={() => {

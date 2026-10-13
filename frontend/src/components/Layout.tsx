@@ -38,7 +38,7 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     icon: 'Users'
   },
   {
-    label: 'Máquinas',
+    label: 'Equipamiento',
     href: '/machines',
     icon: 'Dumbbell'
   },
