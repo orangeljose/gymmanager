@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
@@ -23,7 +23,7 @@ export const MachinesPage: React.FC = () => {
   const canWrite = !!user && ['super_admin', 'admin', 'branch_admin'].includes(user.role);
 
   const [tab, setTab] = useState<MachineKind>('machine');
-  const [machines, setMachines] = useState<Machine[]>([]);
+  const [allEquipment, setAllEquipment] = useState<Machine[]>([]);
   const [summary, setSummary] = useState<MachinesSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,31 +44,49 @@ export const MachinesPage: React.FC = () => {
     }
   }, [user?.role, effectiveBusinessId]);
 
-  const loadMachines = useCallback(async () => {
+  // Carga ÚNICA de todo el equipamiento (máquinas + accesorios). El filtrado por
+  // pestaña/categoría/estado/búsqueda se hace LOCALMENTE, así cambiar de tab,
+  // teclear o cambiar filtros NO consulta Firestore (0 lecturas por interacción).
+  const loadEquipment = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await apiService.getMachines({
-        ...filters,
-        kind: tab,
         businessId: user?.role === 'super_admin' ? effectiveBusinessId : undefined,
         limit: 100,
       });
-      if (response.success) setMachines(response.data);
+      if (response.success) setAllEquipment(response.data);
     } catch (err: any) {
       setError(err.message || 'Error cargando equipamiento');
     } finally {
       setLoading(false);
     }
-  }, [filters, tab, user?.role, effectiveBusinessId]);
+  }, [user?.role, effectiveBusinessId]);
 
   useEffect(() => {
-    loadMachines();
-  }, [loadMachines]);
+    loadEquipment();
+  }, [loadEquipment]);
 
   useEffect(() => {
     loadSummary();
   }, [loadSummary]);
+
+  // Filtrado local (0 lecturas): pestaña + categoría + estado + búsqueda.
+  const machines = useMemo(() => {
+    const search = (filters.search ?? '').trim().toLowerCase();
+    return allEquipment
+      .filter((m) => {
+        if ((m.kind ?? 'machine') !== tab) return false;
+        if (filters.category && m.category !== filters.category) return false;
+        if (filters.status && m.status !== filters.status) return false;
+        if (search) {
+          const haystack = `${m.name ?? ''} ${m.brand ?? ''} ${m.model ?? ''}`.toLowerCase();
+          if (!haystack.includes(search)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => (a.name ?? '').toLowerCase().localeCompare((b.name ?? '').toLowerCase()));
+  }, [allEquipment, tab, filters]);
 
   const switchTab = (next: MachineKind) => {
     if (next === tab) return;
@@ -298,7 +316,7 @@ export const MachinesPage: React.FC = () => {
         businessId={effectiveBusinessId}
         onClose={() => setShowForm(false)}
         onSaved={() => {
-          loadMachines();
+          loadEquipment();
           loadSummary();
         }}
       />
