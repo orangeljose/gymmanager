@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home,
   Users,
+  Dumbbell,
   CreditCard,
   FileText,
   Settings,
@@ -37,6 +38,11 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     icon: 'Users'
   },
   {
+    label: 'Máquinas',
+    href: '/machines',
+    icon: 'Dumbbell'
+  },
+  {
     label: 'Reportes',
     href: '/reports',
     icon: 'FileText',
@@ -67,6 +73,7 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
 const iconMap: Record<string, React.ElementType> = {
   Home,
   Users,
+  Dumbbell,
   CreditCard,
   FileText,
   Settings

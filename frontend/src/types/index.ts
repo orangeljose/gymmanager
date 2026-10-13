@@ -408,6 +408,92 @@ export interface ReceiptFilters {
   offset?: number;
 }
 
+// Machine / Equipment Types
+export type MachineStatus = 'operational' | 'maintenance' | 'out_of_service';
+export type MachineCategory = 'cardio' | 'strength' | 'functional' | 'free_weights' | 'other';
+export type MachineMaintenanceType = 'preventive' | 'repair';
+export type MachineMaintenanceStatus = 'scheduled' | 'in_progress' | 'completed';
+export type MachineResolvedStatus = 'operational' | 'out_of_service';
+
+export interface Machine {
+  id: string;
+  name: string;
+  brand?: string | null;
+  model?: string | null;
+  category: MachineCategory;
+  purchaseDate?: string | null;
+  warrantyUntil?: string | null;
+  businessId: string;
+  branchId?: string | null;
+  status: MachineStatus;
+  nextMaintenanceDate?: string | null;
+  isActive: boolean;
+  registeredBy?: string;
+  registeredByName?: string;
+  deletedBy?: string;
+  deletedAt?: string;
+  createdAt: string;
+}
+
+export interface MachineMaintenance {
+  id: string;
+  machineId: string;
+  machineName: string;
+  type: MachineMaintenanceType;
+  description?: string | null;
+  date: string;
+  costCents?: number | null;
+  technician?: string | null;
+  status: MachineMaintenanceStatus;
+  resolvedStatus?: MachineResolvedStatus | null;
+  businessId: string;
+  branchId?: string | null;
+  registeredBy: string;
+  registeredByName: string;
+  createdAt: string;
+}
+
+export interface MachineFormData {
+  name: string;
+  brand?: string;
+  model?: string;
+  category: MachineCategory;
+  purchaseDate?: string;
+  warrantyUntil?: string;
+  businessId?: string;
+  branchId?: string | null;
+  status?: MachineStatus;
+  nextMaintenanceDate?: string;
+}
+
+export interface MachineMaintenanceFormData {
+  type: MachineMaintenanceType;
+  status: MachineMaintenanceStatus;
+  date: string;
+  description?: string;
+  costCents?: number;
+  technician?: string;
+  resolvedStatus?: MachineResolvedStatus;
+  nextMaintenanceDate?: string;
+}
+
+export interface MachinesSummary {
+  total: number;
+  byStatus: Record<MachineStatus, number>;
+  upcomingMaintenance: Machine[];
+  recentRepairs: MachineMaintenance[];
+}
+
+export interface MachineFilters {
+  businessId?: string;
+  branchId?: string;
+  category?: MachineCategory | '';
+  status?: MachineStatus | '';
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
 // PWA Types
 export interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
