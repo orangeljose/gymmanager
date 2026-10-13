@@ -27,7 +27,7 @@ Chain strategy: pending
 
 ## Phase 1: Foundation / Contracts
 
-- [ ] 1.1 `frontend/src/types/index.ts`: add `ExpenseCategory`, `Expense`, `ExpenseFilters`, `ExpenseFormData`, `ExpenseSummary`
+- [x] 1.1 `frontend/src/types/index.ts`: add `ExpenseCategory`, `Expense`, `ExpenseFilters`, `ExpenseFormData`, `ExpenseSummary`
 - [x] 1.2 `backend/routes/expenses.py`: `expenses_bp` prefix `/api/expenses`; constants `EXPENSE_CATEGORIES`, `ADMIN_ROLES`; helpers `_scope_ids`, `_error`, `_index_error_response`, `_fetch_active_expense`
 - [x] 1.3 Register: export `expenses_bp` in `backend/routes/__init__.py`; import + `register_blueprint` in `backend/app.py`
 
@@ -51,17 +51,17 @@ Chain strategy: pending
 
 ## Phase 4: Frontend Wiring
 
-- [ ] 4.1 `frontend/src/services/api.ts`: `getExpenses`, `createExpense`, `updateExpense`, `deleteExpense`, `getExpensesSummary`
-- [ ] 4.2 `frontend/src/App.tsx`: `/expenses` route with `ProtectedRoute requiredRoles={super_admin,admin,branch_admin}`
-- [ ] 4.3 `frontend/src/components/Layout.tsx`: top-level "Egresos" (`TrendingDown`) after "Equipamiento"; register icon in `iconMap`
+- [x] 4.1 `frontend/src/services/api.ts`: `getExpenses`, `createExpense`, `updateExpense`, `deleteExpense`, `getExpensesSummary`
+- [x] 4.2 `frontend/src/App.tsx`: `/expenses` route with `ProtectedRoute requiredRoles={super_admin,admin,branch_admin}`
+- [x] 4.3 `frontend/src/components/Layout.tsx`: top-level "Egresos" (`TrendingDown`) after "Equipamiento"; register icon in `iconMap`
 
 ## Phase 5: Frontend Pages
 
-- [ ] 5.1 `frontend/src/components/ExpenseForm.tsx` — create/edit modal (category, amountCents, date, description)
-- [ ] 5.2 `frontend/src/pages/ExpensesPage.tsx` — Hoy/Semana/Mes stat cards, category badges, category + date filters, by-category chart (`recharts`), pagination, delete, open form
-- [ ] 5.3 Apply GoatGym theme; run `npm run build` (frontend)
+- [x] 5.1 `frontend/src/components/ExpenseForm.tsx` — create/edit modal (category, amountCents, date, description)
+- [x] 5.2 `frontend/src/pages/ExpensesPage.tsx` — Hoy/Semana/Mes stat cards, category badges, category + date filters, by-category chart (`recharts`), pagination, delete, open form
+- [x] 5.3 Apply GoatGym theme; run `npm run build` (frontend)
 
 ## Phase 6: Ops & Verification
 
-- [ ] 6.1 Document composite index `expenses (businessId ASC, date ASC)` in `openspec/changes/cash-expenses/indexes.md`
+- [x] 6.1 Document composite index `expenses (businessId ASC, date ASC)` in `openspec/changes/cash-expenses/indexes.md`
 - [ ] 6.2 Manual smoke (live Firebase): create → list → edit → delete → summary refresh

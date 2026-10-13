@@ -33,7 +33,11 @@ import type {
   MachineFormData,
   MachineMaintenance,
   MachineMaintenanceFormData,
-  MachinesSummary
+  MachinesSummary,
+  Expense,
+  ExpenseFilters,
+  ExpenseFormData,
+  ExpenseSummary
 } from '@/types';
 
 class ApiService {
@@ -596,6 +600,49 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  // Expenses (Egresos)
+  async getExpenses(filters: ExpenseFilters = {}): Promise<ApiResponse<Expense[]>> {
+    const params = new URLSearchParams();
+    if (filters.businessId) params.append('businessId', filters.businessId);
+    if (filters.branchId) params.append('branchId', filters.branchId);
+    if (filters.category) params.append('category', filters.category);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.search) params.append('search', filters.search);
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
+    const endpoint = `/expenses${params.toString() ? `?${params.toString()}` : ''}`;
+    return this.requestWithAuth<Expense[]>(endpoint);
+  }
+
+  async createExpense(data: ExpenseFormData): Promise<ApiResponse<Expense>> {
+    return this.requestWithAuth<Expense>('/expenses', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateExpense(id: string, data: Partial<ExpenseFormData>): Promise<ApiResponse<Expense>> {
+    return this.requestWithAuth<Expense>(`/expenses/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteExpense(id: string): Promise<ApiResponse<{ id: string }>> {
+    return this.requestWithAuth<{ id: string }>(`/expenses/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getExpensesSummary(params: { businessId?: string; branchId?: string } = {}): Promise<ApiResponse<ExpenseSummary>> {
+    const searchParams = new URLSearchParams();
+    if (params.businessId) searchParams.append('businessId', params.businessId);
+    if (params.branchId) searchParams.append('branchId', params.branchId);
+    const endpoint = `/expenses/summary${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.requestWithAuth<ExpenseSummary>(endpoint);
   }
 }
 

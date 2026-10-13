@@ -562,6 +562,52 @@ export interface MachineFilters {
   limit?: number;
 }
 
+// Expense Types (Egresos)
+export type ExpenseCategory = 'payroll' | 'supplies' | 'services' | 'rent' | 'maintenance' | 'other';
+
+export interface Expense {
+  id: string;
+  category: ExpenseCategory;
+  amountCents: number;          // centavos; el UI muestra dólares
+  description?: string | null;
+  date: string;                 // YYYY-MM-DD
+  businessId: string;
+  branchId?: string | null;
+  registeredBy: string;
+  registeredByName: string;
+  createdAt: string;
+  isDeleted?: boolean;
+  deletedBy?: string;
+  deletedAt?: string;
+}
+
+export interface ExpenseSummary {
+  today: number;                // centavos
+  week: number;                 // centavos
+  month: number;                // centavos
+  byCategory: Record<ExpenseCategory, number>;  // centavos
+}
+
+export interface ExpenseFilters {
+  businessId?: string;
+  branchId?: string;
+  category?: ExpenseCategory | '';
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ExpenseFormData {
+  category: ExpenseCategory;
+  amountCents: number;
+  description?: string;
+  date: string;
+  businessId?: string;          // Solo para create
+  branchId?: string | null;
+}
+
 // PWA Types
 export interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];

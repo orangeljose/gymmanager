@@ -8,6 +8,7 @@ import {
   CreditCard,
   FileText,
   Settings,
+  TrendingDown,
   LogOut,
   Menu,
   X,
@@ -50,6 +51,12 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     icon: 'Dumbbell'
   },
   {
+    label: 'Egresos',
+    href: '/expenses',
+    icon: 'TrendingDown',
+    roles: ['super_admin', 'admin', 'branch_admin']
+  },
+  {
     label: 'Reportes',
     href: '/reports',
     icon: 'FileText',
@@ -84,7 +91,8 @@ const iconMap: Record<string, React.ElementType> = {
   Dumbbell,
   CreditCard,
   FileText,
-  Settings
+  Settings,
+  TrendingDown
 };
 
 export const Layout: React.FC = () => {
