@@ -38,7 +38,11 @@ machines_bp = Blueprint('machines', __name__, url_prefix='/api/machines')
 MACHINES_COLLECTION = 'machines'
 MAINTENANCE_COLLECTION = 'machine_maintenance'
 
-VALID_CATEGORIES = ['cardio', 'strength', 'functional', 'free_weights', 'other']
+VALID_KINDS = ['machine', 'item']
+VALID_CATEGORIES = ['cardio', 'strength', 'functional', 'free_weights', 'accessory', 'other']
+# Subconjunto válido para `kind='item'` (pesas y accesorios): las categorías de
+# máquina (cardio/strength/functional) no aplican físicamente a un accesorio.
+ITEM_CATEGORIES = ['free_weights', 'accessory', 'other']
 VALID_STATUSES = ['operational', 'maintenance', 'out_of_service']
 VALID_MAINTENANCE_TYPES = ['preventive', 'repair']
 VALID_MAINTENANCE_STATUSES = ['scheduled', 'in_progress', 'completed']
@@ -86,6 +90,26 @@ def _is_active(machine):
     Trata un documento legacy sin `isActive` como activo (filtrado defensivo).
     """
     return machine.get('isActive', True) is not False
+
+
+def _kind(doc):
+    """
+    Normaliza el discriminador de equipamiento. Un documento legacy sin `kind`
+    se trata como `machine` (compatibilidad hacia atrás).
+    """
+    return doc.get('kind') or 'machine'
+
+
+def _valid_quantity(value):
+    """`quantity` debe ser un entero >= 1 (bool excluido explícitamente)."""
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 1
+
+
+def _valid_weight(value):
+    """`weightKg` debe ser un número >= 0 o null."""
+    if value is None:
+        return True
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0
 
 
 def _scope_ids():
@@ -179,6 +203,7 @@ def list_machines():
         # Filtrado defensivo + filtros de negocio/sede en Python.
         category = (request.args.get('category') or '').strip()
         status = (request.args.get('status') or '').strip()
+        kind = (request.args.get('kind') or '').strip()
         search = (request.args.get('search') or '').strip().lower()
 
         result = []
@@ -190,6 +215,8 @@ def list_machines():
             if category and m.get('category') != category:
                 continue
             if status and m.get('status') != status:
+                continue
+            if kind and _kind(m) != kind:
                 continue
             if search:
                 haystack = ' '.join([
@@ -262,10 +289,16 @@ def machines_summary():
                 return index_response
             raise
 
-        active_machines = [
+        active_docs = [
             m for m in machines
             if _is_active(m) and (not branch_id or m.get('branchId') == branch_id)
         ]
+
+        # Split por `kind` en Python sobre la MISMA query scoped a `machines`
+        # (sin índice nuevo). `machine` conserva los statos; `item` va al bloque
+        # aditivo `items`.
+        active_machines = [m for m in active_docs if _kind(m) == 'machine']
+        active_items = [m for m in active_docs if _kind(m) == 'item']
 
         by_status = {s: 0 for s in VALID_STATUSES}
         for m in active_machines:
@@ -280,6 +313,11 @@ def machines_summary():
             if m.get('nextMaintenanceDate') and m.get('nextMaintenanceDate') <= horizon
         ]
         upcoming.sort(key=lambda m: m.get('nextMaintenanceDate') or '')
+
+        items_summary = {
+            'itemTypes': len(active_items),
+            'totalUnits': sum(int(m.get('quantity') or 1) for m in active_items),
+        }
 
         maintenance_filters = []
         if business_id:
@@ -311,6 +349,7 @@ def machines_summary():
                 'byStatus': by_status,
                 'upcomingMaintenance': upcoming,
                 'recentRepairs': recent,
+                'items': items_summary,
             }
         }), 200
 
@@ -374,20 +413,53 @@ def create_machine():
         if not name:
             return _error(400, 'El campo name es requerido')
 
-        category = (data.get('category') or '').strip()
-        if category not in VALID_CATEGORIES:
-            return _error(400, f'category debe ser uno de: {", ".join(VALID_CATEGORIES)}')
+        kind = (data.get('kind') or 'machine').strip()
+        if kind not in VALID_KINDS:
+            return _error(400, f'kind debe ser uno de: {", ".join(VALID_KINDS)}')
 
-        status = (data.get('status') or 'operational').strip()
-        if status not in VALID_STATUSES:
-            return _error(400, f'status debe ser uno de: {", ".join(VALID_STATUSES)}')
+        # Campos específicos por tipo. Sólo el branch correspondiente se valida;
+        # el path de máquina conserva byte-a-byte su comportamiento original.
+        item_fields = {}
+        category = ''
+        status = 'operational'
 
-        for field in ('purchaseDate', 'warrantyUntil', 'nextMaintenanceDate'):
-            value = data.get(field)
-            if value:
-                errors = validate_date_format(value, field)
+        if kind == 'item':
+            category = (data.get('category') or '').strip()
+            if category not in ITEM_CATEGORIES:
+                return _error(400, f'category de accesorio debe ser uno de: {", ".join(ITEM_CATEGORIES)}')
+
+            quantity = data.get('quantity', 1)
+            if not _valid_quantity(quantity):
+                return _error(400, 'quantity debe ser un entero >= 1')
+
+            weight_kg = data.get('weightKg')
+            if not _valid_weight(weight_kg):
+                return _error(400, 'weightKg debe ser un número >= 0 o null')
+
+            purchase_date = data.get('purchaseDate')
+            if purchase_date:
+                errors = validate_date_format(purchase_date, 'purchaseDate')
                 if errors:
                     return _error(400, '; '.join(errors))
+
+            # Los accesorios no tienen mantenimiento ni estado editable.
+            item_fields = {'quantity': quantity, 'weightKg': weight_kg}
+
+        else:
+            category = (data.get('category') or '').strip()
+            if category not in VALID_CATEGORIES:
+                return _error(400, f'category debe ser uno de: {", ".join(VALID_CATEGORIES)}')
+
+            status = (data.get('status') or 'operational').strip()
+            if status not in VALID_STATUSES:
+                return _error(400, f'status debe ser uno de: {", ".join(VALID_STATUSES)}')
+
+            for field in ('purchaseDate', 'warrantyUntil', 'nextMaintenanceDate'):
+                value = data.get(field)
+                if value:
+                    errors = validate_date_format(value, field)
+                    if errors:
+                        return _error(400, '; '.join(errors))
 
         role = g.current_user.get('role')
         user_branch_id = g.current_user.get('branchId')
@@ -405,22 +477,45 @@ def create_machine():
             business_id = g.current_user.get('businessId')
 
         now_iso = datetime.now(timezone.utc).isoformat()
-        record = {
-            'name': name,
-            'brand': data.get('brand'),
-            'model': data.get('model'),
-            'category': category,
-            'purchaseDate': data.get('purchaseDate'),
-            'warrantyUntil': data.get('warrantyUntil'),
-            'businessId': business_id,
-            'branchId': branch_id,
-            'status': status,
-            'nextMaintenanceDate': data.get('nextMaintenanceDate'),
-            'isActive': True,
-            'registeredBy': g.current_user.get('uid'),
-            'registeredByName': g.current_user.get('name'),
-            'createdAt': now_iso,
-        }
+
+        if kind == 'item':
+            record = {
+                'kind': 'item',
+                'name': name,
+                'brand': None,
+                'model': None,
+                'category': category,
+                'purchaseDate': data.get('purchaseDate'),
+                'warrantyUntil': None,
+                'businessId': business_id,
+                'branchId': branch_id,
+                'status': 'operational',
+                'nextMaintenanceDate': None,
+                'quantity': item_fields['quantity'],
+                'weightKg': item_fields['weightKg'],
+                'isActive': True,
+                'registeredBy': g.current_user.get('uid'),
+                'registeredByName': g.current_user.get('name'),
+                'createdAt': now_iso,
+            }
+        else:
+            record = {
+                'kind': 'machine',
+                'name': name,
+                'brand': data.get('brand'),
+                'model': data.get('model'),
+                'category': category,
+                'purchaseDate': data.get('purchaseDate'),
+                'warrantyUntil': data.get('warrantyUntil'),
+                'businessId': business_id,
+                'branchId': branch_id,
+                'status': status,
+                'nextMaintenanceDate': data.get('nextMaintenanceDate'),
+                'isActive': True,
+                'registeredBy': g.current_user.get('uid'),
+                'registeredByName': g.current_user.get('name'),
+                'createdAt': now_iso,
+            }
 
         firebase_service = FirebaseService()
         created = firebase_service.create_document(MACHINES_COLLECTION, record)
@@ -463,32 +558,69 @@ def update_machine(machine_id):
 
         update = {}
 
-        if 'name' in data:
-            name = (data.get('name') or '').strip()
-            if not name:
-                return _error(400, 'El campo name no puede estar vacío')
-            update['name'] = name
+        if _kind(machine) == 'item':
+            # Los accesorios sólo permiten editar name, category (set de ítems),
+            # quantity, weightKg y purchaseDate. El status queda fijo en
+            # 'operational' y no tienen mantenimiento.
+            if 'name' in data:
+                name = (data.get('name') or '').strip()
+                if not name:
+                    return _error(400, 'El campo name no puede estar vacío')
+                update['name'] = name
 
-        if 'category' in data:
-            category = (data.get('category') or '').strip()
-            if category not in VALID_CATEGORIES:
-                return _error(400, f'category debe ser uno de: {", ".join(VALID_CATEGORIES)}')
-            update['category'] = category
+            if 'category' in data:
+                category = (data.get('category') or '').strip()
+                if category not in ITEM_CATEGORIES:
+                    return _error(400, f'category de accesorio debe ser uno de: {", ".join(ITEM_CATEGORIES)}')
+                update['category'] = category
 
-        if 'status' in data:
-            status = (data.get('status') or '').strip()
-            if status not in VALID_STATUSES:
-                return _error(400, f'status debe ser uno de: {", ".join(VALID_STATUSES)}')
-            update['status'] = status
+            if 'quantity' in data:
+                quantity = data.get('quantity')
+                if not _valid_quantity(quantity):
+                    return _error(400, 'quantity debe ser un entero >= 1')
+                update['quantity'] = quantity
 
-        for field in ('brand', 'model', 'purchaseDate', 'warrantyUntil', 'nextMaintenanceDate'):
-            if field in data:
-                value = data.get(field)
+            if 'weightKg' in data:
+                weight_kg = data.get('weightKg')
+                if not _valid_weight(weight_kg):
+                    return _error(400, 'weightKg debe ser un número >= 0 o null')
+                update['weightKg'] = weight_kg
+
+            if 'purchaseDate' in data:
+                value = data.get('purchaseDate')
                 if value:
-                    errors = validate_date_format(value, field)
-                    if errors and field in ('purchaseDate', 'warrantyUntil', 'nextMaintenanceDate'):
+                    errors = validate_date_format(value, 'purchaseDate')
+                    if errors:
                         return _error(400, '; '.join(errors))
-                update[field] = value
+                update['purchaseDate'] = value
+
+        else:
+            if 'name' in data:
+                name = (data.get('name') or '').strip()
+                if not name:
+                    return _error(400, 'El campo name no puede estar vacío')
+                update['name'] = name
+
+            if 'category' in data:
+                category = (data.get('category') or '').strip()
+                if category not in VALID_CATEGORIES:
+                    return _error(400, f'category debe ser uno de: {", ".join(VALID_CATEGORIES)}')
+                update['category'] = category
+
+            if 'status' in data:
+                status = (data.get('status') or '').strip()
+                if status not in VALID_STATUSES:
+                    return _error(400, f'status debe ser uno de: {", ".join(VALID_STATUSES)}')
+                update['status'] = status
+
+            for field in ('brand', 'model', 'purchaseDate', 'warrantyUntil', 'nextMaintenanceDate'):
+                if field in data:
+                    value = data.get(field)
+                    if value:
+                        errors = validate_date_format(value, field)
+                        if errors and field in ('purchaseDate', 'warrantyUntil', 'nextMaintenanceDate'):
+                            return _error(400, '; '.join(errors))
+                    update[field] = value
 
         if not update:
             return _error(400, 'No se enviaron campos válidos para actualizar')
@@ -681,6 +813,11 @@ def add_machine_maintenance(machine_id):
         denied = _machine_scope_denied(machine)
         if denied:
             return denied
+
+        # Los accesorios (kind='item') no tienen mantenimiento: rechazo antes de
+        # cualquier escritura.
+        if _kind(machine) == 'item':
+            return _error(400, 'Los accesorios no tienen mantenimiento')
 
         now_iso = datetime.now(timezone.utc).isoformat()
         record = {

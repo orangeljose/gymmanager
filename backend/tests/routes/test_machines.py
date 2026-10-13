@@ -65,6 +65,12 @@ MACHINE = {
     'status': 'operational', 'isActive': True,
 }
 
+ITEM = {
+    'id': 'i1', 'kind': 'item', 'name': 'Mancuerna 10kg', 'category': 'free_weights',
+    'businessId': 'biz-1', 'branchId': 'branch-1', 'status': 'operational',
+    'isActive': True, 'quantity': 8, 'weightKg': 10,
+}
+
 
 # ============================================================================
 # FIXTURES
@@ -648,3 +654,320 @@ class TestMachinesSummary:
 
         assert response.status_code == 200
         assert response.get_json()['data']['upcomingMaintenance'] == []
+
+
+# ============================================================================
+# POST /api/machines — kind='item' (validación condicional)
+# ============================================================================
+
+class TestCreateItem:
+
+    def test_item_create_201_stores_fields(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        client = make_client(mock)
+
+        response = client.post('/api/machines', json={
+            'kind': 'item', 'name': 'Mancuerna 10kg', 'category': 'free_weights',
+            'quantity': 8, 'weightKg': 10,
+        }, headers=auth_header)
+
+        assert response.status_code == 201
+        collection, record = mock.create_document.call_args[0]
+        assert collection == 'machines'
+        assert record['kind'] == 'item'
+        assert record['quantity'] == 8
+        assert record['weightKg'] == 10
+        assert record['status'] == 'operational'
+        assert record['nextMaintenanceDate'] is None
+        assert record['isActive'] is True
+        assert {'kind', 'name', 'quantity', 'weightKg', 'category', 'businessId'} <= set(record)
+
+    def test_item_quantity_defaults_to_one(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        client = make_client(mock)
+
+        response = client.post('/api/machines', json={
+            'kind': 'item', 'name': 'Cuerda', 'category': 'accessory',
+        }, headers=auth_header)
+
+        assert response.status_code == 201
+        _, record = mock.create_document.call_args[0]
+        assert record['quantity'] == 1
+        assert record['weightKg'] is None
+
+    @pytest.mark.parametrize('quantity', [0, -1, 'x', 2.5, True])
+    def test_item_invalid_quantity_400(self, make_client, auth_header, quantity):
+        mock = create_mock_service(role='admin')
+        client = make_client(mock)
+
+        response = client.post('/api/machines', json={
+            'kind': 'item', 'name': 'X', 'category': 'free_weights', 'quantity': quantity,
+        }, headers=auth_header)
+
+        assert response.status_code == 400
+        mock.create_document.assert_not_called()
+
+    def test_item_invalid_weight_400(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        client = make_client(mock)
+
+        response = client.post('/api/machines', json={
+            'kind': 'item', 'name': 'X', 'category': 'free_weights', 'weightKg': -1,
+        }, headers=auth_header)
+
+        assert response.status_code == 400
+        mock.create_document.assert_not_called()
+
+    def test_item_accepts_null_weight(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        client = make_client(mock)
+
+        response = client.post('/api/machines', json={
+            'kind': 'item', 'name': 'X', 'category': 'other', 'weightKg': None,
+        }, headers=auth_header)
+
+        assert response.status_code == 201
+        _, record = mock.create_document.call_args[0]
+        assert record['weightKg'] is None
+
+    def test_item_machine_category_rejected_400(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        client = make_client(mock)
+
+        response = client.post('/api/machines', json={
+            'kind': 'item', 'name': 'X', 'category': 'cardio',
+        }, headers=auth_header)
+
+        assert response.status_code == 400
+        mock.create_document.assert_not_called()
+
+    def test_unknown_kind_400(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        client = make_client(mock)
+
+        response = client.post('/api/machines', json={
+            'kind': 'gadget', 'name': 'X', 'category': 'cardio',
+        }, headers=auth_header)
+
+        assert response.status_code == 400
+        mock.create_document.assert_not_called()
+
+    def test_machine_kind_explicit_stored(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        client = make_client(mock)
+
+        response = client.post('/api/machines', json={
+            'name': 'Bici', 'category': 'cardio', 'kind': 'machine',
+        }, headers=auth_header)
+
+        assert response.status_code == 201
+        _, record = mock.create_document.call_args[0]
+        assert record['kind'] == 'machine'
+        assert record['status'] == 'operational'
+
+
+# ============================================================================
+# GET /api/machines?kind=  (filtro por tipo)
+# ============================================================================
+
+class TestListKindFilter:
+
+    def _docs(self):
+        return [
+            {'id': 'm1', 'name': 'Cinta', 'category': 'cardio', 'status': 'operational',
+             'businessId': 'biz-1', 'branchId': 'branch-1', 'isActive': True, 'kind': 'machine'},
+            {'id': 'i1', 'name': 'Mancuerna', 'category': 'free_weights', 'status': 'operational',
+             'businessId': 'biz-1', 'branchId': 'branch-1', 'isActive': True, 'kind': 'item',
+             'quantity': 3},
+            # legacy sin kind → machine
+            {'id': 'l1', 'name': 'Remo', 'category': 'strength', 'status': 'operational',
+             'businessId': 'biz-1', 'branchId': 'branch-1'},
+        ]
+
+    def test_filter_item_only(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        mock.query_firestore.return_value = self._docs()
+        client = make_client(mock)
+
+        response = client.get('/api/machines?kind=item', headers=auth_header)
+
+        assert [m['id'] for m in response.get_json()['data']] == ['i1']
+        # Sigue siendo UNA query scoped sólo por businessId (sin índice nuevo)
+        assert mock.query_firestore.call_args[1]['filters'] == [
+            {'field': 'businessId', 'operator': '==', 'value': 'biz-1'}
+        ]
+
+    def test_filter_machine_includes_legacy(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        mock.query_firestore.return_value = self._docs()
+        client = make_client(mock)
+
+        response = client.get('/api/machines?kind=machine', headers=auth_header)
+
+        # Orden estable por nombre: Cinta, Remo
+        assert [m['id'] for m in response.get_json()['data']] == ['m1', 'l1']
+
+    def test_no_filter_returns_all(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        mock.query_firestore.return_value = self._docs()
+        client = make_client(mock)
+
+        response = client.get('/api/machines', headers=auth_header)
+
+        assert {m['id'] for m in response.get_json()['data']} == {'m1', 'i1', 'l1'}
+
+
+# ============================================================================
+# GET /api/machines/summary — split máquinas / ítems
+# ============================================================================
+
+class TestSummaryKindSplit:
+
+    def test_summary_split_machines_and_items(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        docs = [
+            {'id': 'm1', 'kind': 'machine', 'status': 'operational',
+             'businessId': 'biz-1', 'branchId': 'branch-1', 'isActive': True},
+            {'id': 'm2', 'kind': 'machine', 'status': 'maintenance',
+             'businessId': 'biz-1', 'branchId': 'branch-1', 'isActive': True},
+            # Ítem con fecha de mantenimiento: NO debe entrar en upcomingMaintenance
+            {'id': 'i1', 'kind': 'item', 'quantity': 5, 'nextMaintenanceDate': _date_plus(2),
+             'businessId': 'biz-1', 'branchId': 'branch-1', 'isActive': True},
+            {'id': 'i2', 'kind': 'item', 'quantity': 2,
+             'businessId': 'biz-1', 'branchId': 'branch-1', 'isActive': True},
+            {'id': 'i3', 'kind': 'item', 'quantity': 1,
+             'businessId': 'biz-1', 'branchId': 'branch-1', 'isActive': True},
+        ]
+        mock.query_firestore.side_effect = lambda collection, **kw: (
+            docs if collection == 'machines' else []
+        )
+        client = make_client(mock)
+
+        response = client.get('/api/machines/summary', headers=auth_header)
+
+        assert response.status_code == 200
+        data = response.get_json()['data']
+        assert data['total'] == 2
+        assert data['byStatus'] == {'operational': 1, 'maintenance': 1, 'out_of_service': 0}
+        assert data['upcomingMaintenance'] == []
+        assert data['items'] == {'itemTypes': 3, 'totalUnits': 8}
+
+    def test_items_only_business(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        docs = [
+            {'id': 'i1', 'kind': 'item', 'quantity': 4,
+             'businessId': 'biz-1', 'branchId': 'branch-1', 'isActive': True},
+        ]
+        mock.query_firestore.side_effect = lambda collection, **kw: (
+            docs if collection == 'machines' else []
+        )
+        client = make_client(mock)
+
+        data = client.get('/api/machines/summary', headers=auth_header).get_json()['data']
+
+        assert data['total'] == 0
+        assert data['byStatus'] == {'operational': 0, 'maintenance': 0, 'out_of_service': 0}
+        assert data['items'] == {'itemTypes': 1, 'totalUnits': 4}
+
+
+# ============================================================================
+# POST /api/machines/<id>/maintenance en un ítem
+# ============================================================================
+
+class TestMaintenanceOnItem:
+
+    def test_maintenance_on_item_400(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        mock.get_document.return_value = dict(ITEM)
+        client = make_client(mock)
+
+        response = client.post('/api/machines/i1/maintenance',
+                               json={'type': 'repair', 'status': 'completed',
+                                     'resolvedStatus': 'operational', 'date': '2026-10-13'},
+                               headers=auth_header)
+
+        assert response.status_code == 400
+        assert 'accesorios' in response.get_json()['error']['message'].lower()
+        mock.create_document.assert_not_called()
+        mock.update_document.assert_not_called()
+
+    def test_legacy_doc_maintenance_still_201(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        mock.get_document.return_value = dict(MACHINE)  # sin kind → machine
+        mock.create_document.return_value = {'id': 'rec-1'}
+        client = make_client(mock)
+
+        response = client.post('/api/machines/m1/maintenance',
+                               json={'type': 'preventive', 'status': 'completed',
+                                     'date': '2026-10-13'},
+                               headers=auth_header)
+
+        assert response.status_code == 201
+        mock.create_document.assert_called_once()
+
+
+# ============================================================================
+# PUT /api/machines/<id> en un ítem
+# ============================================================================
+
+class TestUpdateItem:
+
+    def test_update_item_quantity_200(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        mock.get_document.return_value = dict(ITEM)
+        client = make_client(mock)
+
+        response = client.put('/api/machines/i1', json={'quantity': 12}, headers=auth_header)
+
+        assert response.status_code == 200
+        collection, doc_id, update = mock.update_document.call_args[0]
+        assert collection == 'machines'
+        assert doc_id == 'i1'
+        assert update == {'quantity': 12}
+
+    @pytest.mark.parametrize('quantity', [-3, 0, 'x'])
+    def test_update_item_invalid_quantity_400(self, make_client, auth_header, quantity):
+        mock = create_mock_service(role='admin')
+        mock.get_document.return_value = dict(ITEM)
+        client = make_client(mock)
+
+        response = client.put('/api/machines/i1', json={'quantity': quantity}, headers=auth_header)
+
+        assert response.status_code == 400
+        mock.update_document.assert_not_called()
+
+    def test_update_item_fields_200(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        mock.get_document.return_value = dict(ITEM)
+        client = make_client(mock)
+
+        response = client.put('/api/machines/i1',
+                              json={'weightKg': 12.5, 'category': 'accessory',
+                                    'name': 'Mancuerna 12kg'},
+                              headers=auth_header)
+
+        assert response.status_code == 200
+        _, _, update = mock.update_document.call_args[0]
+        assert update['weightKg'] == 12.5
+        assert update['category'] == 'accessory'
+        assert update['name'] == 'Mancuerna 12kg'
+
+    def test_update_item_invalid_weight_400(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        mock.get_document.return_value = dict(ITEM)
+        client = make_client(mock)
+
+        response = client.put('/api/machines/i1', json={'weightKg': -2}, headers=auth_header)
+
+        assert response.status_code == 400
+        mock.update_document.assert_not_called()
+
+    def test_update_item_rejects_machine_category_400(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        mock.get_document.return_value = dict(ITEM)
+        client = make_client(mock)
+
+        response = client.put('/api/machines/i1', json={'category': 'cardio'}, headers=auth_header)
+
+        assert response.status_code == 400
+        mock.update_document.assert_not_called()
