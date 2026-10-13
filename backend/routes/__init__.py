@@ -12,6 +12,7 @@ from .users import users_bp
 from .invitations import invitations_bp
 from .businesses import businesses_bp
 from .attendance import attendance_bp
+from .machines import machines_bp
 
 __all__ = [
     'auth_bp',
@@ -24,5 +25,6 @@ __all__ = [
     'users_bp',
     'invitations_bp',
     'businesses_bp',
-    'attendance_bp'
+    'attendance_bp',
+    'machines_bp'
 ]

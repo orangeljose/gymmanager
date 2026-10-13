@@ -4,6 +4,7 @@ import {
   Home,
   Users,
   UserCheck,
+  Dumbbell,
   CreditCard,
   FileText,
   Settings,
@@ -44,6 +45,11 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     roles: ['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer']
   },
   {
+    label: 'Equipamiento',
+    href: '/machines',
+    icon: 'Dumbbell'
+  },
+  {
     label: 'Reportes',
     href: '/reports',
     icon: 'FileText',
@@ -75,6 +81,7 @@ const iconMap: Record<string, React.ElementType> = {
   Home,
   Users,
   UserCheck,
+  Dumbbell,
   CreditCard,
   FileText,
   Settings

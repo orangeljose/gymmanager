@@ -29,6 +29,8 @@ import { BusinessesPage } from '@/pages/BusinessesPage';
 import { DataLoadPage } from '@/pages/DataLoadPage';
 import { PaymentsNewPage } from '@/pages/PaymentsNewPage';
 import { AttendancePage } from '@/pages/AttendancePage';
+import { MachinesPage } from '@/pages/MachinesPage';
+import { MachineDetailPage } from '@/pages/MachineDetailPage';
 
 // Loading component
 const LoadingSpinner = () => (
@@ -92,7 +94,19 @@ const App: React.FC = () => {
                 </Suspense>
               </ProtectedRoute>
             } />
-            
+
+            {/* Machines */}
+            <Route path="machines" element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <MachinesPage />
+              </Suspense>
+            } />
+            <Route path="machines/:id" element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <MachineDetailPage />
+              </Suspense>
+            } />
+
             {/* Payments */}
             <Route path="payments/new" element={
               <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin', 'cashier']}>

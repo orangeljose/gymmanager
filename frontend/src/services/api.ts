@@ -27,7 +27,13 @@ import type {
   AttendanceFilters,
   AttendanceMethod,
   AttendanceSummary,
-  ClientAttendanceStats
+  ClientAttendanceStats,
+  Machine,
+  MachineFilters,
+  MachineFormData,
+  MachineMaintenance,
+  MachineMaintenanceFormData,
+  MachinesSummary
 } from '@/types';
 
 class ApiService {
@@ -528,6 +534,68 @@ class ApiService {
   // Exchange Rate
   async getExchangeRate(): Promise<ApiResponse<{ rate: number; currency: string; source: string; cached: boolean }>> {
     return this.request<{ rate: number; currency: string; source: string; cached: boolean }>('/exchange-rate');
+  }
+
+  // Machines
+  async getMachines(filters: MachineFilters = {}): Promise<ApiResponse<Machine[]>> {
+    const params = new URLSearchParams();
+    if (filters.businessId) params.append('businessId', filters.businessId);
+    if (filters.branchId) params.append('branchId', filters.branchId);
+    if (filters.kind) params.append('kind', filters.kind);
+    if (filters.category) params.append('category', filters.category);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.search) params.append('search', filters.search);
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
+    const endpoint = `/machines${params.toString() ? `?${params.toString()}` : ''}`;
+    return this.requestWithAuth<Machine[]>(endpoint);
+  }
+
+  async getMachine(id: string): Promise<ApiResponse<Machine>> {
+    return this.requestWithAuth<Machine>(`/machines/${id}`);
+  }
+
+  async createMachine(data: MachineFormData): Promise<ApiResponse<Machine>> {
+    return this.requestWithAuth<Machine>('/machines', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateMachine(id: string, data: Partial<MachineFormData>): Promise<ApiResponse<Machine>> {
+    return this.requestWithAuth<Machine>(`/machines/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMachine(id: string): Promise<ApiResponse<{ id: string }>> {
+    return this.requestWithAuth<{ id: string }>(`/machines/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getMachinesSummary(params: { businessId?: string; branchId?: string } = {}): Promise<ApiResponse<MachinesSummary>> {
+    const searchParams = new URLSearchParams();
+    if (params.businessId) searchParams.append('businessId', params.businessId);
+    if (params.branchId) searchParams.append('branchId', params.branchId);
+    const endpoint = `/machines/summary${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.requestWithAuth<MachinesSummary>(endpoint);
+  }
+
+  async getMachineMaintenance(id: string, params: { page?: number; limit?: number } = {}): Promise<ApiResponse<MachineMaintenance[]>> {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.limit) searchParams.append('limit', params.limit.toString());
+    const endpoint = `/machines/${id}/maintenance${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.requestWithAuth<MachineMaintenance[]>(endpoint);
+  }
+
+  async addMachineMaintenance(id: string, data: MachineMaintenanceFormData): Promise<ApiResponse<MachineMaintenance>> {
+    return this.requestWithAuth<MachineMaintenance>(`/machines/${id}/maintenance`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 }
 
