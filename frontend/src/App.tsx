@@ -110,7 +110,7 @@ const App: React.FC = () => {
               </Suspense>
             } />
 
-            {/* Expenses (Egresos) */}
+            {/* Expenses (Servicios) */}
             <Route path="expenses" element={
               <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>

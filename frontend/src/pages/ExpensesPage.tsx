@@ -1,7 +1,4 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-} from 'recharts';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import toast from 'react-hot-toast';
@@ -72,7 +69,7 @@ export const ExpensesPage: React.FC = () => {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Error cargando egresos');
+      setError(err.message || 'Error cargando servicios');
     } finally {
       setLoading(false);
     }
@@ -92,16 +89,16 @@ export const ExpensesPage: React.FC = () => {
 
   const handleDelete = async (expense: Expense) => {
     const label = `${EXPENSE_CATEGORY_META[expense.category].label} · ${formatDollars(expense.amountCents)}`;
-    if (!window.confirm(`¿Eliminar el egreso "${label}"? Esta acción no se puede deshacer.`)) return;
+    if (!window.confirm(`¿Eliminar el servicio "${label}"? Esta acción no se puede deshacer.`)) return;
     try {
       const response = await apiService.deleteExpense(expense.id);
       if (response.success) {
-        toast.success('Egreso eliminado');
+        toast.success('Servicio eliminado');
         loadExpenses();
         loadSummary();
       }
     } catch (err: any) {
-      toast.error(err.message || 'Error eliminando egreso');
+      toast.error(err.message || 'Error eliminando servicio');
     }
   };
 
@@ -111,24 +108,19 @@ export const ExpensesPage: React.FC = () => {
     { label: 'Últimos 30 días', value: summary?.month ?? 0, icon: Receipt, color: 'text-green-600 bg-green-50' },
   ];
 
-  const chartData = EXPENSE_CATEGORIES.map((c) => ({
-    name: EXPENSE_CATEGORY_META[c].label,
-    value: (summary?.byCategory?.[c] ?? 0) / 100,
-  })).filter((d) => d.value > 0);
-
   const hasFilters = !!(filters.category || filters.startDate || filters.endDate || filters.search);
 
   return (
     <div className="p-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Egresos</h1>
-          <p className="text-gray-600 mt-1">Gastos del negocio por categoría</p>
+          <h1 className="text-2xl font-bold text-gray-900">Servicios</h1>
+          <p className="text-gray-600 mt-1">Servicios y gastos del negocio por categoría</p>
         </div>
         {canWrite && (
           <button onClick={openCreate} className="btn btn-primary">
             <Plus className="h-4 w-4 mr-2" />
-            Registrar Egreso
+            Registrar Servicio
           </button>
         )}
       </div>
@@ -190,23 +182,7 @@ export const ExpensesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* By-category chart */}
-      {chartData.length > 0 && (
-        <div className="card mb-6">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Egresos por categoría (USD)</h2>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value) => formatDollars(Number(value) * 100)} />
-                <Bar dataKey="value" fill="#F73F08" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
+      {/* By-category chart removed: this is a registration screen, not a report */}
 
       {/* List */}
       {loading ? (
@@ -216,22 +192,22 @@ export const ExpensesPage: React.FC = () => {
       ) : error ? (
         <div className="card text-center py-12">
           <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No se pudieron cargar los egresos</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No se pudieron cargar los servicios</h3>
           <p className="text-gray-600">{error}</p>
         </div>
       ) : expenses.length === 0 ? (
         <div className="card text-center py-12">
           <TrendingDown className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {hasFilters ? 'No hay egresos para estos filtros' : 'No hay egresos registrados'}
+            {hasFilters ? 'No hay servicios para estos filtros' : 'No hay servicios registrados'}
           </h3>
           <p className="text-gray-600 mb-6">
-            Registra los gastos del negocio para llevar el control financiero.
+            Registra los servicios y gastos del negocio para llevar el control financiero.
           </p>
           {canWrite && (
             <button onClick={openCreate} className="btn btn-primary">
               <Plus className="h-4 w-4 mr-2" />
-              Registrar Egreso
+              Registrar Servicio
             </button>
           )}
         </div>
@@ -294,7 +270,7 @@ export const ExpensesPage: React.FC = () => {
           {meta.pages > 1 && (
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-gray-500">
-                Página {meta.page} de {meta.pages} · {meta.total} egresos
+                Página {meta.page} de {meta.pages} · {meta.total} servicios
               </p>
               <div className="flex space-x-2">
                 <button
