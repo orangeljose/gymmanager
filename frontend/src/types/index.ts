@@ -590,6 +590,18 @@ export interface ExpenseSummary {
   byCategory: Record<ExpenseCategory, number>;  // centavos
 }
 
+export interface ServiceReportDailyPoint {
+  date: string;
+  totalCents: number;
+}
+
+export interface ServiceReport {
+  totalCents: number;                              // centavos
+  count: number;                                   // número de egresos en el período
+  byCategory: Record<ExpenseCategory, number>;     // categoría → centavos
+  daily: ServiceReportDailyPoint[];
+}
+
 export interface ExpenseFilters {
   businessId?: string;
   branchId?: string;

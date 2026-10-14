@@ -38,6 +38,7 @@ import type {
   ExpenseFilters,
   ExpenseFormData,
   ExpenseSummary,
+  ServiceReport,
   Product,
   ProductFilters,
   ProductFormData,
@@ -650,6 +651,16 @@ class ApiService {
     if (params.branchId) searchParams.append('branchId', params.branchId);
     const endpoint = `/expenses/summary${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
     return this.requestWithAuth<ExpenseSummary>(endpoint);
+  }
+
+  async getExpensesReport(startDate?: string, endDate?: string, branchId?: string, businessId?: string): Promise<ApiResponse<ServiceReport>> {
+    const searchParams = new URLSearchParams();
+    if (startDate) searchParams.append('startDate', startDate);
+    if (endDate) searchParams.append('endDate', endDate);
+    if (branchId) searchParams.append('branchId', branchId);
+    if (businessId) searchParams.append('businessId', businessId);
+    const endpoint = `/expenses/report${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.requestWithAuth<ServiceReport>(endpoint);
   }
 
   // Products (Productos e Inventario)
