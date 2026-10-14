@@ -37,7 +37,13 @@ import type {
   Expense,
   ExpenseFilters,
   ExpenseFormData,
-  ExpenseSummary
+  ExpenseSummary,
+  Product,
+  ProductFilters,
+  ProductFormData,
+  ProductMovement,
+  ProductMovementFormData,
+  ProductSummary
 } from '@/types';
 
 class ApiService {
@@ -643,6 +649,67 @@ class ApiService {
     if (params.branchId) searchParams.append('branchId', params.branchId);
     const endpoint = `/expenses/summary${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
     return this.requestWithAuth<ExpenseSummary>(endpoint);
+  }
+
+  // Products (Productos e Inventario)
+  async getProducts(filters: ProductFilters = {}): Promise<ApiResponse<Product[]>> {
+    const params = new URLSearchParams();
+    if (filters.businessId) params.append('businessId', filters.businessId);
+    if (filters.branchId) params.append('branchId', filters.branchId);
+    if (filters.category) params.append('category', filters.category);
+    if (filters.lowStock) params.append('lowStock', 'true');
+    if (filters.search) params.append('search', filters.search);
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
+    const endpoint = `/products${params.toString() ? `?${params.toString()}` : ''}`;
+    return this.requestWithAuth<Product[]>(endpoint);
+  }
+
+  async getProduct(id: string): Promise<ApiResponse<Product>> {
+    return this.requestWithAuth<Product>(`/products/${id}`);
+  }
+
+  async createProduct(data: ProductFormData): Promise<ApiResponse<Product>> {
+    return this.requestWithAuth<Product>('/products', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateProduct(id: string, data: Partial<ProductFormData>): Promise<ApiResponse<Product>> {
+    return this.requestWithAuth<Product>(`/products/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteProduct(id: string): Promise<ApiResponse<{ id: string }>> {
+    return this.requestWithAuth<{ id: string }>(`/products/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getProductsSummary(params: { businessId?: string; branchId?: string } = {}): Promise<ApiResponse<ProductSummary>> {
+    const searchParams = new URLSearchParams();
+    if (params.businessId) searchParams.append('businessId', params.businessId);
+    if (params.branchId) searchParams.append('branchId', params.branchId);
+    const endpoint = `/products/summary${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.requestWithAuth<ProductSummary>(endpoint);
+  }
+
+  async getProductMovements(id: string, params: { page?: number; limit?: number } = {}): Promise<ApiResponse<ProductMovement[]>> {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.limit) searchParams.append('limit', params.limit.toString());
+    const endpoint = `/products/${id}/movements${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.requestWithAuth<ProductMovement[]>(endpoint);
+  }
+
+  async createProductMovement(id: string, data: ProductMovementFormData): Promise<ApiResponse<ProductMovement>> {
+    return this.requestWithAuth<ProductMovement>(`/products/${id}/movement`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 }
 

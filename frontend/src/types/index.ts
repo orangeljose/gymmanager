@@ -608,6 +608,81 @@ export interface ExpenseFormData {
   branchId?: string | null;
 }
 
+// Product / Inventory Types (Fase 2 — Productos, Stock y Movimientos)
+export type ProductCategory = 'supplement' | 'drink' | 'apparel' | 'accessory' | 'other';
+export type MovementType = 'sale' | 'purchase';
+
+export interface Product {
+  id: string;
+  name: string;
+  category: ProductCategory;
+  costPriceCents: number;       // centavos; el UI muestra dólares
+  salePriceCents: number;       // centavos
+  stockQty: number;
+  lowStockThreshold: number;
+  businessId: string;
+  branchId?: string | null;
+  isActive: boolean;
+  registeredBy: string;
+  registeredByName?: string;
+  createdAt: string;
+  deletedBy?: string;
+  deletedAt?: string;
+}
+
+export interface ProductMovement {
+  id: string;
+  productId: string;
+  type: MovementType;
+  qty: number;
+  unitPriceCents: number;
+  totalCents: number;
+  date: string;                 // YYYY-MM-DD
+  businessId: string;
+  branchId?: string | null;
+  registeredBy: string;
+  registeredByName: string;
+  createdAt: string;
+  note?: string | null;
+}
+
+export interface ProductSummary {
+  totalProducts: number;
+  totalStockValue: number;      // centavos
+  lowStockCount: number;
+  outOfStockCount: number;
+}
+
+export interface ProductFilters {
+  businessId?: string;
+  branchId?: string;
+  category?: ProductCategory | '';
+  lowStock?: boolean;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface ProductFormData {
+  name: string;
+  category: ProductCategory;
+  costPriceCents: number;
+  salePriceCents: number;
+  stockQty?: number;            // Solo para create (stock inicial)
+  lowStockThreshold?: number;
+  businessId?: string;          // Solo para create
+  branchId?: string | null;
+}
+
+export interface ProductMovementFormData {
+  type: MovementType;
+  qty: number;
+  unitPriceCents?: number;      // venta: default salePriceCents; compra: requerido
+  updateCostPrice?: boolean;    // compra: actualizar costPriceCents
+  date?: string;
+  note?: string;
+}
+
 // PWA Types
 export interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
