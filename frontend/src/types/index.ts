@@ -571,6 +571,8 @@ export interface Expense {
   amountCents: number;          // centavos; el UI muestra dólares
   description?: string | null;
   date: string;                 // YYYY-MM-DD
+  method: PaymentMethod;
+  paymentAccountId?: string | null;
   businessId: string;
   branchId?: string | null;
   registeredBy: string;
@@ -604,6 +606,8 @@ export interface ExpenseFormData {
   amountCents: number;
   description?: string;
   date: string;
+  method: PaymentMethod;
+  paymentAccountId?: string | null;
   businessId?: string;          // Solo para create
   branchId?: string | null;
 }
@@ -638,6 +642,8 @@ export interface ProductMovement {
   unitPriceCents: number;
   totalCents: number;
   date: string;                 // YYYY-MM-DD
+  method: PaymentMethod;
+  paymentAccountId?: string | null;
   businessId: string;
   branchId?: string | null;
   registeredBy: string;
@@ -681,6 +687,21 @@ export interface ProductMovementFormData {
   updateCostPrice?: boolean;    // compra: actualizar costPriceCents
   date?: string;
   note?: string;
+  method?: PaymentMethod;
+  paymentAccountId?: string | null;
+}
+
+export interface ProductReportDailyPoint {
+  date: string;
+  salesCents: number;
+  purchasesCents: number;
+}
+
+export interface ProductReport {
+  sales: { count: number; totalCents: number };
+  purchases: { count: number; totalCents: number };
+  net: number;                  // sales.totalCents - purchases.totalCents
+  daily: ProductReportDailyPoint[];
 }
 
 // PWA Types

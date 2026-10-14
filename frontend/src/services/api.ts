@@ -43,6 +43,7 @@ import type {
   ProductFormData,
   ProductMovement,
   ProductMovementFormData,
+  ProductReport,
   ProductSummary
 } from '@/types';
 
@@ -608,7 +609,7 @@ class ApiService {
     });
   }
 
-  // Expenses (Egresos)
+  // Expenses (Servicios)
   async getExpenses(filters: ExpenseFilters = {}): Promise<ApiResponse<Expense[]>> {
     const params = new URLSearchParams();
     if (filters.businessId) params.append('businessId', filters.businessId);
@@ -695,6 +696,16 @@ class ApiService {
     if (params.branchId) searchParams.append('branchId', params.branchId);
     const endpoint = `/products/summary${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
     return this.requestWithAuth<ProductSummary>(endpoint);
+  }
+
+  async getProductsReport(startDate?: string, endDate?: string, branchId?: string, businessId?: string): Promise<ApiResponse<ProductReport>> {
+    const searchParams = new URLSearchParams();
+    if (startDate) searchParams.append('startDate', startDate);
+    if (endDate) searchParams.append('endDate', endDate);
+    if (branchId) searchParams.append('branchId', branchId);
+    if (businessId) searchParams.append('businessId', businessId);
+    const endpoint = `/products/report${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.requestWithAuth<ProductReport>(endpoint);
   }
 
   async getProductMovements(id: string, params: { page?: number; limit?: number } = {}): Promise<ApiResponse<ProductMovement[]>> {
