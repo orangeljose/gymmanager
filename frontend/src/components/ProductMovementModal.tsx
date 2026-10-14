@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { apiService } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
+import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
+import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from '@/components/ExpenseForm';
 import toast from 'react-hot-toast';
 import { X } from 'lucide-react';
-import type { MovementType, Product, ProductMovement, ProductMovementFormData } from '@/types';
+import type { MovementType, PaymentMethod, Product, ProductMovement, ProductMovementFormData } from '@/types';
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
 const ADMIN_ROLES = ['super_admin', 'admin', 'branch_admin'];
 const SALE_ROLES = ['super_admin', 'admin', 'branch_admin', 'cashier'];
+
+// Métodos que requieren cuenta de destino (payment_accounts por tipo).
+const ACCOUNT_METHODS: PaymentMethod[] = ['zelle', 'pago_movil', 'binance'];
 
 interface MovementFormState {
   type: MovementType;
@@ -17,6 +22,8 @@ interface MovementFormState {
   date: string;
   note: string;
   updateCostPrice: boolean;
+  method: PaymentMethod;
+  paymentAccountId: string;
 }
 
 interface ProductMovementModalProps {
@@ -32,6 +39,7 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
   const { user } = useAuth();
   const canPurchase = !!user && ADMIN_ROLES.includes(user.role);
   const canSell = !!user && SALE_ROLES.includes(user.role);
+  const { accounts } = usePaymentAccounts(product.businessId || '');
 
   const [form, setForm] = useState<MovementFormState>(() => ({
     type: 'sale',
@@ -40,6 +48,8 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
     date: todayIso(),
     note: '',
     updateCostPrice: false,
+    method: 'cash',
+    paymentAccountId: '',
   }));
   const [saving, setSaving] = useState(false);
 
@@ -53,6 +63,8 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
       date: todayIso(),
       note: '',
       updateCostPrice: false,
+      method: 'cash',
+      paymentAccountId: '',
     });
   }, [open, canSell]);
 
@@ -80,6 +92,8 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
       qty,
       date: form.date || todayIso(),
       note: form.note.trim() || undefined,
+      method: form.method,
+      paymentAccountId: form.paymentAccountId || null,
     };
 
     if (form.unitPrice.trim()) {
@@ -215,6 +229,37 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
               placeholder="Detalle opcional"
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Método de pago</label>
+            <select
+              value={form.method}
+              onChange={(e) => set('method', e.target.value as PaymentMethod)}
+              className="input"
+            >
+              {PAYMENT_METHODS.map((m) => (
+                <option key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</option>
+              ))}
+            </select>
+          </div>
+
+          {ACCOUNT_METHODS.includes(form.method) && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cuenta {PAYMENT_METHOD_LABELS[form.method]} destino
+              </label>
+              <select
+                value={form.paymentAccountId}
+                onChange={(e) => set('paymentAccountId', e.target.value)}
+                className="input"
+              >
+                <option value="">Seleccionar cuenta</option>
+                {accounts.filter((a) => a.type === form.method).map((acc) => (
+                  <option key={acc.id} value={acc.id}>{acc.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex justify-end space-x-2 pt-4 border-t">
             <button type="button" onClick={onClose} className="btn btn-outline">

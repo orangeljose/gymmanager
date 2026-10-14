@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { apiService } from '@/services/api';
+import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import toast from 'react-hot-toast';
 import { X } from 'lucide-react';
-import type { Expense, ExpenseCategory, ExpenseFormData } from '@/types';
+import type { Expense, ExpenseCategory, ExpenseFormData, PaymentMethod } from '@/types';
 
 // Etiquetas y colores de badge por categoría de egreso (tema GoatGym).
 export const EXPENSE_CATEGORY_META: Record<ExpenseCategory, { label: string; badge: string }> = {
@@ -16,6 +17,24 @@ export const EXPENSE_CATEGORY_META: Record<ExpenseCategory, { label: string; bad
 
 export const EXPENSE_CATEGORIES = Object.keys(EXPENSE_CATEGORY_META) as ExpenseCategory[];
 
+// Métodos de pago (compartidos con ProductMovementModal).
+export const PAYMENT_METHODS: PaymentMethod[] = [
+  'cash', 'card', 'transfer', 'zelle', 'pago_movil', 'binance', 'other',
+];
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  cash: 'Efectivo',
+  card: 'Tarjeta',
+  transfer: 'Transferencia',
+  zelle: 'Zelle',
+  pago_movil: 'Pago Móvil',
+  binance: 'Binance',
+  other: 'Otro',
+};
+
+// Métodos que requieren cuenta de destino (payment_accounts por tipo).
+const ACCOUNT_METHODS: PaymentMethod[] = ['zelle', 'pago_movil', 'binance'];
+
 /** centavos → dólares con 2 decimales */
 export const formatDollars = (cents: number): string =>
   `$${((cents || 0) / 100).toFixed(2)}`;
@@ -27,6 +46,8 @@ interface ExpenseFormState {
   amount: string;   // dólares, tal como lo teclea el usuario
   description: string;
   date: string;
+  method: PaymentMethod;
+  paymentAccountId: string;
 }
 
 const emptyForm = (): ExpenseFormState => ({
@@ -34,6 +55,8 @@ const emptyForm = (): ExpenseFormState => ({
   amount: '',
   description: '',
   date: todayIso(),
+  method: 'cash',
+  paymentAccountId: '',
 });
 
 interface ExpenseFormProps {
@@ -49,6 +72,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
 }) => {
   const [form, setForm] = useState<ExpenseFormState>(emptyForm());
   const [saving, setSaving] = useState(false);
+  const { accounts } = usePaymentAccounts(businessId || '');
 
   useEffect(() => {
     if (!open) return;
@@ -58,6 +82,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
         amount: (initial.amountCents / 100).toFixed(2),
         description: initial.description || '',
         date: initial.date || todayIso(),
+        method: initial.method || 'cash',
+        paymentAccountId: initial.paymentAccountId || '',
       });
     } else {
       setForm(emptyForm());
@@ -87,6 +113,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
       amountCents: Math.round(dollars * 100),
       description: form.description.trim() || undefined,
       date: form.date,
+      method: form.method,
+      paymentAccountId: form.paymentAccountId || null,
     };
 
     try {
@@ -96,12 +124,12 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
         : await apiService.createExpense({ ...payload, businessId });
 
       if (response.success) {
-        toast.success(initial ? 'Egreso actualizado' : 'Egreso registrado');
+        toast.success(initial ? 'Servicio actualizado' : 'Servicio registrado');
         onSaved(response.data);
         onClose();
       }
     } catch (error: any) {
-      toast.error(error.message || 'Error guardando egreso');
+      toast.error(error.message || 'Error guardando servicio');
     } finally {
       setSaving(false);
     }
@@ -112,7 +140,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white">
           <h3 className="text-lg font-semibold text-gray-900">
-            {initial ? 'Editar Egreso' : 'Registrar Egreso'}
+            {initial ? 'Editar Servicio' : 'Registrar Servicio'}
           </h3>
           <button onClick={onClose} className="btn btn-ghost btn-sm" type="button">
             <X className="h-5 w-5" />
@@ -165,16 +193,47 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
               value={form.description}
               onChange={(e) => set('description', e.target.value)}
               className="input h-24 py-2"
-              placeholder="Detalle opcional del egreso"
+              placeholder="Detalle opcional del servicio"
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Método de pago</label>
+            <select
+              value={form.method}
+              onChange={(e) => set('method', e.target.value as PaymentMethod)}
+              className="input"
+            >
+              {PAYMENT_METHODS.map((m) => (
+                <option key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</option>
+              ))}
+            </select>
+          </div>
+
+          {ACCOUNT_METHODS.includes(form.method) && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cuenta {PAYMENT_METHOD_LABELS[form.method]} destino
+              </label>
+              <select
+                value={form.paymentAccountId}
+                onChange={(e) => set('paymentAccountId', e.target.value)}
+                className="input"
+              >
+                <option value="">Seleccionar cuenta</option>
+                {accounts.filter((a) => a.type === form.method).map((acc) => (
+                  <option key={acc.id} value={acc.id}>{acc.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex justify-end space-x-2 pt-4 border-t">
             <button type="button" onClick={onClose} className="btn btn-outline">
               Cancelar
             </button>
             <button type="submit" disabled={saving} className="btn btn-primary">
-              {saving ? 'Guardando...' : initial ? 'Actualizar' : 'Registrar Egreso'}
+              {saving ? 'Guardando...' : initial ? 'Actualizar' : 'Registrar Servicio'}
             </button>
           </div>
         </form>
