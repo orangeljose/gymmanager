@@ -65,11 +65,12 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     label: 'Reportes',
     href: '/reports',
     icon: 'FileText',
-    roles: ['super_admin', 'admin', 'branch_admin', 'cashier'],
+    roles: ['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer'],
     submenu: [
       { label: 'Reporte de Suscripciones', href: '/reports/income', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Reporte de Productos', href: '/reports/products', roles: ['super_admin', 'admin', 'branch_admin'] },
-      { label: 'Reporte de Servicios', href: '/reports/services', roles: ['super_admin', 'admin', 'branch_admin'] }
+      { label: 'Reporte de Servicios', href: '/reports/services', roles: ['super_admin', 'admin', 'branch_admin'] },
+      { label: 'Reporte de Asistencias', href: '/reports/attendance', roles: ['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer'] }
     ]
   },
   {

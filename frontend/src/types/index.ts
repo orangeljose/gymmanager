@@ -191,6 +191,19 @@ export interface AttendanceStats {
   topAttendees: AttendanceTopAttendee[];
 }
 
+export interface AttendanceReportDailyPoint {
+  date: string;
+  count: number;
+}
+
+export interface AttendanceReport {
+  total: number;
+  avgDaily: number;
+  peakDay: { date: string; count: number } | null;
+  daily: AttendanceReportDailyPoint[];
+  topAttendees: AttendanceTopAttendee[];
+}
+
 export interface AttendanceSummary {
   total: number;
   byMethod: Record<string, number>;

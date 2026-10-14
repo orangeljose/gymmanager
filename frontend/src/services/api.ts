@@ -24,6 +24,7 @@ import type {
   ReceiptFilters,
   AttendanceRecord,
   AttendanceStats,
+  AttendanceReport,
   AttendanceFilters,
   AttendanceMethod,
   AttendanceSummary,
@@ -281,6 +282,22 @@ class ApiService {
 
     const endpoint = `/attendance/stats${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
     return this.requestWithAuth<AttendanceStats>(endpoint);
+  }
+
+  async getAttendanceReport(
+    startDate?: string,
+    endDate?: string,
+    branchId?: string,
+    businessId?: string
+  ): Promise<ApiResponse<AttendanceReport>> {
+    const searchParams = new URLSearchParams();
+    if (startDate) searchParams.append('startDate', startDate);
+    if (endDate) searchParams.append('endDate', endDate);
+    if (branchId) searchParams.append('branchId', branchId);
+    if (businessId) searchParams.append('businessId', businessId);
+
+    const endpoint = `/attendance/report${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.requestWithAuth<AttendanceReport>(endpoint);
   }
 
   // Dashboard

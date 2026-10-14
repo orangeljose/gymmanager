@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { DollarSign, Package, Wrench } from 'lucide-react';
+import { DollarSign, Package, Wrench, CalendarCheck } from 'lucide-react';
 
 export const ReportsPage: React.FC = () => {
   const reportSections = [
@@ -27,6 +27,14 @@ export const ReportsPage: React.FC = () => {
       icon: Wrench,
       color: 'bg-amber-100 text-amber-600',
       stats: 'Egresos por período'
+    },
+    {
+      title: 'Reporte de Asistencias',
+      description: 'Asistencias por período y top de asistentes',
+      href: '/reports/attendance',
+      icon: CalendarCheck,
+      color: 'bg-primary-100 text-primary-600',
+      stats: 'Check-ins por período'
     }
   ];
 
