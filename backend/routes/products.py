@@ -38,6 +38,7 @@ from flask import Blueprint, request, jsonify, g
 
 from middleware.auth_middleware import require_auth, require_role
 from services.firebase_service import FirebaseService
+from models.payment import PaymentModel
 from utils.validators import validate_pagination, validate_date_format
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,9 @@ MOVEMENT_TYPES = ['sale', 'purchase']
 ADMIN_ROLES = ['super_admin', 'admin', 'branch_admin']
 SALE_ROLES = ['super_admin', 'admin', 'branch_admin', 'cashier']
 READ_ROLES = ['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer']
+
+# Métodos de pago reutilizados del modelo de pagos (fuente única de verdad).
+VALID_METHODS = PaymentModel.VALID_METHODS
 
 DEFAULT_LOW_STOCK_THRESHOLD = 5
 
@@ -307,8 +311,111 @@ def products_summary():
 
 
 # ============================================================================
+# GET /api/products/report  (TODOS los roles)
+# IMPORTANTE: declarado ANTES de `/<product_id>` para no ser capturado.
+# ============================================================================
+
+@products_bp.route('/report', methods=['GET', 'OPTIONS'])
+@require_auth
+@require_role(READ_ROLES)
+def products_report():
+    """
+    Reporte de ventas vs compras sobre `product_movements` (libro append-only).
+
+    Query Params: startDate, endDate (YYYY-MM-DD, opcionales), branchId,
+                  businessId (super_admin)
+    Response (200): { success, data:{ sales:{count,totalCents},
+                     purchases:{count,totalCents}, net, daily:[
+                     {date, salesCents, purchasesCents}] } }
+
+    `net = sales.totalCents - purchases.totalCents` (una compra es dinero que
+    sale). UNA query scoped a `product_movements` (igualdad businessId) y toda la
+    agregación por tipo/fecha en Python.
+    """
+    try:
+        business_id, branch_id = _scope_ids()
+
+        start_date = (request.args.get('startDate') or '').strip()
+        end_date = (request.args.get('endDate') or '').strip()
+
+        errors = []
+        if start_date:
+            errors.extend(validate_date_format(start_date, 'startDate'))
+        if end_date:
+            errors.extend(validate_date_format(end_date, 'endDate'))
+        if errors:
+            return _error(400, '; '.join(errors))
+
+        filters = []
+        if business_id:
+            filters.append({'field': 'businessId', 'operator': '==', 'value': business_id})
+
+        firebase_service = FirebaseService()
+        try:
+            movements = firebase_service.query_firestore(MOVEMENTS_COLLECTION, filters=filters)
+        except Exception as query_error:
+            index_response = _index_error_response(query_error)
+            if index_response:
+                return index_response
+            raise
+
+        sales_count = 0
+        sales_cents = 0
+        purchases_count = 0
+        purchases_cents = 0
+        daily_map = {}
+
+        for m in movements:
+            if branch_id and m.get('branchId') != branch_id:
+                continue
+            m_date = m.get('date') or ''
+            if start_date and m_date < start_date:
+                continue
+            if end_date and m_date > end_date:
+                continue
+
+            total = int(m.get('totalCents') or 0)
+            mtype = m.get('type')
+
+            if mtype == 'sale':
+                sales_count += 1
+                sales_cents += total
+            elif mtype == 'purchase':
+                purchases_count += 1
+                purchases_cents += total
+
+            day = daily_map.setdefault(
+                m_date, {'date': m_date, 'salesCents': 0, 'purchasesCents': 0}
+            )
+            if mtype == 'sale':
+                day['salesCents'] += total
+            elif mtype == 'purchase':
+                day['purchasesCents'] += total
+
+        daily = sorted(daily_map.values(), key=lambda d: d['date'])
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'sales': {'count': sales_count, 'totalCents': sales_cents},
+                'purchases': {'count': purchases_count, 'totalCents': purchases_cents},
+                'net': sales_cents - purchases_cents,
+                'daily': daily,
+            }
+        }), 200
+
+    except Exception as e:
+        index_response = _index_error_response(e)
+        if index_response:
+            return index_response
+        logger.error(f"Error calculando reporte de productos: {str(e)}")
+        return _error(500, 'Error interno del servidor')
+
+
+# ============================================================================
 # GET /api/products/<id>  (TODOS los roles)
-# Declarado DESPUÉS de `/summary` para que la ruta estática no sea capturada.
+# Declarado DESPUÉS de `/summary` y `/report` para que las rutas estáticas no
+# sean capturadas.
 # ============================================================================
 
 @products_bp.route('/<product_id>', methods=['GET', 'OPTIONS'])
@@ -434,6 +541,7 @@ def create_product():
                 'unitPriceCents': cost_cents,
                 'totalCents': stock_qty * cost_cents,
                 'date': _today_utc(),
+                'method': 'cash',
                 'businessId': business_id,
                 'branchId': branch_id,
                 'registeredBy': g.current_user.get('uid'),
@@ -699,6 +807,14 @@ def register_movement(product_id):
         if note is not None:
             note = str(note).strip() or None
 
+        method = str(data.get('method') or 'cash').strip() or 'cash'
+        if method not in VALID_METHODS:
+            return _error(400, f'method debe ser uno de: {", ".join(VALID_METHODS)}')
+
+        payment_account_id = data.get('paymentAccountId')
+        if payment_account_id is not None:
+            payment_account_id = str(payment_account_id).strip() or None
+
         firebase_service = FirebaseService()
         product, not_found = _fetch_active_product(firebase_service, product_id)
         if not_found:
@@ -741,6 +857,8 @@ def register_movement(product_id):
             'unitPriceCents': unit_price,
             'totalCents': qty * unit_price,
             'date': date_str,
+            'method': method,
+            'paymentAccountId': payment_account_id,
             'businessId': product.get('businessId'),
             'branchId': product.get('branchId'),
             'registeredBy': g.current_user.get('uid'),

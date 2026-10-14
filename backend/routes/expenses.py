@@ -27,6 +27,7 @@ from flask import Blueprint, request, jsonify, g
 
 from middleware.auth_middleware import require_auth, require_role
 from services.firebase_service import FirebaseService
+from models.payment import PaymentModel
 from utils.validators import validate_pagination, validate_date_format
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,9 @@ EXPENSES_COLLECTION = 'expenses'
 
 EXPENSE_CATEGORIES = ['payroll', 'supplies', 'services', 'rent', 'maintenance', 'other']
 ADMIN_ROLES = ['super_admin', 'admin', 'branch_admin']
+
+# Métodos de pago reutilizados del modelo de pagos (fuente única de verdad).
+VALID_METHODS = PaymentModel.VALID_METHODS
 
 
 # ============================================================================
@@ -332,6 +336,14 @@ def create_expense():
         if description is not None:
             description = str(description).strip() or None
 
+        method = str(data.get('method') or 'cash').strip() or 'cash'
+        if method not in VALID_METHODS:
+            return _error(400, f'method debe ser uno de: {", ".join(VALID_METHODS)}')
+
+        payment_account_id = data.get('paymentAccountId')
+        if payment_account_id is not None:
+            payment_account_id = str(payment_account_id).strip() or None
+
         role = g.current_user.get('role')
         user_branch_id = g.current_user.get('branchId')
         branch_id = data.get('branchId')
@@ -354,6 +366,8 @@ def create_expense():
             'amountCents': amount_cents,
             'description': description,
             'date': date_str,
+            'method': method,
+            'paymentAccountId': payment_account_id,
             'businessId': business_id,
             'branchId': branch_id,
             'registeredBy': g.current_user.get('uid'),
@@ -425,6 +439,16 @@ def update_expense(expense_id):
         if 'description' in data:
             description = data.get('description')
             update['description'] = str(description).strip() or None if description is not None else None
+
+        if 'method' in data:
+            method = str(data.get('method') or '').strip()
+            if method not in VALID_METHODS:
+                return _error(400, f'method debe ser uno de: {", ".join(VALID_METHODS)}')
+            update['method'] = method
+
+        if 'paymentAccountId' in data:
+            account_id = data.get('paymentAccountId')
+            update['paymentAccountId'] = str(account_id).strip() or None if account_id is not None else None
 
         if not update:
             return _error(400, 'No se enviaron campos válidos para actualizar')

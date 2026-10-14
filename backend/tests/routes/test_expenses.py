@@ -257,6 +257,51 @@ class TestCreateExpense:
         _, record = mock.create_document.call_args[0]
         assert record['description'] is None
 
+    def test_create_with_method_and_payment_account(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        client = make_client(mock)
+
+        response = client.post(
+            '/api/expenses',
+            json={'category': 'rent', 'amountCents': 50000, 'date': '2026-10-12',
+                  'method': 'zelle', 'paymentAccountId': 'acc-zelle-1'},
+            headers=auth_header,
+        )
+
+        assert response.status_code == 201
+        _, record = mock.create_document.call_args[0]
+        assert record['method'] == 'zelle'
+        assert record['paymentAccountId'] == 'acc-zelle-1'
+
+    def test_create_default_method_cash(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        client = make_client(mock)
+
+        response = client.post(
+            '/api/expenses',
+            json={'category': 'other', 'amountCents': 100, 'date': '2026-10-12'},
+            headers=auth_header,
+        )
+
+        assert response.status_code == 201
+        _, record = mock.create_document.call_args[0]
+        assert record['method'] == 'cash'
+        assert record['paymentAccountId'] is None
+
+    def test_create_invalid_method_400(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        client = make_client(mock)
+
+        response = client.post(
+            '/api/expenses',
+            json={'category': 'rent', 'amountCents': 100, 'date': '2026-10-12',
+                  'method': 'bitcoin'},
+            headers=auth_header,
+        )
+
+        assert response.status_code == 400
+        mock.create_document.assert_not_called()
+
     @pytest.mark.parametrize('amount', [0, -100, '500', 12.5, True])
     def test_create_invalid_amount_cents_400(self, make_client, auth_header, amount):
         mock = create_mock_service(role='admin')
@@ -344,6 +389,23 @@ class TestUpdateAndDeleteExpense:
 
         assert response.status_code == 400
         mock.update_document.assert_not_called()
+
+    def test_update_method_and_payment_account(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        mock.get_document.return_value = dict(EXPENSE)
+        client = make_client(mock)
+
+        response = client.put(
+            '/api/expenses/e1',
+            json={'method': 'binance', 'paymentAccountId': 'acc-binance-1'},
+            headers=auth_header,
+        )
+
+        assert response.status_code == 200
+        collection, doc_id, update = mock.update_document.call_args[0]
+        assert collection == 'expenses'
+        assert doc_id == 'e1'
+        assert update == {'method': 'binance', 'paymentAccountId': 'acc-binance-1'}
 
     def test_update_missing_404(self, make_client, auth_header):
         mock = create_mock_service(role='admin')
