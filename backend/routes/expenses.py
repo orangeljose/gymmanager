@@ -7,6 +7,7 @@ Colección:
 Endpoints (TODOS admin+ = super_admin | admin | branch_admin):
     GET    /api/expenses            - listar (scoped, filtros en Python, paginado)
     GET    /api/expenses/summary    - resumen (hoy / 7d / 30d + byCategory)
+    GET    /api/expenses/report     - reporte (totalCents, count, byCategory, daily)
     POST   /api/expenses            - crear
     PUT    /api/expenses/<id>       - actualizar
     DELETE /api/expenses/<id>       - soft delete + auditoría
@@ -297,6 +298,100 @@ def expenses_summary():
         if index_response:
             return index_response
         logger.error(f"Error calculando resumen de egresos: {str(e)}")
+        return _error(500, 'Error interno del servidor')
+
+
+# ============================================================================
+# GET /api/expenses/report
+# ============================================================================
+
+@expenses_bp.route('/report', methods=['GET', 'OPTIONS'])
+@require_auth
+@require_role(ADMIN_ROLES)
+def expenses_report():
+    """
+    Reporte de egresos (servicios/gastos) agregado por categoría y por día.
+
+    Query Params: startDate, endDate (YYYY-MM-DD, opcionales), branchId,
+                  businessId (super_admin)
+    Response (200): { success, data:{ totalCents, count,
+                     byCategory:{category:totalCents}, daily:[
+                     {date, totalCents}] } }
+
+    UNA query scoped a `expenses` (igualdad businessId) y toda la agregación
+    por categoría/fecha en Python, espejando `products_report`.
+    """
+    try:
+        business_id, branch_id = _scope_ids()
+
+        start_date = (request.args.get('startDate') or '').strip()
+        end_date = (request.args.get('endDate') or '').strip()
+
+        errors = []
+        if start_date:
+            errors.extend(validate_date_format(start_date, 'startDate'))
+        if end_date:
+            errors.extend(validate_date_format(end_date, 'endDate'))
+        if errors:
+            return _error(400, '; '.join(errors))
+
+        filters = []
+        if business_id:
+            filters.append({'field': 'businessId', 'operator': '==', 'value': business_id})
+
+        firebase_service = FirebaseService()
+        try:
+            expenses = firebase_service.query_firestore(EXPENSES_COLLECTION, filters=filters)
+        except Exception as query_error:
+            index_response = _index_error_response(query_error)
+            if index_response:
+                return index_response
+            raise
+
+        total_cents = 0
+        count = 0
+        by_category = {c: 0 for c in EXPENSE_CATEGORIES}
+        daily_map = {}
+
+        for e in expenses:
+            if not _is_active(e):
+                continue
+            if branch_id and e.get('branchId') != branch_id:
+                continue
+            e_date = e.get('date') or ''
+            if start_date and e_date < start_date:
+                continue
+            if end_date and e_date > end_date:
+                continue
+
+            amount = int(e.get('amountCents') or 0)
+            total_cents += amount
+            count += 1
+
+            cat = e.get('category')
+            if cat in by_category:
+                by_category[cat] += amount
+
+            day = daily_map.setdefault(e_date, {'date': e_date, 'totalCents': 0})
+            day['totalCents'] += amount
+
+        daily = sorted(daily_map.values(), key=lambda d: d['date'])
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'totalCents': total_cents,
+                'count': count,
+                'byCategory': by_category,
+                'daily': daily,
+            }
+        }), 200
+
+    except Exception as e:
+        index_response = _index_error_response(e)
+        if index_response:
+            return index_response
+        logger.error(f"Error calculando reporte de egresos: {str(e)}")
         return _error(500, 'Error interno del servidor')
 
 

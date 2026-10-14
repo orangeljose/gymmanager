@@ -543,6 +543,92 @@ class TestExpensesSummary:
 
 
 # ============================================================================
+# GET /api/expenses/report
+# ============================================================================
+
+class TestExpensesReport:
+
+    def test_report_totals_count_by_category_and_daily(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        mock.query_firestore.return_value = [
+            {'id': 'e1', 'category': 'rent', 'amountCents': 50000, 'date': '2026-10-01',
+             'businessId': 'biz-1', 'branchId': 'branch-1', 'isDeleted': False},
+            {'id': 'e2', 'category': 'services', 'amountCents': 1500, 'date': '2026-10-01',
+             'businessId': 'biz-1', 'branchId': 'branch-1', 'isDeleted': False},
+            {'id': 'e3', 'category': 'rent', 'amountCents': 2000, 'date': '2026-10-02',
+             'businessId': 'biz-1', 'branchId': 'branch-1', 'isDeleted': False},
+            # fuera de rango → excluido
+            {'id': 'e4', 'category': 'payroll', 'amountCents': 8000, 'date': '2026-09-01',
+             'businessId': 'biz-1', 'branchId': 'branch-1', 'isDeleted': False},
+            # borrado → excluido
+            {'id': 'e5', 'category': 'other', 'amountCents': 99999, 'date': '2026-10-02',
+             'businessId': 'biz-1', 'branchId': 'branch-1', 'isDeleted': True},
+        ]
+        client = make_client(mock)
+
+        response = client.get(
+            '/api/expenses/report?startDate=2026-10-01&endDate=2026-10-31',
+            headers=auth_header,
+        )
+
+        assert response.status_code == 200
+        data = response.get_json()['data']
+        assert data['totalCents'] == 50000 + 1500 + 2000
+        assert data['count'] == 3
+        assert data['byCategory'] == {
+            'payroll': 0, 'supplies': 0, 'services': 1500,
+            'rent': 52000, 'maintenance': 0, 'other': 0,
+        }
+        assert data['daily'] == [
+            {'date': '2026-10-01', 'totalCents': 50000 + 1500},
+            {'date': '2026-10-02', 'totalCents': 2000},
+        ]
+        # UNA sola query scoped a expenses
+        calls = mock.query_firestore.call_args_list
+        assert len(calls) == 1
+        assert calls[0][0][0] == 'expenses'
+        assert calls[0][1]['filters'] == [
+            {'field': 'businessId', 'operator': '==', 'value': 'biz-1'}
+        ]
+
+    def test_report_empty_returns_zeroes(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        mock.query_firestore.return_value = []
+        client = make_client(mock)
+
+        data = client.get('/api/expenses/report', headers=auth_header).get_json()['data']
+
+        assert data['totalCents'] == 0
+        assert data['count'] == 0
+        assert data['byCategory']['rent'] == 0
+        assert data['daily'] == []
+
+    def test_report_invalid_date_400(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        client = make_client(mock)
+
+        response = client.get('/api/expenses/report?startDate=01-2026', headers=auth_header)
+
+        assert response.status_code == 400
+        mock.query_firestore.assert_not_called()
+
+    def test_report_branch_scoped_user_filters_own_branch(self, make_client, auth_header):
+        mock = create_mock_service(role='branch_admin', business_id='biz-1', branch_id='branch-1')
+        mock.query_firestore.return_value = [
+            {'id': 'a', 'category': 'rent', 'amountCents': 1000, 'date': '2026-10-01',
+             'businessId': 'biz-1', 'branchId': 'branch-1', 'isDeleted': False},
+            {'id': 'b', 'category': 'rent', 'amountCents': 99999, 'date': '2026-10-01',
+             'businessId': 'biz-1', 'branchId': 'branch-2', 'isDeleted': False},
+        ]
+        client = make_client(mock)
+
+        data = client.get('/api/expenses/report', headers=auth_header).get_json()['data']
+
+        assert data['totalCents'] == 1000
+        assert data['count'] == 1
+
+
+# ============================================================================
 # Permisos (admin+; cashier/trainer 403; sin auth 401)
 # ============================================================================
 
@@ -552,6 +638,7 @@ class TestPermissions:
         ('get', '/api/expenses'),
         ('post', '/api/expenses'),
         ('get', '/api/expenses/summary'),
+        ('get', '/api/expenses/report'),
         ('put', '/api/expenses/e1'),
         ('delete', '/api/expenses/e1'),
     ])
@@ -569,6 +656,7 @@ class TestPermissions:
         ('get', '/api/expenses'),
         ('post', '/api/expenses'),
         ('get', '/api/expenses/summary'),
+        ('get', '/api/expenses/report'),
         ('put', '/api/expenses/e1'),
         ('delete', '/api/expenses/e1'),
     ])
