@@ -10,20 +10,9 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from 'recharts';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import type { Client, AttendanceRecord, AttendanceStats, AttendanceMethod } from '@/types';
-
-const PRIMARY_600 = '#D43506';
 
 const METHOD_LABELS: Record<AttendanceMethod, string> = {
   manual: 'Manual',
@@ -42,8 +31,6 @@ const MethodIcon: React.FC<{ method: AttendanceMethod; className?: string }> = (
   if (method === 'biometric') return <Fingerprint className={className} />;
   return <UserCheck className={className} />;
 };
-
-const shortDate = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 
 const formatTime = (iso: string) => {
   if (!iso) return '--:--';
@@ -360,30 +347,6 @@ export const AttendancePage: React.FC = () => {
           icon={<CalendarDays className="h-6 w-6" />}
           accent="bg-green-600"
         />
-      </div>
-
-      {/* 7-day chart */}
-      <div className="card mb-6">
-        <div className="card-header">
-          <h3 className="card-title">Asistencias últimos 7 días</h3>
-        </div>
-        <div className="card-content">
-          <div style={{ width: '100%', height: 240 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats?.series7 ?? []} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="date" tickFormatter={shortDate} fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis allowDecimals={false} fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip
-                  labelFormatter={(label: string) => shortDate(label)}
-                  formatter={(value: number) => [value, 'Asistencias']}
-                  cursor={{ fill: 'rgba(212, 53, 6, 0.06)' }}
-                />
-                <Bar dataKey="count" fill={PRIMARY_600} radius={[4, 4, 0, 0]} name="Asistencias" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
       </div>
 
       {/* Today's list */}
