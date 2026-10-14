@@ -558,6 +558,114 @@ class TestAttendanceStats:
 
 
 # ============================================================================
+# GET /api/attendance/report
+# ============================================================================
+
+class TestAttendanceReport:
+
+    def test_report_totals_daily_series_and_top_attendees(self, make_client, auth_header):
+        """Total, promedio diario, día pico, serie diaria y top asistentes sobre el rango."""
+        mock = create_mock_service(role='admin')
+        mock.query_firestore.return_value = [
+            {'clientId': 'c1', 'clientName': 'Uno', 'date': '2026-10-01', 'branchId': 'branch-1'},
+            {'clientId': 'c1', 'clientName': 'Uno', 'date': '2026-10-02', 'branchId': 'branch-1'},
+            {'clientId': 'c2', 'clientName': 'Dos', 'date': '2026-10-01', 'branchId': 'branch-1'},
+            {'clientId': 'c2', 'clientName': 'Dos', 'date': '2026-10-02', 'branchId': 'branch-1'},
+            {'clientId': 'c2', 'clientName': 'Dos', 'date': '2026-10-02', 'branchId': 'branch-1'},
+        ]
+        client = make_client(mock)
+
+        response = client.get(
+            '/api/attendance/report?startDate=2026-10-01&endDate=2026-10-02',
+            headers=auth_header,
+        )
+
+        assert response.status_code == 200
+        data = response.get_json()['data']
+        assert data['total'] == 5
+        assert data['avgDaily'] == 2.5          # 5 / 2 días calendario
+        assert data['peakDay'] == {'date': '2026-10-02', 'count': 3}
+        assert data['daily'] == [
+            {'date': '2026-10-01', 'count': 2},
+            {'date': '2026-10-02', 'count': 3},
+        ]
+        assert data['topAttendees'][0] == {'clientId': 'c2', 'clientName': 'Dos', 'count': 3}
+        assert data['topAttendees'][1] == {'clientId': 'c1', 'clientName': 'Uno', 'count': 2}
+
+    def test_report_filters_by_date_range(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        mock.query_firestore.return_value = [
+            {'clientId': 'c1', 'clientName': 'Uno', 'date': '2026-10-01', 'branchId': 'branch-1'},
+            {'clientId': 'c1', 'clientName': 'Uno', 'date': '2026-10-05', 'branchId': 'branch-1'},  # fuera (después)
+            {'clientId': 'c1', 'clientName': 'Uno', 'date': '2026-09-30', 'branchId': 'branch-1'},  # fuera (antes)
+        ]
+        client = make_client(mock)
+
+        response = client.get(
+            '/api/attendance/report?startDate=2026-10-01&endDate=2026-10-02',
+            headers=auth_header,
+        )
+
+        data = response.get_json()['data']
+        assert data['total'] == 1
+        assert data['daily'] == [{'date': '2026-10-01', 'count': 1}]
+
+    def test_report_filters_by_branch_scope(self, make_client, auth_header):
+        mock = create_mock_service(role='branch_admin', business_id='biz-1', branch_id='branch-1')
+        mock.query_firestore.return_value = [
+            {'clientId': 'c1', 'clientName': 'Uno', 'date': '2026-10-01', 'branchId': 'branch-1'},
+            {'clientId': 'c2', 'clientName': 'Dos', 'date': '2026-10-01', 'branchId': 'branch-2'},  # otra sede
+        ]
+        client = make_client(mock)
+
+        response = client.get(
+            '/api/attendance/report?startDate=2026-10-01&endDate=2026-10-01',
+            headers=auth_header,
+        )
+
+        data = response.get_json()['data']
+        assert data['total'] == 1
+        assert data['daily'] == [{'date': '2026-10-01', 'count': 1}]
+        assert data['topAttendees'] == [{'clientId': 'c1', 'clientName': 'Uno', 'count': 1}]
+
+    def test_report_invalid_date_returns_400(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        client = make_client(mock)
+
+        response = client.get('/api/attendance/report?startDate=01-10-2026', headers=auth_header)
+
+        assert response.status_code == 400
+
+    def test_report_empty_range_returns_zero_aggregates(self, make_client, auth_header):
+        mock = create_mock_service(role='admin')
+        mock.query_firestore.return_value = []
+        client = make_client(mock)
+
+        response = client.get(
+            '/api/attendance/report?startDate=2026-10-01&endDate=2026-10-01',
+            headers=auth_header,
+        )
+
+        data = response.get_json()['data']
+        assert data['total'] == 0
+        assert data['avgDaily'] == 0.0
+        assert data['peakDay'] is None
+        assert data['daily'] == []
+        assert data['topAttendees'] == []
+
+    def test_report_trainer_can_read(self, make_client, auth_header):
+        mock = create_mock_service(role='trainer')
+        client = make_client(mock)
+
+        response = client.get('/api/attendance/report', headers=auth_header)
+
+        assert response.status_code == 200
+        data = response.get_json()['data']
+        assert data['total'] == 0
+        assert data['topAttendees'] == []
+
+
+# ============================================================================
 # GET /api/attendance/client/<id>
 # ============================================================================
 

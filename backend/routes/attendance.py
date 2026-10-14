@@ -7,6 +7,7 @@ Endpoints:
     GET    /api/attendance              - listar check-ins (business[/branch] + fecha)
     GET    /api/attendance/client/<id>  - historial + stats de un cliente
     GET    /api/attendance/stats        - agregados hoy/semana/mes + series + top asistentes
+    GET    /api/attendance/report       - reporte por período (total, promedio, día pico, top)
 
 Patrón: Firestore hace los filtros de igualdad/rango; Python ordena, pagina y
 agrupa (mismo patrón que `clients.py`). El `date` es autoritativo del servidor en
@@ -143,6 +144,18 @@ def _resolve_business_id():
     if g.current_user.get('role') == 'super_admin':
         return request.args.get('businessId')
     return g.current_user.get('businessId')
+
+
+def _resolve_scope_ids():
+    """
+    Devuelve (business_id, branch_id) que restringen el reporte de asistencia.
+
+    - super_admin: opcionales desde query params (pueden ser None → cross-business/sede).
+    - otros roles: forzados del usuario autenticado (branchId puede ser None).
+    """
+    if g.current_user.get('role') == 'super_admin':
+        return request.args.get('businessId'), request.args.get('branchId')
+    return g.current_user.get('businessId'), g.current_user.get('branchId')
 
 
 def _read_daily_counter(firebase_service, business_id, date_str):
@@ -531,6 +544,133 @@ def get_attendance_stats():
         if index_response:
             return index_response
         logger.error(f"Error calculando stats de asistencia: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': {'code': 500, 'message': 'Error interno del servidor'}
+        }), 500
+
+
+@attendance_bp.route('/report', methods=['GET', 'OPTIONS'])
+@require_auth
+@require_role(READ_ROLES)
+def get_attendance_report():
+    """
+    Reporte de asistencia por período: total, promedio diario, día pico,
+    serie diaria y top de asistentes.
+
+    Query Params: startDate, endDate (YYYY-MM-DD, opcionales), branchId,
+                  businessId (super_admin)
+    Response (200): { success, data:{ total, avgDaily, peakDay:{date,count}|null,
+                     daily:[{date,count}], topAttendees:[
+                     {clientId,clientName,count}] } }
+
+    UNA query scoped a `attendance` (igualdad businessId, índice automático de un
+    campo). Los filtros de sede y rango de fechas + la agregación por día/cliente
+    se resuelven en Python (espeja `products_report`/`expenses_report`), evitando
+    un índice compuesto `(businessId, date)`.
+
+    Default de rango: últimos 30 días (endDate = hoy del negocio,
+    startDate = endDate - 29).
+    """
+    try:
+        business_id, branch_id = _resolve_scope_ids()
+
+        start_date = (request.args.get('startDate') or '').strip()
+        end_date = (request.args.get('endDate') or '').strip()
+
+        errors = []
+        if start_date:
+            errors.extend(validate_date_format(start_date, 'startDate'))
+        if end_date:
+            errors.extend(validate_date_format(end_date, 'endDate'))
+        if errors:
+            return jsonify({
+                'success': False,
+                'error': {'code': 400, 'message': '; '.join(errors)}
+            }), 400
+
+        if not end_date:
+            end_date = _business_today()
+        if not start_date:
+            try:
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({
+                    'success': False,
+                    'error': {'code': 400, 'message': 'La fecha debe tener formato YYYY-MM-DD'}
+                }), 400
+            start_date = (end_dt - timedelta(days=29)).isoformat()
+
+        filters = []
+        if business_id:
+            filters.append({'field': 'businessId', 'operator': '==', 'value': business_id})
+
+        firebase_service = FirebaseService()
+        try:
+            rows = firebase_service.query_firestore('attendance', filters=filters)
+        except Exception as query_error:
+            index_response = _index_error_response(query_error)
+            if index_response:
+                return index_response
+            raise
+
+        daily_map = {}
+        attendee_counts = Counter()
+        attendee_names = {}
+        for row in rows:
+            if branch_id and row.get('branchId') != branch_id:
+                continue
+            r_date = row.get('date') or ''
+            if start_date and r_date < start_date:
+                continue
+            if end_date and r_date > end_date:
+                continue
+
+            daily_map[r_date] = daily_map.get(r_date, 0) + 1
+
+            cid = row.get('clientId')
+            if cid:
+                attendee_counts[cid] += 1
+                if row.get('clientName'):
+                    attendee_names[cid] = row.get('clientName')
+
+        daily = [{'date': d, 'count': c} for d, c in sorted(daily_map.items())]
+        total = sum(p['count'] for p in daily)
+        peak_day = max(daily, key=lambda p: p['count']) if daily else None
+
+        try:
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
+            days_in_range = max(1, (end_dt - start_dt).days + 1)
+        except ValueError:
+            days_in_range = 1
+        avg_daily = round(total / days_in_range, 2)
+
+        top_attendees = [
+            {
+                'clientId': cid,
+                'clientName': attendee_names.get(cid, cid),
+                'count': count,
+            }
+            for cid, count in attendee_counts.most_common(10)
+        ]
+
+        return jsonify({
+            'success': True,
+            'data': {
+                'total': total,
+                'avgDaily': avg_daily,
+                'peakDay': peak_day,
+                'daily': daily,
+                'topAttendees': top_attendees,
+            }
+        }), 200
+
+    except Exception as e:
+        index_response = _index_error_response(e)
+        if index_response:
+            return index_response
+        logger.error(f"Error calculando reporte de asistencia: {str(e)}")
         return jsonify({
             'success': False,
             'error': {'code': 500, 'message': 'Error interno del servidor'}
