@@ -1,22 +1,39 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
+} from 'recharts';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import toast from 'react-hot-toast';
 import {
   ProductForm, PRODUCT_CATEGORY_META, PRODUCT_CATEGORIES, formatDollars, stockStatus,
 } from '@/components/ProductForm';
-import type { Product, ProductCategory, ProductFilters, ProductSummary } from '@/types';
+import type {
+  Product, ProductCategory, ProductFilters, ProductReport, ProductSummary,
+} from '@/types';
 import {
   Plus, Search, Package, DollarSign, AlertTriangle, Ban, Pencil, Trash2, Eye,
+  TrendingUp, TrendingDown, BarChart3,
 } from 'lucide-react';
 
 const LIMIT = 20;
+
+const daysAgo = (n: number) =>
+  new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
+const formatNet = (cents: number) =>
+  `${cents < 0 ? '-' : ''}$${(Math.abs(cents) / 100).toFixed(2)}`;
+
+type ProductTab = 'inventario' | 'reportes';
 
 export const ProductsPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
   const effectiveBusinessId = selectedBusinessId || user?.businessId || '';
   const canWrite = !!user && ['super_admin', 'admin', 'branch_admin'].includes(user.role);
+
+  const [activeTab, setActiveTab] = useState<ProductTab>('inventario');
 
   const [products, setProducts] = useState<Product[]>([]);
   const [summary, setSummary] = useState<ProductSummary | null>(null);
@@ -31,6 +48,13 @@ export const ProductsPage: React.FC = () => {
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+
+  // Reportes
+  const [reportStart, setReportStart] = useState(daysAgo(29));
+  const [reportEnd, setReportEnd] = useState(todayIso());
+  const [report, setReport] = useState<ProductReport | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   const scoped = user?.role === 'super_admin' && effectiveBusinessId
     ? { businessId: effectiveBusinessId }
@@ -76,8 +100,29 @@ export const ProductsPage: React.FC = () => {
     }
   }, [user?.role, effectiveBusinessId, filters, page]);
 
+  const loadReport = useCallback(async () => {
+    try {
+      setReportLoading(true);
+      setReportError(null);
+      const response = await apiService.getProductsReport(
+        reportStart || undefined,
+        reportEnd || undefined,
+        undefined,
+        scoped.businessId,
+      );
+      if (response.success) setReport(response.data);
+    } catch (err: any) {
+      setReportError(err.message || 'Error cargando reporte');
+    } finally {
+      setReportLoading(false);
+    }
+  }, [reportStart, reportEnd, user?.role, effectiveBusinessId]);
+
   useEffect(() => { loadSummary(); }, [loadSummary]);
   useEffect(() => { loadProducts(); }, [loadProducts]);
+  useEffect(() => {
+    if (activeTab === 'reportes') loadReport();
+  }, [activeTab, loadReport]);
 
   const updateFilter = (patch: Partial<typeof filters>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
@@ -108,6 +153,18 @@ export const ProductsPage: React.FC = () => {
     { label: 'Agotados', value: String(summary?.outOfStockCount ?? 0), icon: Ban, color: 'text-red-600 bg-red-50' },
   ];
 
+  const reportCards = [
+    { label: 'Ventas totales', value: formatDollars(report?.sales.totalCents ?? 0), icon: TrendingUp, color: 'text-green-600 bg-green-50' },
+    { label: 'Compras totales', value: formatDollars(report?.purchases.totalCents ?? 0), icon: TrendingDown, color: 'text-red-600 bg-red-50' },
+    { label: 'Neto', value: formatNet(report?.net ?? 0), icon: BarChart3, color: 'text-primary-600 bg-primary-50' },
+  ];
+
+  const reportChartData = (report?.daily ?? []).map((d) => ({
+    name: d.date,
+    Ventas: d.salesCents / 100,
+    Compras: d.purchasesCents / 100,
+  }));
+
   const hasFilters = !!(filters.category || filters.lowStock || filters.search);
 
   return (
@@ -117,7 +174,7 @@ export const ProductsPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">Productos</h1>
           <p className="text-gray-600 mt-1">Inventario de productos, precios y stock</p>
         </div>
-        {canWrite && (
+        {activeTab === 'inventario' && canWrite && (
           <button onClick={openCreate} className="btn btn-primary">
             <Plus className="h-4 w-4 mr-2" />
             Nuevo Producto
@@ -125,196 +182,303 @@ export const ProductsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {statCards.map((card) => (
-          <div key={card.label} className="card p-4 flex items-center">
-            <div className={`p-2 rounded-lg ${card.color}`}>
-              <card.icon className="h-5 w-5" />
-            </div>
-            <div className="ml-3">
-              <p className="text-2xl font-bold text-gray-900">{card.value}</p>
-              <p className="text-xs text-gray-500">{card.label}</p>
-            </div>
-          </div>
-        ))}
+      {/* Tabs */}
+      <div className="flex space-x-1 border-b border-gray-200 mb-6">
+        <button
+          onClick={() => setActiveTab('inventario')}
+          className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors ${
+            activeTab === 'inventario'
+              ? 'border-b-2 border-primary-500 text-primary-600'
+              : 'text-gray-500 hover:text-primary-600'
+          }`}
+        >
+          Inventario
+        </button>
+        <button
+          onClick={() => setActiveTab('reportes')}
+          className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors ${
+            activeTab === 'reportes'
+              ? 'border-b-2 border-primary-500 text-primary-600'
+              : 'text-gray-500 hover:text-primary-600'
+          }`}
+        >
+          Reportes
+        </button>
       </div>
 
-      {/* Filters */}
-      <div className="card mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="relative lg:col-span-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              value={filters.search}
-              onChange={(e) => updateFilter({ search: e.target.value })}
-              className="input pl-9"
-              placeholder="Buscar por nombre..."
-            />
-          </div>
-          <select
-            value={filters.category}
-            onChange={(e) => updateFilter({ category: e.target.value as ProductCategory | '' })}
-            className="input"
-          >
-            <option value="">Todas las categorías</option>
-            {PRODUCT_CATEGORIES.map((c) => (
-              <option key={c} value={c}>{PRODUCT_CATEGORY_META[c].label}</option>
+      {activeTab === 'inventario' ? (
+        <>
+          {/* Summary cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {statCards.map((card) => (
+              <div key={card.label} className="card p-4 flex items-center">
+                <div className={`p-2 rounded-lg ${card.color}`}>
+                  <card.icon className="h-5 w-5" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                  <p className="text-xs text-gray-500">{card.label}</p>
+                </div>
+              </div>
             ))}
-          </select>
-          <label className="flex items-center text-sm text-gray-700 px-1">
-            <input
-              type="checkbox"
-              checked={filters.lowStock}
-              onChange={(e) => updateFilter({ lowStock: e.target.checked })}
-              className="mr-2"
-            />
-            Solo stock bajo
-          </label>
-        </div>
-      </div>
+          </div>
 
-      {/* List */}
-      {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="loading-spinner h-10 w-10"></div>
-        </div>
-      ) : error ? (
-        <div className="card text-center py-12">
-          <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No se pudieron cargar los productos</h3>
-          <p className="text-gray-600">{error}</p>
-        </div>
-      ) : products.length === 0 ? (
-        <div className="card text-center py-12">
-          <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {hasFilters ? 'No hay productos para estos filtros' : 'No hay productos registrados'}
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Registra los productos del gimnasio para controlar precios y stock.
-          </p>
-          {canWrite && (
-            <button onClick={openCreate} className="btn btn-primary">
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Producto
-            </button>
+          {/* Filters */}
+          <div className="card mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="relative lg:col-span-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={filters.search}
+                  onChange={(e) => updateFilter({ search: e.target.value })}
+                  className="input pl-9"
+                  placeholder="Buscar por nombre..."
+                />
+              </div>
+              <select
+                value={filters.category}
+                onChange={(e) => updateFilter({ category: e.target.value as ProductCategory | '' })}
+                className="input"
+              >
+                <option value="">Todas las categorías</option>
+                {PRODUCT_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{PRODUCT_CATEGORY_META[c].label}</option>
+                ))}
+              </select>
+              <label className="flex items-center text-sm text-gray-700 px-1">
+                <input
+                  type="checkbox"
+                  checked={filters.lowStock}
+                  onChange={(e) => updateFilter({ lowStock: e.target.checked })}
+                  className="mr-2"
+                />
+                Solo stock bajo
+              </label>
+            </div>
+          </div>
+
+          {/* List */}
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="loading-spinner h-10 w-10"></div>
+            </div>
+          ) : error ? (
+            <div className="card text-center py-12">
+              <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No se pudieron cargar los productos</h3>
+              <p className="text-gray-600">{error}</p>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="card text-center py-12">
+              <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {hasFilters ? 'No hay productos para estos filtros' : 'No hay productos registrados'}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Registra los productos del gimnasio para controlar precios y stock.
+              </p>
+              {canWrite && (
+                <button onClick={openCreate} className="btn btn-primary">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Producto
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="card p-0 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-gray-500 text-left">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Producto</th>
+                      <th className="px-4 py-3 font-medium">Categoría</th>
+                      <th className="px-4 py-3 font-medium text-center">Stock</th>
+                      <th className="px-4 py-3 font-medium text-right hidden sm:table-cell">Costo</th>
+                      <th className="px-4 py-3 font-medium text-right">Precio</th>
+                      <th className="px-4 py-3 font-medium text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {products.map((product) => {
+                      const stock = stockStatus(product);
+                      const cat = PRODUCT_CATEGORY_META[product.category];
+                      return (
+                        <tr key={product.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            <Link to={`/products/${product.id}`} className="font-medium text-gray-900 hover:text-primary-600">
+                              {product.name}
+                            </Link>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`badge ${cat.badge}`}>{cat.label}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`badge ${stock.badge} whitespace-nowrap`}>
+                              <span className={`mr-1.5 h-2 w-2 rounded-full ${stock.dot}`} />
+                              {product.stockQty} · {stock.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-600 hidden sm:table-cell whitespace-nowrap">
+                            {formatDollars(product.costPriceCents)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">
+                            {formatDollars(product.salePriceCents)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end space-x-1">
+                              <Link
+                                to={`/products/${product.id}`}
+                                className="p-2 rounded-md text-gray-500 hover:bg-primary-50 hover:text-primary-600"
+                                title="Ver detalle"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                              {canWrite && (
+                                <>
+                                  <button
+                                    onClick={() => openEdit(product)}
+                                    className="p-2 rounded-md text-gray-500 hover:bg-primary-50 hover:text-primary-600"
+                                    title="Editar"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(product)}
+                                    className="p-2 rounded-md text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                    title="Eliminar"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {meta.pages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-gray-500">
+                    Página {meta.page} de {meta.pages} · {meta.total} productos
+                  </p>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={meta.page <= 1}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      onClick={() => setPage((p) => Math.min(meta.pages, p + 1))}
+                      disabled={meta.page >= meta.pages}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
-        </div>
+
+          <ProductForm
+            open={showForm}
+            initial={editing}
+            businessId={effectiveBusinessId}
+            onClose={() => setShowForm(false)}
+            onSaved={() => {
+              loadProducts();
+              loadSummary();
+            }}
+          />
+        </>
       ) : (
         <>
-          <div className="card p-0 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-500 text-left">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Producto</th>
-                  <th className="px-4 py-3 font-medium">Categoría</th>
-                  <th className="px-4 py-3 font-medium text-center">Stock</th>
-                  <th className="px-4 py-3 font-medium text-right hidden sm:table-cell">Costo</th>
-                  <th className="px-4 py-3 font-medium text-right">Precio</th>
-                  <th className="px-4 py-3 font-medium text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {products.map((product) => {
-                  const stock = stockStatus(product);
-                  const cat = PRODUCT_CATEGORY_META[product.category];
-                  return (
-                    <tr key={product.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <Link to={`/products/${product.id}`} className="font-medium text-gray-900 hover:text-primary-600">
-                          {product.name}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`badge ${cat.badge}`}>{cat.label}</span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`badge ${stock.badge} whitespace-nowrap`}>
-                          <span className={`mr-1.5 h-2 w-2 rounded-full ${stock.dot}`} />
-                          {product.stockQty} · {stock.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-600 hidden sm:table-cell whitespace-nowrap">
-                        {formatDollars(product.costPriceCents)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">
-                        {formatDollars(product.salePriceCents)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end space-x-1">
-                          <Link
-                            to={`/products/${product.id}`}
-                            className="p-2 rounded-md text-gray-500 hover:bg-primary-50 hover:text-primary-600"
-                            title="Ver detalle"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Link>
-                          {canWrite && (
-                            <>
-                              <button
-                                onClick={() => openEdit(product)}
-                                className="p-2 rounded-md text-gray-500 hover:bg-primary-50 hover:text-primary-600"
-                                title="Editar"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(product)}
-                                className="p-2 rounded-md text-gray-500 hover:bg-red-50 hover:text-red-600"
-                                title="Eliminar"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          {/* Date range */}
+          <div className="card mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                <input
+                  type="date"
+                  value={reportStart}
+                  onChange={(e) => setReportStart(e.target.value)}
+                  className="input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                <input
+                  type="date"
+                  value={reportEnd}
+                  onChange={(e) => setReportEnd(e.target.value)}
+                  className="input"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Pagination */}
-          {meta.pages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <p className="text-sm text-gray-500">
-                Página {meta.page} de {meta.pages} · {meta.total} productos
+          {/* Report cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            {reportCards.map((card) => (
+              <div key={card.label} className="card p-4 flex items-center">
+                <div className={`p-2 rounded-lg ${card.color}`}>
+                  <card.icon className="h-5 w-5" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                  <p className="text-xs text-gray-500">{card.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Chart */}
+          {reportLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="loading-spinner h-10 w-10"></div>
+            </div>
+          ) : reportError ? (
+            <div className="card text-center py-12">
+              <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No se pudo cargar el reporte</h3>
+              <p className="text-gray-600">{reportError}</p>
+            </div>
+          ) : reportChartData.length === 0 ? (
+            <div className="card text-center py-12">
+              <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Sin movimientos en el período</h3>
+              <p className="text-gray-600">
+                No hay ventas ni compras registradas en el rango seleccionado.
               </p>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={meta.page <= 1}
-                  className="btn btn-secondary btn-sm"
-                >
-                  Anterior
-                </button>
-                <button
-                  onClick={() => setPage((p) => Math.min(meta.pages, p + 1))}
-                  disabled={meta.page >= meta.pages}
-                  className="btn btn-secondary btn-sm"
-                >
-                  Siguiente
-                </button>
+            </div>
+          ) : (
+            <div className="card">
+              <h2 className="text-sm font-semibold text-gray-700 mb-4">Ventas vs compras por día (USD)</h2>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={reportChartData} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="Ventas" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Compras" fill="#dc2626" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           )}
         </>
       )}
-
-      <ProductForm
-        open={showForm}
-        initial={editing}
-        businessId={effectiveBusinessId}
-        onClose={() => setShowForm(false)}
-        onSaved={() => {
-          loadProducts();
-          loadSummary();
-        }}
-      />
     </div>
   );
 };
