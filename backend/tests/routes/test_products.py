@@ -8,11 +8,12 @@ importan `FirebaseService` a nivel de módulo, por lo que se parchea el símbolo
 ejecuta DENTRO de los patches para que cada test use SU mock y no dependa del
 orden de ejecución entre archivos.
 
-Cubre: CRUD + validación, soft-delete + auditoría, scope (business/branch),
-list (filtros/paginación), summary (conteos con UNA query), movimientos
-(venta descuenta stock, sobreventa 400, compra incrementa + costo, compra por
-cashier 403, venta por cashier 201, inmutabilidad, purchase NO escribe expenses)
-y la matriz de permisos.
+Cubre: CRUD + validación, detalle GET /<id> (200/404/403), soft-delete +
+auditoría, scope (business/branch), list (filtros/paginación + meta), summary
+(conteos con UNA query), movimientos (venta descuenta stock, sobreventa 400,
+compra incrementa + costo, compra por cashier 403, venta por cashier 201,
+inmutabilidad, purchase NO escribe expenses + meta paginación) y la matriz de
+permisos.
 """
 import sys
 import os
@@ -469,6 +470,59 @@ class TestProductsSummary:
 
 
 # ============================================================================
+# GET /api/products/<id>
+# ============================================================================
+
+class TestGetProduct:
+
+    def test_get_product_200(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        mock.get_document.return_value = _product(id='p1')
+        client = make_client(mock)
+
+        response = client.get('/api/products/p1', headers=auth_header)
+
+        assert response.status_code == 200
+        body = response.get_json()
+        assert body['success'] is True
+        assert body['data']['id'] == 'p1'
+        assert body['data']['name'] == 'Proteína Whey'
+        mock.get_document.assert_called_once_with('products', 'p1')
+
+    def test_get_product_missing_404(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        mock.get_document.return_value = None
+        client = make_client(mock)
+
+        response = client.get('/api/products/ghost', headers=auth_header)
+
+        assert response.status_code == 404
+        assert response.get_json()['success'] is False
+
+    def test_get_product_soft_deleted_404(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        mock.get_document.return_value = _product(isActive=False)
+        client = make_client(mock)
+
+        assert client.get('/api/products/p1', headers=auth_header).status_code == 404
+
+    def test_get_product_out_of_scope_403(self, make_client, auth_header):
+        mock = create_mock_service(role='branch_admin', business_id='biz-1', branch_id='branch-2')
+        mock.get_document.return_value = _product()  # branch-1
+        client = make_client(mock)
+
+        assert client.get('/api/products/p1', headers=auth_header).status_code == 403
+
+    @pytest.mark.parametrize('role', ['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer'])
+    def test_all_roles_can_get_detail_200(self, make_client, auth_header, role):
+        mock = create_mock_service(role=role, business_id='biz-1')
+        mock.get_document.return_value = _product(businessId='biz-1')
+        client = make_client(mock)
+
+        assert client.get('/api/products/p1', headers=auth_header).status_code == 200
+
+
+# ============================================================================
 # Movimientos (/api/products/<id>/movement[s])
 # ============================================================================
 
@@ -656,7 +710,9 @@ class TestMovements:
         response = client.get('/api/products/p1/movements', headers=auth_header)
 
         assert response.status_code == 200
-        assert [m['id'] for m in response.get_json()['data']] == ['mv2', 'mv1']
+        body = response.get_json()
+        assert [m['id'] for m in body['data']] == ['mv2', 'mv1']
+        assert body['meta'] == {'total': 2, 'page': 1, 'limit': 20, 'pages': 1}
 
     def test_movements_history_missing_product_404(self, make_client, auth_header):
         mock = create_mock_service(role='admin', business_id='biz-1')
@@ -699,6 +755,7 @@ class TestPermissions:
     @pytest.mark.parametrize('method,path', [
         ('get', '/api/products'),
         ('get', '/api/products/summary'),
+        ('get', '/api/products/p1'),
         ('post', '/api/products'),
         ('put', '/api/products/p1'),
         ('delete', '/api/products/p1'),

@@ -8,6 +8,7 @@ Colecciones:
 Endpoints:
     GET    /api/products                - listar (TODOS los roles; filtros en Python, paginado)
     GET    /api/products/summary        - resumen (total, valor de stock, bajo/agotado)
+    GET    /api/products/<id>           - detalle (TODOS los roles)
     POST   /api/products                - crear (admin+)
     PUT    /api/products/<id>           - actualizar (admin+)
     DELETE /api/products/<id>           - soft delete + auditoría (admin+)
@@ -302,6 +303,41 @@ def products_summary():
         if index_response:
             return index_response
         logger.error(f"Error calculando resumen de productos: {str(e)}")
+        return _error(500, 'Error interno del servidor')
+
+
+# ============================================================================
+# GET /api/products/<id>  (TODOS los roles)
+# Declarado DESPUÉS de `/summary` para que la ruta estática no sea capturada.
+# ============================================================================
+
+@products_bp.route('/<product_id>', methods=['GET', 'OPTIONS'])
+@require_auth
+@require_role(READ_ROLES)
+def get_product(product_id):
+    """
+    Detalle de un producto del catálogo. 404 si no existe o está borrado
+    (`isActive:false`); 403 si está fuera del alcance del usuario (negocio/sede).
+
+    Response (200): { success, data:{id, ...campos} }
+    """
+    try:
+        firebase_service = FirebaseService()
+        product, not_found = _fetch_active_product(firebase_service, product_id)
+        if not_found:
+            return not_found
+
+        denied = _product_scope_denied(product)
+        if denied:
+            return denied
+
+        return jsonify({'success': True, 'data': product}), 200
+
+    except Exception as e:
+        index_response = _index_error_response(e)
+        if index_response:
+            return index_response
+        logger.error(f"Error obteniendo producto {product_id}: {str(e)}")
         return _error(500, 'Error interno del servidor')
 
 
