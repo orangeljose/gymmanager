@@ -57,8 +57,8 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     icon: 'Wallet',
     submenu: [
       { label: 'Suscripciones', href: '/payments/new', roles: ['super_admin', 'admin', 'branch_admin', 'cashier'] },
-      { label: 'Servicios', href: '/expenses', roles: ['super_admin', 'admin', 'branch_admin'] },
-      { label: 'Productos', href: '/products' }
+      { label: 'Productos', href: '/products' },
+      { label: 'Servicios', href: '/expenses', roles: ['super_admin', 'admin', 'branch_admin'] }
     ]
   },
   {
