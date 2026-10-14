@@ -16,7 +16,8 @@ import {
   WifiOff,
   AlertCircle,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Wallet
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOffline } from '@/hooks/useOffline';
@@ -51,10 +52,13 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     icon: 'Dumbbell'
   },
   {
-    label: 'Egresos',
-    href: '/expenses',
-    icon: 'TrendingDown',
-    roles: ['super_admin', 'admin', 'branch_admin']
+    label: 'Caja',
+    href: '/caja',
+    icon: 'Wallet',
+    submenu: [
+      { label: 'Egresos', href: '/expenses', roles: ['super_admin', 'admin', 'branch_admin'] },
+      { label: 'Productos', href: '/products' }
+    ]
   },
   {
     label: 'Reportes',
@@ -92,7 +96,8 @@ const iconMap: Record<string, React.ElementType> = {
   CreditCard,
   FileText,
   Settings,
-  TrendingDown
+  TrendingDown,
+  Wallet
 };
 
 export const Layout: React.FC = () => {
@@ -129,7 +134,9 @@ export const Layout: React.FC = () => {
   };
 
   const isSubmenuActive = (submenu: SubMenuItem[]) => {
-    return submenu.some(item => location.pathname === item.href);
+    return submenu.some(
+      item => location.pathname === item.href || location.pathname.startsWith(`${item.href}/`)
+    );
   };
 
   return (

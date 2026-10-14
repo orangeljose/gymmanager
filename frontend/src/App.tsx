@@ -32,6 +32,8 @@ import { AttendancePage } from '@/pages/AttendancePage';
 import { MachinesPage } from '@/pages/MachinesPage';
 import { MachineDetailPage } from '@/pages/MachineDetailPage';
 import { ExpensesPage } from '@/pages/ExpensesPage';
+import { ProductsPage } from '@/pages/ProductsPage';
+import { ProductDetailPage } from '@/pages/ProductDetailPage';
 
 // Loading component
 const LoadingSpinner = () => (
@@ -113,6 +115,22 @@ const App: React.FC = () => {
               <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <ExpensesPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+
+            {/* Products (Inventario — lectura para todos los roles) */}
+            <Route path="products" element={
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer']}>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <ProductsPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="products/:id" element={
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer']}>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <ProductDetailPage />
                 </Suspense>
               </ProtectedRoute>
             } />
