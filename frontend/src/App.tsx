@@ -16,6 +16,8 @@ import { ClientDetailPage } from '@/pages/ClientDetailPage';
 import { ClientFormPage } from '@/pages/ClientFormPage';
 import { ReportsPage } from '@/pages/ReportsPage';
 import { IncomeReportPage } from '@/pages/IncomeReportPage';
+import { ProductReportPage } from '@/pages/ProductReportPage';
+import { ServicesReportPage } from '@/pages/ServicesReportPage';
 import { AdministrationPage } from '@/pages/AdministrationPage';
 import { PlansPage } from '@/pages/PlansPage';
 import { PaymentAccountsPage } from '@/pages/PaymentAccountsPage';
@@ -165,6 +167,20 @@ const App: React.FC = () => {
               <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <IncomeReportPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="reports/products" element={
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <ProductReportPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="reports/services" element={
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <ServicesReportPage />
                 </Suspense>
               </ProtectedRoute>
             } />

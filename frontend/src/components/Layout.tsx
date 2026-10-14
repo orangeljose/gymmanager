@@ -67,7 +67,9 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     icon: 'FileText',
     roles: ['super_admin', 'admin', 'branch_admin', 'cashier'],
     submenu: [
-      { label: 'Ingresos', href: '/reports/income', roles: ['super_admin', 'admin', 'branch_admin'] }
+      { label: 'Reporte de Suscripciones', href: '/reports/income', roles: ['super_admin', 'admin', 'branch_admin'] },
+      { label: 'Reporte de Productos', href: '/reports/products', roles: ['super_admin', 'admin', 'branch_admin'] },
+      { label: 'Reporte de Servicios', href: '/reports/services', roles: ['super_admin', 'admin', 'branch_admin'] }
     ]
   },
   {

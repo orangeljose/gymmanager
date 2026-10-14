@@ -1,16 +1,32 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Package, Wrench } from 'lucide-react';
 
 export const ReportsPage: React.FC = () => {
   const reportSections = [
     {
-      title: 'Reporte de Ingresos',
+      title: 'Reporte de Suscripciones',
       description: 'Resumen de pagos por período y método',
       href: '/reports/income',
       icon: DollarSign,
       color: 'bg-green-100 text-green-600',
       stats: 'Ingresos por período'
+    },
+    {
+      title: 'Reporte de Productos',
+      description: 'Ventas vs compras de productos por período',
+      href: '/reports/products',
+      icon: Package,
+      color: 'bg-blue-100 text-blue-600',
+      stats: 'Movimientos de inventario'
+    },
+    {
+      title: 'Reporte de Servicios',
+      description: 'Egresos y servicios por período y categoría',
+      href: '/reports/services',
+      icon: Wrench,
+      color: 'bg-amber-100 text-amber-600',
+      stats: 'Egresos por período'
     }
   ];
 
