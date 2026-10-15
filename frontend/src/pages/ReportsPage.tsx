@@ -5,7 +5,7 @@ import { DollarSign, Package, Wrench, CalendarCheck } from 'lucide-react';
 export const ReportsPage: React.FC = () => {
   const reportSections = [
     {
-      title: 'Reporte de Suscripciones',
+      title: 'Reporte de Membresías',
       description: 'Resumen de pagos por período y método',
       href: '/reports/income',
       icon: DollarSign,
