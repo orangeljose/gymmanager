@@ -15,6 +15,7 @@ from .attendance import attendance_bp
 from .machines import machines_bp
 from .expenses import expenses_bp
 from .products import products_bp
+from .sales import sales_bp
 
 __all__ = [
     'auth_bp',
@@ -30,5 +31,6 @@ __all__ = [
     'attendance_bp',
     'machines_bp',
     'expenses_bp',
-    'products_bp'
+    'products_bp',
+    'sales_bp'
 ]
