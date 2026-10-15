@@ -77,7 +77,7 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     label: 'Administración',
     href: '/admin',
     icon: 'Settings',
-    roles: ['super_admin', 'admin'],
+    roles: ['super_admin', 'admin', 'branch_admin'],
     submenu: [
       { label: 'Negocios', href: '/businesses', roles: ['super_admin'] },
       { label: 'Negocio', href: '/admin/businesses/create', roles: ['super_admin'] },
