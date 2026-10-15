@@ -72,8 +72,8 @@ export const ProductReportPage: React.FC = () => {
 
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reporte de Productos</h1>
-          <p className="text-gray-600 mt-1">Ventas vs compras de productos por período</p>
+          <h1 className="text-2xl font-bold text-gray-900">Reporte de Mercancía</h1>
+          <p className="text-gray-600 mt-1">Ventas (caja) vs compras de mercancía por período</p>
         </div>
       </div>
 

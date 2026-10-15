@@ -639,7 +639,7 @@ export interface ExpenseFormData {
 
 // Product / Inventory Types (Fase 2 — Productos, Stock y Movimientos)
 export type ProductCategory = 'supplement' | 'drink' | 'apparel' | 'accessory' | 'other';
-export type MovementType = 'sale' | 'purchase';
+export type MovementType = 'purchase';
 
 export interface Product {
   id: string;
@@ -727,6 +727,52 @@ export interface ProductReport {
   purchases: { count: number; totalCents: number };
   net: number;                  // sales.totalCents - purchases.totalCents
   daily: ProductReportDailyPoint[];
+}
+
+// Point of Sale Types (Ventas de productos)
+export interface SaleItem {
+  productId: string;
+  productName: string;
+  qty: number;
+  unitPriceCents: number;
+  subtotalCents: number;
+}
+
+export interface Sale {
+  id: string;
+  receiptNumber: string;        // V-YYYYMMDD-XXX
+  date: string;                 // YYYY-MM-DD
+  totalCents: number;
+  method: PaymentMethod;
+  paymentAccountId?: string | null;
+  clientId?: string | null;
+  clientName?: string | null;
+  items: SaleItem[];
+  businessId: string;
+  branchId?: string | null;
+  registeredBy: string;
+  registeredByName: string;
+  createdAt: string;
+}
+
+export interface SaleCreateData {
+  items: { productId: string; qty: number }[];
+  method: PaymentMethod;
+  paymentAccountId?: string | null;
+  clientId?: string | null;
+  clientName?: string | null;
+  branchId?: string | null;
+  date?: string;
+}
+
+export interface SaleFilters {
+  businessId?: string;
+  branchId?: string;
+  startDate?: string;
+  endDate?: string;
+  clientName?: string;
+  page?: number;
+  limit?: number;
 }
 
 // PWA Types

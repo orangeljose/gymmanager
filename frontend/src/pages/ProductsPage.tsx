@@ -6,11 +6,12 @@ import toast from 'react-hot-toast';
 import {
   ProductForm, PRODUCT_CATEGORY_META, PRODUCT_CATEGORIES, formatDollars, stockStatus,
 } from '@/components/ProductForm';
+import { ProductMovementModal } from '@/components/ProductMovementModal';
 import type {
   Product, ProductCategory, ProductFilters, ProductSummary,
 } from '@/types';
 import {
-  Plus, Search, Package, DollarSign, AlertTriangle, Ban, Pencil, Trash2, Eye,
+  Plus, Search, Package, DollarSign, AlertTriangle, Ban, Pencil, Trash2, Eye, PackagePlus,
 } from 'lucide-react';
 
 const LIMIT = 20;
@@ -33,6 +34,7 @@ export const ProductsPage: React.FC = () => {
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [movementProduct, setMovementProduct] = useState<Product | null>(null);
 
   const scoped = user?.role === 'super_admin' && effectiveBusinessId
     ? { businessId: effectiveBusinessId }
@@ -116,8 +118,8 @@ export const ProductsPage: React.FC = () => {
     <div className="p-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Productos</h1>
-          <p className="text-gray-600 mt-1">Inventario de productos, precios y stock</p>
+          <h1 className="text-2xl font-bold text-gray-900">Mercancía</h1>
+          <p className="text-gray-600 mt-1">Inventario de mercancía, precios y stock</p>
         </div>
         {canWrite && (
           <button onClick={openCreate} className="btn btn-primary">
@@ -192,10 +194,10 @@ export const ProductsPage: React.FC = () => {
         <div className="card text-center py-12">
           <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {hasFilters ? 'No hay productos para estos filtros' : 'No hay productos registrados'}
+            {hasFilters ? 'No hay mercancía para estos filtros' : 'No hay mercancía registrada'}
           </h3>
           <p className="text-gray-600 mb-6">
-            Registra los productos del gimnasio para controlar precios y stock.
+            Registra la mercancía del gimnasio para controlar precios y stock.
           </p>
           {canWrite && (
             <button onClick={openCreate} className="btn btn-primary">
@@ -255,6 +257,13 @@ export const ProductsPage: React.FC = () => {
                           </Link>
                           {canWrite && (
                             <>
+                              <button
+                                onClick={() => setMovementProduct(product)}
+                                className="p-2 rounded-md text-gray-500 hover:bg-primary-50 hover:text-primary-600"
+                                title="Reponer"
+                              >
+                                <PackagePlus className="h-4 w-4" />
+                              </button>
                               <button
                                 onClick={() => openEdit(product)}
                                 className="p-2 rounded-md text-gray-500 hover:bg-primary-50 hover:text-primary-600"
@@ -317,6 +326,19 @@ export const ProductsPage: React.FC = () => {
           loadSummary();
         }}
       />
+
+      {movementProduct && (
+        <ProductMovementModal
+          open={!!movementProduct}
+          product={movementProduct}
+          onClose={() => setMovementProduct(null)}
+          onSaved={() => {
+            setMovementProduct(null);
+            loadProducts();
+            loadSummary();
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -5,20 +5,18 @@ import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from '@/components/ExpenseForm';
 import toast from 'react-hot-toast';
 import { X } from 'lucide-react';
-import type { MovementType, PaymentMethod, Product, ProductMovement, ProductMovementFormData } from '@/types';
+import type { PaymentMethod, Product, ProductMovement, ProductMovementFormData } from '@/types';
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
 const ADMIN_ROLES = ['super_admin', 'admin', 'branch_admin'];
-const SALE_ROLES = ['super_admin', 'admin', 'branch_admin', 'cashier'];
 
 // Métodos que requieren cuenta de destino (payment_accounts por tipo).
 const ACCOUNT_METHODS: PaymentMethod[] = ['zelle', 'pago_movil', 'binance'];
 
-interface MovementFormState {
-  type: MovementType;
+interface ReponerFormState {
   qty: string;
-  unitPrice: string;   // dólares; vacío en venta ⇒ usa salePriceCents
+  unitPrice: string;   // dólares; costo unitario (requerido)
   date: string;
   note: string;
   updateCostPrice: boolean;
@@ -38,11 +36,9 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
 }) => {
   const { user } = useAuth();
   const canPurchase = !!user && ADMIN_ROLES.includes(user.role);
-  const canSell = !!user && SALE_ROLES.includes(user.role);
   const { accounts } = usePaymentAccounts(product.businessId || '');
 
-  const [form, setForm] = useState<MovementFormState>(() => ({
-    type: 'sale',
+  const [form, setForm] = useState<ReponerFormState>(() => ({
     qty: '1',
     unitPrice: '',
     date: todayIso(),
@@ -56,8 +52,6 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
   useEffect(() => {
     if (!open) return;
     setForm({
-      // Por defecto venta; si el rol no puede vender, arranca en compra.
-      type: canSell ? 'sale' : 'purchase',
       qty: '1',
       unitPrice: '',
       date: todayIso(),
@@ -66,11 +60,11 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
       method: 'cash',
       paymentAccountId: '',
     });
-  }, [open, canSell]);
+  }, [open]);
 
   if (!open) return null;
 
-  const set = <K extends keyof MovementFormState>(key: K, value: MovementFormState[K]) =>
+  const set = <K extends keyof ReponerFormState>(key: K, value: ReponerFormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,41 +76,28 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
       return;
     }
 
-    if (form.type === 'sale' && qty > (product.stockQty ?? 0)) {
-      toast.error('Stock insuficiente');
+    const unitPrice = Number(form.unitPrice);
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+      toast.error('El costo unitario debe ser mayor o igual a 0');
       return;
     }
 
     const payload: ProductMovementFormData = {
-      type: form.type,
+      type: 'purchase',
       qty,
+      unitPriceCents: Math.round(unitPrice * 100),
+      updateCostPrice: form.updateCostPrice,
       date: form.date || todayIso(),
       note: form.note.trim() || undefined,
       method: form.method,
       paymentAccountId: form.paymentAccountId || null,
     };
 
-    if (form.unitPrice.trim()) {
-      const price = Number(form.unitPrice);
-      if (!Number.isFinite(price) || price < 0) {
-        toast.error('El precio unitario debe ser mayor o igual a 0');
-        return;
-      }
-      payload.unitPriceCents = Math.round(price * 100);
-    } else if (form.type === 'purchase') {
-      toast.error('El costo unitario es obligatorio en una compra');
-      return;
-    }
-
-    if (form.type === 'purchase') {
-      payload.updateCostPrice = form.updateCostPrice;
-    }
-
     try {
       setSaving(true);
       const response = await apiService.createProductMovement(product.id, payload);
       if (response.success) {
-        toast.success(form.type === 'sale' ? 'Venta registrada' : 'Compra registrada');
+        toast.success('Stock repuesto');
         onSaved(response.data);
         onClose();
       }
@@ -127,13 +108,15 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
     }
   };
 
-  const salePriceDollars = (product.salePriceCents / 100).toFixed(2);
+  if (!canPurchase) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white">
-          <h3 className="text-lg font-semibold text-gray-900">Registrar Movimiento</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Reponer stock</h3>
           <button onClick={onClose} className="btn btn-ghost btn-sm" type="button">
             <X className="h-5 w-5" />
           </button>
@@ -147,21 +130,6 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
-              <select
-                value={form.type}
-                onChange={(e) => set('type', e.target.value as MovementType)}
-                className="input"
-                disabled={!canSell && !canPurchase}
-              >
-                {canSell && <option value="sale">Venta</option>}
-                {canPurchase && <option value="purchase">Compra</option>}
-              </select>
-              {!canPurchase && (
-                <p className="text-xs text-gray-500 mt-1">Solo administradores pueden registrar compras.</p>
-              )}
-            </div>
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Cantidad *</label>
               <input
                 type="number"
@@ -173,27 +141,19 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
                 required
               />
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {form.type === 'sale' ? 'Precio unitario (USD)' : 'Costo unitario (USD) *'}
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.unitPrice}
-              onChange={(e) => set('unitPrice', e.target.value)}
-              className="input"
-              placeholder={form.type === 'sale' ? `Por defecto $${salePriceDollars}` : 'Ej: 15.00'}
-              required={form.type === 'purchase'}
-            />
-            {form.type === 'sale' && (
-              <p className="text-xs text-gray-500 mt-1">
-                Si se deja vacío se usa el precio de venta (${salePriceDollars}).
-              </p>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Costo unitario (USD) *</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.unitPrice}
+                onChange={(e) => set('unitPrice', e.target.value)}
+                className="input"
+                placeholder="Ej: 15.00"
+                required
+              />
+            </div>
           </div>
 
           <div>
@@ -207,17 +167,15 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
             />
           </div>
 
-          {form.type === 'purchase' && (
-            <label className="flex items-center text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={form.updateCostPrice}
-                onChange={(e) => set('updateCostPrice', e.target.checked)}
-                className="mr-2"
-              />
-              Actualizar el costo del producto con este precio
-            </label>
-          )}
+          <label className="flex items-center text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={form.updateCostPrice}
+              onChange={(e) => set('updateCostPrice', e.target.checked)}
+              className="mr-2"
+            />
+            Actualizar el costo del producto con este precio
+          </label>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nota</label>
@@ -266,7 +224,7 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
               Cancelar
             </button>
             <button type="submit" disabled={saving} className="btn btn-primary">
-              {saving ? 'Guardando...' : 'Registrar'}
+              {saving ? 'Guardando...' : 'Reponer'}
             </button>
           </div>
         </form>

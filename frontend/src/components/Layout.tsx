@@ -57,7 +57,7 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     icon: 'Wallet',
     submenu: [
       { label: 'Membresías', href: '/payments/new', roles: ['super_admin', 'admin', 'branch_admin', 'cashier'] },
-      { label: 'Productos', href: '/products' },
+      { label: 'Productos', href: '/pos', roles: ['super_admin', 'admin', 'branch_admin', 'cashier'] },
       { label: 'Servicios', href: '/expenses', roles: ['super_admin', 'admin', 'branch_admin'] }
     ]
   },
@@ -81,6 +81,7 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     submenu: [
       { label: 'Negocios', href: '/businesses', roles: ['super_admin'] },
       { label: 'Negocio', href: '/admin/businesses/create', roles: ['super_admin'] },
+      { label: 'Mercancía', href: '/products', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Planes', href: '/plans', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Cuentas de Pago', href: '/payment-accounts', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Recibos', href: '/receipts', roles: ['super_admin', 'admin', 'branch_admin'] },

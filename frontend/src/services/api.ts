@@ -46,7 +46,10 @@ import type {
   ProductMovement,
   ProductMovementFormData,
   ProductReport,
-  ProductSummary
+  ProductSummary,
+  Sale,
+  SaleCreateData,
+  SaleFilters
 } from '@/types';
 
 class ApiService {
@@ -749,6 +752,31 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  // Sales (Punto de Venta)
+  async createSale(data: SaleCreateData): Promise<ApiResponse<Sale>> {
+    return this.requestWithAuth<Sale>('/sales', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getSales(filters: SaleFilters = {}): Promise<ApiResponse<Sale[]>> {
+    const params = new URLSearchParams();
+    if (filters.businessId) params.append('businessId', filters.businessId);
+    if (filters.branchId) params.append('branchId', filters.branchId);
+    if (filters.startDate) params.append('startDate', filters.startDate);
+    if (filters.endDate) params.append('endDate', filters.endDate);
+    if (filters.clientName) params.append('clientName', filters.clientName);
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
+    const endpoint = `/sales${params.toString() ? `?${params.toString()}` : ''}`;
+    return this.requestWithAuth<Sale[]>(endpoint);
+  }
+
+  async getSale(id: string): Promise<ApiResponse<Sale>> {
+    return this.requestWithAuth<Sale>(`/sales/${id}`);
   }
 }
 

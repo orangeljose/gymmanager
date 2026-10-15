@@ -5,28 +5,27 @@ import { apiService } from '@/services/api';
 import { ProductForm, PRODUCT_CATEGORY_META, formatDollars, stockStatus } from '@/components/ProductForm';
 import { ProductMovementModal } from '@/components/ProductMovementModal';
 import toast from 'react-hot-toast';
-import type { MovementType, Product, ProductMovement } from '@/types';
+import type { Product, ProductMovement } from '@/types';
 import {
   ArrowLeft, Package, Edit2, Trash2, PlusCircle, AlertTriangle, Tag, DollarSign,
   Boxes, ArrowDownRight, ArrowUpRight,
 } from 'lucide-react';
 
-const TYPE_META: Record<MovementType, { label: string; badge: string; icon: React.ElementType }> = {
+// Incluye `sale` por compatibilidad con movimientos legacy; hoy solo se registran compras.
+const TYPE_META: Record<string, { label: string; badge: string; icon: React.ElementType }> = {
   sale: { label: 'Venta', badge: 'bg-green-100 text-green-800', icon: ArrowUpRight },
   purchase: { label: 'Compra', badge: 'bg-blue-100 text-blue-800', icon: ArrowDownRight },
 };
 
 const ADMIN_ROLES = ['super_admin', 'admin', 'branch_admin'];
-const SALE_ROLES = ['super_admin', 'admin', 'branch_admin', 'cashier'];
 
 export const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const canWrite = !!user && ADMIN_ROLES.includes(user.role);
-  const canSell = !!user && SALE_ROLES.includes(user.role);
   const canPurchase = canWrite;
-  const canRegisterMovement = canSell || canPurchase;
+  const canRegisterMovement = canPurchase;
 
   const [product, setProduct] = useState<Product | null>(null);
   const [history, setHistory] = useState<ProductMovement[]>([]);
@@ -174,7 +173,7 @@ export const ProductDetailPage: React.FC = () => {
           <h2 className="text-lg font-semibold text-gray-900">Historial de movimientos</h2>
           {canRegisterMovement && (
             <button onClick={() => setShowMovement(true)} className="btn btn-primary btn-sm">
-              <PlusCircle className="h-4 w-4 mr-2" /> Registrar Movimiento
+              <PlusCircle className="h-4 w-4 mr-2" /> Reponer
             </button>
           )}
         </div>
@@ -200,7 +199,7 @@ export const ProductDetailPage: React.FC = () => {
               </thead>
               <tbody>
                 {history.map((mv) => {
-                  const tmeta = TYPE_META[mv.type] || TYPE_META.sale;
+                  const tmeta = TYPE_META[mv.type] || TYPE_META.purchase;
                   const Icon = tmeta.icon;
                   return (
                     <tr key={mv.id} className="border-b last:border-0">

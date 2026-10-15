@@ -37,6 +37,7 @@ import { MachineDetailPage } from '@/pages/MachineDetailPage';
 import { ExpensesPage } from '@/pages/ExpensesPage';
 import { ProductsPage } from '@/pages/ProductsPage';
 import { ProductDetailPage } from '@/pages/ProductDetailPage';
+import { PointOfSalePage } from '@/pages/PointOfSalePage';
 
 // Loading component
 const LoadingSpinner = () => (
@@ -118,6 +119,15 @@ const App: React.FC = () => {
               <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <ExpensesPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+
+            {/* Point of Sale (Caja — cashier+) */}
+            <Route path="pos" element={
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin', 'cashier']}>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <PointOfSalePage />
                 </Suspense>
               </ProtectedRoute>
             } />
