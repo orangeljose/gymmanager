@@ -13,7 +13,7 @@ Endpoints:
     PUT    /api/products/<id>           - actualizar (admin+)
     DELETE /api/products/<id>           - soft delete + auditoría (admin+)
     GET    /api/products/<id>/movements - historial de movimientos (TODOS los roles)
-    POST   /api/products/<id>/movement  - registrar movimiento (rol según `type` en el body)
+    POST   /api/products/<id>/movement  - registrar compra ("Reponer", admin+)
 
 Patrón: copia fiel de `routes/expenses.py`. Firestore aplica SOLO la igualdad de
 `businessId` (índice automático de un campo); los filtros de `branchId`/`category`
@@ -21,10 +21,9 @@ Patrón: copia fiel de `routes/expenses.py`. Firestore aplica SOLO la igualdad d
 (volumen 10-50 docs/negocio), evitando índices compuestos en `products`.
 
 Roles: `products` es lectura para TODOS los roles; las escrituras de catálogo
-exigen admin+ (`ADMIN_ROLES`). La venta (`sale`) la pueden registrar
-`SALE_ROLES` (incluye `cashier`); la compra (`purchase`) SOLO admin+. Como el rol
-depende del `type` en el body (no del path), `POST /movement` valida el rol
-IN-BODY y NO usa `@require_role`.
+exigen admin+ (`ADMIN_ROLES`). `POST /movement` registra SOLO compras (`purchase`,
+admin+) y usa `@require_role`. Las ventas NO son movimientos: se registran vía
+`POST /api/sales` (ver `routes/sales.py`).
 
 IMPORTANTE (anti-doble-conteo): una compra es dinero que sale, pero NUNCA crea ni
 muta un documento de `expenses`. Compras y egresos son fuentes separadas.
@@ -47,12 +46,12 @@ products_bp = Blueprint('products', __name__, url_prefix='/api/products')
 
 PRODUCTS_COLLECTION = 'products'
 MOVEMENTS_COLLECTION = 'product_movements'
+SALES_COLLECTION = 'sales'
 
 PRODUCT_CATEGORIES = ['supplement', 'drink', 'apparel', 'accessory', 'other']
-MOVEMENT_TYPES = ['sale', 'purchase']
+MOVEMENT_TYPES = ['purchase']
 
 ADMIN_ROLES = ['super_admin', 'admin', 'branch_admin']
-SALE_ROLES = ['super_admin', 'admin', 'branch_admin', 'cashier']
 READ_ROLES = ['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer']
 
 # Métodos de pago reutilizados del modelo de pagos (fuente única de verdad).
@@ -320,7 +319,8 @@ def products_summary():
 @require_role(READ_ROLES)
 def products_report():
     """
-    Reporte de ventas vs compras sobre `product_movements` (libro append-only).
+    Reporte de ventas vs compras: ingreso desde `sales`, egreso desde
+    `product_movements` (compras solamente).
 
     Query Params: startDate, endDate (YYYY-MM-DD, opcionales), branchId,
                   businessId (super_admin)
@@ -329,8 +329,8 @@ def products_report():
                      {date, salesCents, purchasesCents}] } }
 
     `net = sales.totalCents - purchases.totalCents` (una compra es dinero que
-    sale). UNA query scoped a `product_movements` (igualdad businessId) y toda la
-    agregación por tipo/fecha en Python.
+    sale). DOS queries scoped (igualdad businessId en `sales` y en
+    `product_movements`) y toda la agregación por fecha en Python.
     """
     try:
         business_id, branch_id = _scope_ids()
@@ -352,6 +352,14 @@ def products_report():
 
         firebase_service = FirebaseService()
         try:
+            sales_docs = firebase_service.query_firestore(SALES_COLLECTION, filters=filters)
+        except Exception as query_error:
+            index_response = _index_error_response(query_error)
+            if index_response:
+                return index_response
+            raise
+
+        try:
             movements = firebase_service.query_firestore(MOVEMENTS_COLLECTION, filters=filters)
         except Exception as query_error:
             index_response = _index_error_response(query_error)
@@ -365,8 +373,27 @@ def products_report():
         purchases_cents = 0
         daily_map = {}
 
+        for s in sales_docs:
+            if branch_id and s.get('branchId') != branch_id:
+                continue
+            s_date = s.get('date') or ''
+            if start_date and s_date < start_date:
+                continue
+            if end_date and s_date > end_date:
+                continue
+
+            total = int(s.get('totalCents') or 0)
+            sales_count += 1
+            sales_cents += total
+            day = daily_map.setdefault(
+                s_date, {'date': s_date, 'salesCents': 0, 'purchasesCents': 0}
+            )
+            day['salesCents'] += total
+
         for m in movements:
             if branch_id and m.get('branchId') != branch_id:
+                continue
+            if m.get('type') != 'purchase':
                 continue
             m_date = m.get('date') or ''
             if start_date and m_date < start_date:
@@ -375,22 +402,12 @@ def products_report():
                 continue
 
             total = int(m.get('totalCents') or 0)
-            mtype = m.get('type')
-
-            if mtype == 'sale':
-                sales_count += 1
-                sales_cents += total
-            elif mtype == 'purchase':
-                purchases_count += 1
-                purchases_cents += total
-
+            purchases_count += 1
+            purchases_cents += total
             day = daily_map.setdefault(
                 m_date, {'date': m_date, 'salesCents': 0, 'purchasesCents': 0}
             )
-            if mtype == 'sale':
-                day['salesCents'] += total
-            elif mtype == 'purchase':
-                day['purchasesCents'] += total
+            day['purchasesCents'] += total
 
         daily = sorted(daily_map.values(), key=lambda d: d['date'])
 
@@ -755,24 +772,23 @@ def get_product_movements(product_id):
 
 
 # ============================================================================
-# POST /api/products/<id>/movement  (rol según `type`, validado IN-BODY)
+# POST /api/products/<id>/movement  (compra "Reponer", admin+)
 # ============================================================================
 
 @products_bp.route('/<product_id>/movement', methods=['POST', 'OPTIONS'])
 @require_auth
+@require_role(ADMIN_ROLES)
 def register_movement(product_id):
     """
-    Registra un movimiento (append-only) y ajusta el stock del producto.
+    Registra una COMPRA (append-only) y aumenta el stock del producto.
 
-    Body: {type:'sale'|'purchase', qty:int>0, unitPriceCents?:int,
-           updateCostPrice?:bool, date?:YYYY-MM-DD, note?:str}
+    Body: {type:'purchase', qty:int>0, unitPriceCents:int>=0, updateCostPrice?:bool,
+           date?:YYYY-MM-DD, note?:str}
 
-    - sale (SALE_ROLES, incluye cashier): descuenta stock. `unitPriceCents`
-      por defecto es `product.salePriceCents` (override permitido). Rechaza
-      `qty > stockQty` con 400 "Stock insuficiente".
-    - purchase (ADMIN_ROLES SOLO; cashier ⇒ 403): incrementa stock.
-      `unitPriceCents` (costo) es requerido; con `updateCostPrice:true` actualiza
+    - SOLO admin+ (ADMIN_ROLES); cashier ⇒ 403 (vía `@require_role`).
+    - `unitPriceCents` (costo) es requerido; con `updateCostPrice:true` actualiza
       `product.costPriceCents`.
+    - Las ventas NO son movimientos: se registran vía `POST /api/sales`.
 
     NUNCA crea/muta documentos de `expenses` (anti-doble-conteo).
     """
@@ -784,15 +800,6 @@ def register_movement(product_id):
         mtype = (data.get('type') or '').strip()
         if mtype not in MOVEMENT_TYPES:
             return _error(400, f'type debe ser uno de: {", ".join(MOVEMENT_TYPES)}')
-
-        # Chequeo de rol dependiente del `type` (no puede ser un decorador fijo).
-        role = g.current_user.get('role')
-        if mtype == 'sale':
-            if role not in SALE_ROLES:
-                return _error(403, 'No tienes permisos para registrar ventas')
-        else:  # purchase
-            if role not in ADMIN_ROLES:
-                return _error(403, 'No tienes permisos para registrar compras')
 
         qty = data.get('qty')
         if not _valid_int(qty, 1):
@@ -827,32 +834,17 @@ def register_movement(product_id):
         stock_qty = int(product.get('stockQty') or 0)
         now_iso = datetime.now(timezone.utc).isoformat()
 
-        product_update = {}
+        unit_price = data.get('unitPriceCents')
+        if not _valid_int(unit_price, 0):
+            return _error(400, 'unitPriceCents es requerido y debe ser un entero de centavos >= 0')
 
-        if mtype == 'sale':
-            if qty > stock_qty:
-                return _error(400, 'Stock insuficiente')
-
-            unit_price = data.get('unitPriceCents')
-            if unit_price is None:
-                unit_price = int(product.get('salePriceCents') or 0)
-            if not _valid_int(unit_price, 0):
-                return _error(400, 'unitPriceCents debe ser un entero de centavos >= 0')
-
-            product_update['stockQty'] = stock_qty - qty
-        else:  # purchase
-            unit_price = data.get('unitPriceCents')
-            if not _valid_int(unit_price, 0):
-                return _error(400, 'unitPriceCents es requerido y debe ser un entero de centavos >= 0')
-
-            product_update['stockQty'] = stock_qty + qty
-
-            if data.get('updateCostPrice') is True:
-                product_update['costPriceCents'] = unit_price
+        product_update = {'stockQty': stock_qty + qty}
+        if data.get('updateCostPrice') is True:
+            product_update['costPriceCents'] = unit_price
 
         record = {
             'productId': product_id,
-            'type': mtype,
+            'type': 'purchase',
             'qty': qty,
             'unitPriceCents': unit_price,
             'totalCents': qty * unit_price,
@@ -875,7 +867,7 @@ def register_movement(product_id):
         if not updated:
             return _error(500, 'Error al actualizar el stock del producto')
 
-        logger.info(f"Movimiento {mtype} registrado para {product_id}: {created.get('id')}")
+        logger.info(f"Movimiento purchase registrado para {product_id}: {created.get('id')}")
         return jsonify({'success': True, 'data': created}), 201
 
     except Exception as e:

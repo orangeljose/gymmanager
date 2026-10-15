@@ -10,10 +10,10 @@ orden de ejecución entre archivos.
 
 Cubre: CRUD + validación, detalle GET /<id> (200/404/403), soft-delete +
 auditoría, scope (business/branch), list (filtros/paginación + meta), summary
-(conteos con UNA query), movimientos (venta descuenta stock, sobreventa 400,
-compra incrementa + costo, compra por cashier 403, venta por cashier 201,
-inmutabilidad, purchase NO escribe expenses + meta paginación) y la matriz de
-permisos.
+(conteos con UNA query), movimientos (compra incrementa + costo, compra por
+cashier 403, `type:'sale'` → 400, inmutabilidad, purchase NO escribe expenses +
+meta paginación), reporte (DOS queries: `sales` + `product_movements`) y la
+matriz de permisos.
 """
 import sys
 import os
@@ -528,45 +528,6 @@ class TestGetProduct:
 
 class TestMovements:
 
-    def test_sale_decreases_stock_and_defaults_unit_price(self, make_client, auth_header):
-        mock = create_mock_service(role='cashier', business_id='biz-1')
-        mock.get_document.return_value = _product(stockQty=10, salePriceCents=2500)
-        client = make_client(mock)
-
-        response = client.post(
-            '/api/products/p1/movement',
-            json={'type': 'sale', 'qty': 3},
-            headers=auth_header,
-        )
-
-        assert response.status_code == 201
-        collection, movement = mock.create_document.call_args[0]
-        assert collection == 'product_movements'
-        assert movement['type'] == 'sale'
-        assert movement['qty'] == 3
-        assert movement['unitPriceCents'] == 2500   # default = salePriceCents
-        assert movement['totalCents'] == 7500
-        _, doc_id, update = mock.update_document.call_args[0]
-        assert doc_id == 'p1'
-        assert update == {'stockQty': 7}
-
-    def test_sale_with_method_and_payment_account(self, make_client, auth_header):
-        mock = create_mock_service(role='cashier', business_id='biz-1')
-        mock.get_document.return_value = _product(stockQty=10, salePriceCents=2500)
-        client = make_client(mock)
-
-        response = client.post(
-            '/api/products/p1/movement',
-            json={'type': 'sale', 'qty': 2, 'method': 'zelle', 'paymentAccountId': 'acc-zelle-1'},
-            headers=auth_header,
-        )
-
-        assert response.status_code == 201
-        _, movement = mock.create_document.call_args[0]
-        assert movement['type'] == 'sale'
-        assert movement['method'] == 'zelle'
-        assert movement['paymentAccountId'] == 'acc-zelle-1'
-
     def test_purchase_with_method_and_payment_account(self, make_client, auth_header):
         mock = create_mock_service(role='admin', business_id='biz-1')
         mock.get_document.return_value = _product(stockQty=0)
@@ -585,14 +546,14 @@ class TestMovements:
         assert movement['method'] == 'transfer'
         assert movement['paymentAccountId'] == 'acc-bank-1'
 
-    def test_sale_default_method_cash(self, make_client, auth_header):
-        mock = create_mock_service(role='cashier', business_id='biz-1')
-        mock.get_document.return_value = _product(stockQty=10, salePriceCents=2500)
+    def test_purchase_default_method_cash(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        mock.get_document.return_value = _product(stockQty=0)
         client = make_client(mock)
 
         response = client.post(
             '/api/products/p1/movement',
-            json={'type': 'sale', 'qty': 1},
+            json={'type': 'purchase', 'qty': 1, 'unitPriceCents': 100},
             headers=auth_header,
         )
 
@@ -602,34 +563,18 @@ class TestMovements:
         assert movement['paymentAccountId'] is None
 
     def test_invalid_method_400(self, make_client, auth_header):
-        mock = create_mock_service(role='cashier', business_id='biz-1')
-        mock.get_document.return_value = _product(stockQty=10)
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        mock.get_document.return_value = _product(stockQty=0)
         client = make_client(mock)
 
         response = client.post(
             '/api/products/p1/movement',
-            json={'type': 'sale', 'qty': 1, 'method': 'bitcoin'},
+            json={'type': 'purchase', 'qty': 1, 'unitPriceCents': 100, 'method': 'bitcoin'},
             headers=auth_header,
         )
 
         assert response.status_code == 400
         mock.create_document.assert_not_called()
-
-    def test_oversell_rejected_400_stock_unchanged(self, make_client, auth_header):
-        mock = create_mock_service(role='cashier', business_id='biz-1')
-        mock.get_document.return_value = _product(stockQty=2)
-        client = make_client(mock)
-
-        response = client.post(
-            '/api/products/p1/movement',
-            json={'type': 'sale', 'qty': 5},
-            headers=auth_header,
-        )
-
-        assert response.status_code == 400
-        assert 'Stock insuficiente' in response.get_json()['error']['message']
-        mock.create_document.assert_not_called()
-        mock.update_document.assert_not_called()
 
     def test_purchase_increases_stock_and_updates_cost(self, make_client, auth_header):
         mock = create_mock_service(role='admin', business_id='biz-1')
@@ -679,14 +624,14 @@ class TestMovements:
         assert response.status_code == 403
         mock.create_document.assert_not_called()
 
-    def test_trainer_cannot_sell_403(self, make_client, auth_header):
+    def test_trainer_cannot_purchase_403(self, make_client, auth_header):
         mock = create_mock_service(role='trainer', business_id='biz-1')
-        mock.get_document.return_value = _product(stockQty=10)
+        mock.get_document.return_value = _product(stockQty=0)
         client = make_client(mock)
 
         response = client.post(
             '/api/products/p1/movement',
-            json={'type': 'sale', 'qty': 1},
+            json={'type': 'purchase', 'qty': 1, 'unitPriceCents': 100},
             headers=auth_header,
         )
 
@@ -706,17 +651,32 @@ class TestMovements:
         assert response.status_code == 400
         mock.create_document.assert_not_called()
 
-    def test_invalid_type_400(self, make_client, auth_header):
+    @pytest.mark.parametrize('mtype', ['sale', 'loss'])
+    def test_invalid_type_400(self, make_client, auth_header, mtype):
         mock = create_mock_service(role='admin', business_id='biz-1')
         client = make_client(mock)
 
         response = client.post(
             '/api/products/p1/movement',
-            json={'type': 'loss', 'qty': 1},
+            json={'type': mtype, 'qty': 1},
             headers=auth_header,
         )
 
         assert response.status_code == 400
+
+    def test_sale_type_rejected_400(self, make_client, auth_header):
+        """Las ventas ya no son movimientos: `type:'sale'` → 400 (usar POST /api/sales)."""
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        client = make_client(mock)
+
+        response = client.post(
+            '/api/products/p1/movement',
+            json={'type': 'sale', 'qty': 1, 'unitPriceCents': 2500},
+            headers=auth_header,
+        )
+
+        assert response.status_code == 400
+        mock.create_document.assert_not_called()
 
     def test_movement_missing_product_404(self, make_client, auth_header):
         mock = create_mock_service(role='admin', business_id='biz-1')
@@ -725,7 +685,7 @@ class TestMovements:
 
         response = client.post(
             '/api/products/ghost/movement',
-            json={'type': 'sale', 'qty': 1},
+            json={'type': 'purchase', 'qty': 1, 'unitPriceCents': 100},
             headers=auth_header,
         )
 
@@ -765,7 +725,7 @@ class TestMovements:
         mock = create_mock_service(role='admin', business_id='biz-1')
         mock.get_document.return_value = _product()
         mock.query_firestore.return_value = [
-            {'id': 'mv1', 'productId': 'p1', 'type': 'sale', 'qty': 1,
+            {'id': 'mv1', 'productId': 'p1', 'type': 'purchase', 'qty': 1,
              'date': '2026-10-01', 'businessId': 'biz-1'},
             {'id': 'mv2', 'productId': 'p1', 'type': 'purchase', 'qty': 5,
              'date': '2026-10-10', 'businessId': 'biz-1'},
@@ -793,19 +753,33 @@ class TestMovements:
 
 class TestProductsReport:
 
-    def test_report_splits_sales_vs_purchases_and_daily(self, make_client, auth_header):
+    def test_report_reads_sales_and_purchases_two_queries(self, make_client, auth_header):
         mock = create_mock_service(role='admin', business_id='biz-1')
-        mock.query_firestore.return_value = [
-            {'id': 'm1', 'productId': 'p1', 'type': 'sale', 'qty': 2, 'totalCents': 5000,
-             'date': '2026-10-01', 'businessId': 'biz-1', 'branchId': 'branch-1'},
-            {'id': 'm2', 'productId': 'p1', 'type': 'purchase', 'qty': 10, 'totalCents': 15000,
-             'date': '2026-10-01', 'businessId': 'biz-1', 'branchId': 'branch-1'},
-            {'id': 'm3', 'productId': 'p2', 'type': 'sale', 'qty': 1, 'totalCents': 2500,
-             'date': '2026-10-02', 'businessId': 'biz-1', 'branchId': 'branch-1'},
-            # fuera de rango → excluido
-            {'id': 'm4', 'productId': 'p3', 'type': 'sale', 'qty': 5, 'totalCents': 9999,
-             'date': '2026-09-01', 'businessId': 'biz-1', 'branchId': 'branch-1'},
-        ]
+
+        def q(collection, filters=None, **kwargs):
+            if collection == 'sales':
+                return [
+                    {'id': 's1', 'totalCents': 5000, 'date': '2026-10-01',
+                     'businessId': 'biz-1', 'branchId': 'branch-1'},
+                    {'id': 's2', 'totalCents': 2500, 'date': '2026-10-02',
+                     'businessId': 'biz-1', 'branchId': 'branch-1'},
+                    # fuera de rango → excluido
+                    {'id': 's3', 'totalCents': 9999, 'date': '2026-09-01',
+                     'businessId': 'biz-1', 'branchId': 'branch-1'},
+                ]
+            if collection == 'product_movements':
+                return [
+                    {'id': 'm1', 'type': 'purchase', 'totalCents': 15000, 'date': '2026-10-01',
+                     'businessId': 'biz-1', 'branchId': 'branch-1'},
+                    {'id': 'm2', 'type': 'purchase', 'totalCents': 3000, 'date': '2026-10-02',
+                     'businessId': 'biz-1', 'branchId': 'branch-1'},
+                    # legacy sale en movements → ignorado (las ventas viven en `sales`)
+                    {'id': 'm3', 'type': 'sale', 'totalCents': 99999, 'date': '2026-10-01',
+                     'businessId': 'biz-1', 'branchId': 'branch-1'},
+                ]
+            return []
+
+        mock.query_firestore.side_effect = q
         client = make_client(mock)
 
         response = client.get(
@@ -816,17 +790,21 @@ class TestProductsReport:
         assert response.status_code == 200
         data = response.get_json()['data']
         assert data['sales'] == {'count': 2, 'totalCents': 7500}
-        assert data['purchases'] == {'count': 1, 'totalCents': 15000}
-        assert data['net'] == 7500 - 15000
+        assert data['purchases'] == {'count': 2, 'totalCents': 18000}
+        assert data['net'] == 7500 - 18000
         assert data['daily'] == [
             {'date': '2026-10-01', 'salesCents': 5000, 'purchasesCents': 15000},
-            {'date': '2026-10-02', 'salesCents': 2500, 'purchasesCents': 0},
+            {'date': '2026-10-02', 'salesCents': 2500, 'purchasesCents': 3000},
         ]
-        # UNA sola query scoped a product_movements
+        # DOS queries scoped: `sales` + `product_movements`
         calls = mock.query_firestore.call_args_list
-        assert len(calls) == 1
-        assert calls[0][0][0] == 'product_movements'
+        assert len(calls) == 2
+        assert calls[0][0][0] == 'sales'
+        assert calls[1][0][0] == 'product_movements'
         assert calls[0][1]['filters'] == [
+            {'field': 'businessId', 'operator': '==', 'value': 'biz-1'}
+        ]
+        assert calls[1][1]['filters'] == [
             {'field': 'businessId', 'operator': '==', 'value': 'biz-1'}
         ]
 
@@ -855,12 +833,18 @@ class TestProductsReport:
 
     def test_report_branch_scoped_user_filters_own_branch(self, make_client, auth_header):
         mock = create_mock_service(role='branch_admin', business_id='biz-1', branch_id='branch-1')
-        mock.query_firestore.return_value = [
-            {'id': 'a', 'type': 'sale', 'totalCents': 1000, 'date': '2026-10-01',
-             'businessId': 'biz-1', 'branchId': 'branch-1'},
-            {'id': 'b', 'type': 'sale', 'totalCents': 99999, 'date': '2026-10-01',
-             'businessId': 'biz-1', 'branchId': 'branch-2'},
-        ]
+
+        def q(collection, filters=None, **kwargs):
+            if collection == 'sales':
+                return [
+                    {'id': 'a', 'totalCents': 1000, 'date': '2026-10-01',
+                     'businessId': 'biz-1', 'branchId': 'branch-1'},
+                    {'id': 'b', 'totalCents': 99999, 'date': '2026-10-01',
+                     'businessId': 'biz-1', 'branchId': 'branch-2'},
+                ]
+            return []
+
+        mock.query_firestore.side_effect = q
         client = make_client(mock)
 
         data = client.get('/api/products/report', headers=auth_header).get_json()['data']
