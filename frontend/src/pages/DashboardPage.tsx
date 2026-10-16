@@ -13,6 +13,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useOffline } from '@/hooks/useOffline';
 import { apiService } from '@/services/api';
+import { getCachedDashboard, setCachedDashboard } from '@/utils/dashboardCache';
 import type { DashboardData, Branch } from '@/types';
 
 export const DashboardPage: React.FC = () => {
@@ -45,6 +46,15 @@ export const DashboardPage: React.FC = () => {
     const loadDashboardData = async () => {
       if (!effectiveBusinessId) return;
 
+      // Cache en memoria (TTL 5 min): evita el getDashboard en recargas rápidas,
+      // reduciendo lecturas de Firestore. Las mutaciones lo invalidan.
+      const cached = getCachedDashboard();
+      if (cached) {
+        setDashboardData(cached);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
 
@@ -58,6 +68,7 @@ export const DashboardPage: React.FC = () => {
 
         if (dashboardResponse.success && dashboardResponse.data) {
           setDashboardData(dashboardResponse.data);
+          setCachedDashboard(dashboardResponse.data);
         }
 
       } catch (error) {

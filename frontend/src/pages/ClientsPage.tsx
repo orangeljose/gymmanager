@@ -7,6 +7,7 @@ import { useClients } from '@/hooks/useClients';
 import { usePlans } from '@/hooks/usePlans';
 import type { Client, ClientFilters, ClientStatus, Branch } from '@/types';
 import { apiService } from '@/services/api';
+import { invalidateDashboardCache } from '@/utils/dashboardCache';
 import { toLocalMidnight, formatDate as formatDateUtil } from '@/utils/dates';
 
 export const ClientsPage: React.FC = () => {
@@ -116,6 +117,7 @@ export const ClientsPage: React.FC = () => {
       setDeleting(true);
       const response = await apiService.deleteClient(deleteTarget.id);
       if (response.success) {
+        invalidateDashboardCache();
         toast.success('Cliente eliminado correctamente');
         setDeleteTarget(null);
         fetchClients(buildClientFilters());

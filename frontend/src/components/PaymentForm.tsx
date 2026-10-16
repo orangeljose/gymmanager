@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { usePlans } from '@/hooks/usePlans';
 import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import { apiService } from '@/services/api';
+import { invalidateDashboardCache } from '@/utils/dashboardCache';
 import type { PaymentFormData, PaymentMethod } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -99,6 +100,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
       };
       const response = await apiService.createPayment(payload);
       if (response.success) {
+        invalidateDashboardCache();
         toast.success('Pago registrado correctamente');
         onSuccess(response.data?.receiptNumber);
       }

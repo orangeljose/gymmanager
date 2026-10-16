@@ -6,6 +6,7 @@ import { useClients } from '@/hooks/useClients';
 import { usePlans } from '@/hooks/usePlans';
 import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import { apiService } from '@/services/api';
+import { invalidateDashboardCache } from '@/utils/dashboardCache';
 import type { ClientFormData, PaymentFormDataCreate, Branch } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -124,12 +125,14 @@ export const ClientFormPage: React.FC = () => {
       if (isEdit && id) {
         const result = await updateClient(id, clientData);
         if (result.success) {
+          invalidateDashboardCache();
           toast.success('Cliente actualizado');
           navigate(`/clients/${id}`);
         }
       } else {
         const result = await createClient(clientData);
         if (result.success) {
+          invalidateDashboardCache();
           toast.success('Cliente registrado');
           navigate(`/clients/${result.data?.id}`);
         } else {
@@ -179,6 +182,7 @@ export const ClientFormPage: React.FC = () => {
       const paymentRes = await apiService.createPayment(paymentPayload);
       if (!paymentRes.success) throw new Error(paymentRes.error?.message || 'Error registrando pago');
 
+      invalidateDashboardCache();
       toast.success('Cliente registrado con pago');
       navigate(`/clients/${clientId}`);
     } catch (err: any) {

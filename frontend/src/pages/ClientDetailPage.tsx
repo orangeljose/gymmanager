@@ -8,6 +8,7 @@ import { usePlans } from '@/hooks/usePlans';
 import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import { PaymentForm } from '@/components/PaymentForm';
 import { apiService } from '@/services/api';
+import { invalidateDashboardCache } from '@/utils/dashboardCache';
 import { toLocalMidnight, formatDate as formatDateUtil } from '@/utils/dates';
 import type { Client, Payment } from '@/types';
 
@@ -119,6 +120,7 @@ export const ClientDetailPage: React.FC = () => {
       setDeleting(true);
       const response = await apiService.deletePayment(deleteTarget.id);
       if (response.success) {
+        invalidateDashboardCache();
         toast.success('Pago eliminado correctamente');
         setDeleteTarget(null);
         if (client) {
@@ -143,6 +145,7 @@ export const ClientDetailPage: React.FC = () => {
       setDeletingClient(true);
       const response = await apiService.deleteClient(client.id);
       if (response.success) {
+        invalidateDashboardCache();
         toast.success('Cliente eliminado correctamente');
         setShowDeleteClientModal(false);
         navigate('/clients');
