@@ -390,19 +390,6 @@ def get_receipts():
             offset=offset
         )
         
-        # Obtener total (sin limit/offset para saber si hay más)
-        total_filters = filters.copy()  # Sin offset/limit
-        total_filters.append({'field': 'isDeleted', 'operator': '==', 'value': False})
-        all_for_count = firebase_service.query_firestore(
-            'payments',
-            filters=total_filters,
-            order_by='createdAt',
-            direction='DESC',
-            limit=1000  # Un número alto pero no excesivo
-        )
-        # Excluir pagos eliminados (soft delete) en Python como fallback defensivo
-        total = len([p for p in all_for_count if not p.get('isDeleted', False)])
-
         # Excluir pagos de clientes borrados (soft delete) de los recibos
         deleted_client_ids = set()
         if user_business_id:
@@ -413,7 +400,31 @@ def get_receipts():
                 )
                 if c.get('isDeleted', False)
             }
-        total = len([p for p in all_for_count if not p.get('isDeleted', False) and p.get('clientId') not in deleted_client_ids])
+
+        # Obtener total (sin limit/offset para saber si hay más)
+        total_filters = filters.copy()  # Sin offset/limit
+        total_filters.append({'field': 'isDeleted', 'operator': '==', 'value': False})
+
+        # Costo constante: count() de Firestore (1 lectura por cada 1000 entradas
+        # de índice) en lugar de enumerar hasta 1000 pagos + len() (O(N) lecturas).
+        try:
+            total = firebase_service.count_firestore('payments', filters=total_filters)
+        except Exception as e:
+            # Fallback defensivo: count() puede fallar o llegar al techo de
+            # seguridad (>= 1000). Volver a enumerar + len() para no romper el
+            # endpoint. Conserva la exclusión de clientes borrados.
+            logger.warning(f"count_firestore falló en get_receipts, usando fallback len(): {e}")
+            all_for_count = firebase_service.query_firestore(
+                'payments',
+                filters=total_filters,
+                order_by='createdAt',
+                direction='DESC',
+                limit=1000  # Un número alto pero no excesivo
+            )
+            total = len([
+                p for p in all_for_count
+                if not p.get('isDeleted', False) and p.get('clientId') not in deleted_client_ids
+            ])
 
         # Transformar al formato de tabla
         receipts = []
