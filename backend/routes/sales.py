@@ -45,6 +45,9 @@ READ_ROLES = ['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer']
 # Métodos de pago reutilizados del modelo de pagos (fuente única de verdad).
 VALID_METHODS = PaymentModel.VALID_METHODS
 
+# Métodos que exigen una cuenta destino (payment_accounts).
+ACCOUNT_REQUIRED_METHODS = {'zelle', 'pago_movil', 'binance'}
+
 
 # ============================================================================
 # HELPERS
@@ -212,6 +215,10 @@ def create_sale():
         payment_account_id = data.get('paymentAccountId')
         if payment_account_id is not None:
             payment_account_id = str(payment_account_id).strip() or None
+
+        # Zelle / Pago Móvil / Binance exigen cuenta destino seleccionada.
+        if method in ACCOUNT_REQUIRED_METHODS and not payment_account_id:
+            return _error(400, f'Debes seleccionar una cuenta destino para {method}')
 
         client_id = data.get('clientId')
         if client_id is not None:

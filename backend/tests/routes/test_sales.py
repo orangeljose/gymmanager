@@ -263,6 +263,38 @@ class TestCreateSale:
         assert record['clientId'] == 'c1'
         assert record['clientName'] == 'Juan Pérez'
 
+    @pytest.mark.parametrize('account_method', ['zelle', 'pago_movil', 'binance'])
+    def test_account_method_without_account_rejected_400(self, make_client, auth_header, account_method):
+        """Zelle/Pago Móvil/Binance exigen cuenta destino; sin ella → 400 y sin escrituras."""
+        mock = create_mock_service(role='cashier', business_id='biz-1')
+        mock.get_document.return_value = _product(stockQty=10, salePriceCents=2500)
+        client = make_client(mock)
+
+        response = client.post(
+            '/api/sales',
+            json={'items': [{'productId': 'p1', 'qty': 1}], 'method': account_method},
+            headers=auth_header,
+        )
+
+        assert response.status_code == 400
+        assert 'cuenta destino' in response.get_json()['error']['message']
+        mock.create_document.assert_not_called()
+        mock.update_document.assert_not_called()
+
+    def test_cash_does_not_require_account(self, make_client, auth_header):
+        """Efectivo no requiere cuenta destino."""
+        mock = create_mock_service(role='cashier', business_id='biz-1')
+        mock.get_document.return_value = _product(stockQty=10, salePriceCents=2500)
+        client = make_client(mock)
+
+        response = client.post(
+            '/api/sales',
+            json={'items': [{'productId': 'p1', 'qty': 1}], 'method': 'cash'},
+            headers=auth_header,
+        )
+
+        assert response.status_code == 201
+
     def test_boundary_stock_never_negative(self, make_client, auth_header):
         mock = create_mock_service(role='cashier', business_id='biz-1')
         mock.get_document.return_value = _product(stockQty=2, salePriceCents=2500)

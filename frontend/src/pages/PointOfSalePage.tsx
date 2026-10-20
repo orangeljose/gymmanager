@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import { apiService } from '@/services/api';
 import { formatDollars } from '@/components/ProductForm';
-import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from '@/components/ExpenseForm';
+import { PAYMENT_METHOD_LABELS } from '@/components/ExpenseForm';
 import toast from 'react-hot-toast';
 import {
   Search, ShoppingCart, Plus, Minus, Trash2, CheckCircle, Package, User, RotateCcw,
@@ -12,6 +12,10 @@ import type { Client, PaymentMethod, Product, Sale, SaleCreateData } from '@/typ
 
 // Métodos que requieren cuenta de destino (payment_accounts por tipo).
 const ACCOUNT_METHODS: PaymentMethod[] = ['zelle', 'pago_movil', 'binance'];
+
+// Métodos de pago disponibles en el POS (venta de productos):
+// Zelle, Efectivo, Pago Móvil y Binance.
+const POS_METHODS: PaymentMethod[] = ['zelle', 'cash', 'pago_movil', 'binance'];
 
 interface CartItem {
   product: Product;
@@ -133,6 +137,12 @@ export const PointOfSalePage: React.FC = () => {
   const handleCheckout = async () => {
     if (cart.length === 0) {
       toast.error('El carrito está vacío');
+      return;
+    }
+    // Métodos que usan cuenta destino (Zelle / Pago Móvil / Binance) exigen
+    // seleccionar la cuenta. Sin ella, la operación no puede completarse.
+    if (ACCOUNT_METHODS.includes(method) && !paymentAccountId) {
+      toast.error(`Selecciona la cuenta destino para ${PAYMENT_METHOD_LABELS[method]}`);
       return;
     }
     try {
@@ -367,7 +377,7 @@ export const PointOfSalePage: React.FC = () => {
                 onChange={(e) => setMethod(e.target.value as PaymentMethod)}
                 className="input"
               >
-                {PAYMENT_METHODS.map((m) => (
+                {POS_METHODS.map((m) => (
                   <option key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</option>
                 ))}
               </select>
@@ -376,18 +386,24 @@ export const PointOfSalePage: React.FC = () => {
             {ACCOUNT_METHODS.includes(method) && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cuenta {PAYMENT_METHOD_LABELS[method]} destino
+                  Cuenta {PAYMENT_METHOD_LABELS[method]} destino <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={paymentAccountId}
                   onChange={(e) => setPaymentAccountId(e.target.value)}
-                  className="input"
+                  className={`input ${!paymentAccountId ? 'border-red-300' : ''}`}
+                  required
                 >
                   <option value="">Seleccionar cuenta</option>
                   {accounts.filter((a) => a.type === method).map((acc) => (
                     <option key={acc.id} value={acc.id}>{acc.label}</option>
                   ))}
                 </select>
+                {accounts.filter((a) => a.type === method).length === 0 && (
+                  <p className="mt-1 text-xs text-red-600">
+                    No hay cuentas de {PAYMENT_METHOD_LABELS[method]} registradas. Configuralas en Administración → Cuentas de Pago.
+                  </p>
+                )}
               </div>
             )}
 
