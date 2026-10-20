@@ -28,6 +28,7 @@ import { InvitePage } from '@/pages/InvitePage';
 import { AddAdminPage } from '@/pages/AddAdminPage';
 import { BusinessCreatePage } from '@/pages/BusinessCreatePage';
 import { BusinessesPage } from '@/pages/BusinessesPage';
+import { MyBusinessPage } from '@/pages/MyBusinessPage';
 import { DataLoadPage } from '@/pages/DataLoadPage';
 import { PaymentsNewPage } from '@/pages/PaymentsNewPage';
 import { AttendancePage } from '@/pages/AttendancePage';
@@ -207,6 +208,13 @@ const App: React.FC = () => {
               <ProtectedRoute requiredRoles={['super_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <BusinessesPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="businesses/mine" element={
+              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <MyBusinessPage />
                 </Suspense>
               </ProtectedRoute>
             } />
