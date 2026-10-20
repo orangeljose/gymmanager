@@ -110,7 +110,7 @@ const iconMap: Record<string, React.ElementType> = {
 
 export const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+  const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, hasRole, selectedBusinessId, businesses, switchBusiness } = useAuth();
@@ -122,11 +122,7 @@ export const Layout: React.FC = () => {
   };
 
   const toggleMenu = (href: string) => {
-    setExpandedMenus(prev =>
-      prev.includes(href)
-        ? prev.filter(h => h !== href)
-        : [...prev, href]
-    );
+    setExpandedMenu(prev => (prev === href ? null : href));
   };
 
   const filteredNavigation = navigation.filter(item => {
@@ -180,7 +176,7 @@ export const Layout: React.FC = () => {
               const Icon = iconMap[item.icon as keyof typeof iconMap];
               const active = isActiveRoute(item.href);
               const hasSubmenu = item.submenu && item.submenu.length > 0;
-              const isExpanded = expandedMenus.includes(item.href);
+              const isExpanded = expandedMenu === item.href;
               const submenuActive = hasSubmenu && isSubmenuActive(item.submenu!);
 
               return (
