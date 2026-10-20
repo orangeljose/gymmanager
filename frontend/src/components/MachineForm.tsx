@@ -23,6 +23,9 @@ export const MACHINE_CATEGORY_LABELS: Record<MachineCategory, string> = {
 // (cardio/strength/functional) no aplican a un accesorio.
 export const ITEM_CATEGORIES: MachineCategory[] = ['free_weights', 'accessory', 'other'];
 
+// Categorías válidas para máquinas: solo Cardio, Fuerza, Otro
+export const MACHINE_CATEGORIES: MachineCategory[] = ['cardio', 'strength', 'other'];
+
 const emptyMachineForm = (): MachineFormData => ({
   kind: 'machine',
   name: '',
@@ -157,7 +160,7 @@ export const MachineForm: React.FC<MachineFormProps> = ({
   };
 
   const noun = isItem ? 'Accesorio' : 'Máquina';
-  const categoryOptions = isItem ? ITEM_CATEGORIES : (Object.keys(MACHINE_CATEGORY_LABELS) as MachineCategory[]);
+  const categoryOptions = isItem ? ITEM_CATEGORIES : MACHINE_CATEGORIES;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
