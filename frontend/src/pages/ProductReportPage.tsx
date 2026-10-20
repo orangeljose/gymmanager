@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from 'recharts';
@@ -8,7 +7,7 @@ import { apiService } from '@/services/api';
 import type { ProductReport } from '@/types';
 import { formatDollars } from '@/components/ProductForm';
 import {
-  ArrowLeft, TrendingUp, TrendingDown, BarChart3, AlertTriangle,
+  TrendingUp, TrendingDown, BarChart3, AlertTriangle,
 } from 'lucide-react';
 
 const daysAgo = (n: number) =>
@@ -66,10 +65,6 @@ export const ProductReportPage: React.FC = () => {
 
   return (
     <div className="p-6">
-      <Link to="/reports" className="btn btn-ghost btn-sm mb-4">
-        <ArrowLeft className="h-4 w-4 mr-1" /> Volver a Reportes
-      </Link>
-
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reporte de Mercancía</h1>

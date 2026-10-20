@@ -14,7 +14,6 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { ClientsPage } from '@/pages/ClientsPage';
 import { ClientDetailPage } from '@/pages/ClientDetailPage';
 import { ClientFormPage } from '@/pages/ClientFormPage';
-import { ReportsPage } from '@/pages/ReportsPage';
 import { IncomeReportPage } from '@/pages/IncomeReportPage';
 import { ProductReportPage } from '@/pages/ProductReportPage';
 import { ServicesReportPage } from '@/pages/ServicesReportPage';
@@ -167,13 +166,6 @@ const App: React.FC = () => {
             } />
 
             {/* Reports */}
-            <Route path="reports" element={
-              <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
-                <Suspense fallback={<LoadingSpinner />}>
-                  <ReportsPage />
-                </Suspense>
-              </ProtectedRoute>
-            } />
             <Route path="reports/income" element={
               <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>

@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
@@ -9,7 +8,7 @@ import type { ServiceReport, ExpenseCategory } from '@/types';
 import { formatDollars } from '@/components/ProductForm';
 import { EXPENSE_CATEGORY_META, EXPENSE_CATEGORIES } from '@/components/ExpenseForm';
 import {
-  ArrowLeft, DollarSign, Receipt, AlertTriangle, BarChart3,
+  DollarSign, Receipt, AlertTriangle, BarChart3,
 } from 'lucide-react';
 
 const daysAgo = (n: number) =>
@@ -67,10 +66,6 @@ export const ServicesReportPage: React.FC = () => {
 
   return (
     <div className="p-6">
-      <Link to="/reports" className="btn btn-ghost btn-sm mb-4">
-        <ArrowLeft className="h-4 w-4 mr-1" /> Volver a Reportes
-      </Link>
-
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reporte de Servicios</h1>

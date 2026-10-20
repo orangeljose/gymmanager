@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import { apiService } from '@/services/api';
 import type { Branch } from '@/types';
 import toast from 'react-hot-toast';
-import { ArrowLeft, DollarSign, RefreshCw } from 'lucide-react';
+import { DollarSign, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const METHOD_COLORS: Record<string, string> = {
@@ -197,10 +196,6 @@ export const IncomeReportPage: React.FC = () => {
 
   return (
     <div className="p-4 sm:p-6">
-      <Link to="/reports" className="btn btn-ghost btn-sm mb-4">
-        <ArrowLeft className="h-4 w-4 mr-1" /> Volver a Reportes
-      </Link>
-
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Reporte de Ingresos</h1>

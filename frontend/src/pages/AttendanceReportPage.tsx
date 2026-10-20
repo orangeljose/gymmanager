@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
@@ -7,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import type { AttendanceReport } from '@/types';
 import {
-  ArrowLeft, Users, CalendarDays, TrendingUp, Trophy, BarChart3, AlertTriangle,
+  Users, CalendarDays, TrendingUp, Trophy, BarChart3, AlertTriangle,
 } from 'lucide-react';
 
 const PRIMARY_600 = '#D43506';
@@ -98,10 +97,6 @@ export const AttendanceReportPage: React.FC = () => {
 
   return (
     <div className="p-6">
-      <Link to="/reports" className="btn btn-ghost btn-sm mb-4">
-        <ArrowLeft className="h-4 w-4 mr-1" /> Volver a Reportes
-      </Link>
-
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reporte de Asistencias</h1>
