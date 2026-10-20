@@ -211,7 +211,7 @@ const App: React.FC = () => {
                 </Suspense>
               </ProtectedRoute>
             } />
-            <Route path="businesses/mine" element={
+            <Route path="business" element={
               <ProtectedRoute requiredRoles={['super_admin', 'admin', 'branch_admin']}>
                 <Suspense fallback={<LoadingSpinner />}>
                   <MyBusinessPage />
