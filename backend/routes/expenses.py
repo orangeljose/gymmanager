@@ -453,6 +453,9 @@ def create_expense():
             business_id = data.get('businessId') or request.args.get('businessId')
         else:
             business_id = g.current_user.get('businessId')
+        if not business_id:
+            return _error(400, 'Selecciona un negocio antes de continuar' if role == 'super_admin'
+                          else 'Tu usuario no tiene un negocio asignado')
 
         now_iso = datetime.now(timezone.utc).isoformat()
 

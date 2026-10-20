@@ -356,6 +356,16 @@ def create_client():
             client_data['businessId'] = client_data.get('businessId') or request.args.get('businessId')
         else:
             client_data['businessId'] = g.current_user.get('businessId')
+        if not client_data['businessId']:
+            return jsonify({
+                'success': False,
+                'error': {
+                    'code': 400,
+                    'message': ('Selecciona un negocio antes de continuar'
+                                if user_role == 'super_admin'
+                                else 'Tu usuario no tiene un negocio asignado')
+                }
+            }), 400
         client_data['registeredBy'] = g.current_user.get('uid')
         
         # Calcular fechas de membresía
