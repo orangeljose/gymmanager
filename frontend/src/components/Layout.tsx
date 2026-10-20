@@ -8,6 +8,7 @@ import {
   CreditCard,
   FileText,
   Settings,
+  Shield,
   TrendingDown,
   LogOut,
   Menu,
@@ -72,14 +73,22 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     icon: 'Settings',
     roles: ['super_admin', 'admin', 'branch_admin'],
     submenu: [
-      { label: 'Negocios', href: '/businesses', roles: ['super_admin'] },
-      { label: 'Negocio', href: '/admin/businesses/create', roles: ['super_admin'] },
+      { label: 'Negocio', href: '/admin/businesses/create', roles: ['super_admin', 'admin'] },
       { label: 'Mercancía', href: '/products', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Planes', href: '/plans', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Cuentas de Pago', href: '/payment-accounts', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Recibos', href: '/receipts', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Sucursales', href: '/branches', roles: ['super_admin'] },
-      { label: 'Usuarios', href: '/users', roles: ['super_admin', 'admin', 'branch_admin'] },
+      { label: 'Usuarios', href: '/users', roles: ['super_admin', 'admin', 'branch_admin'] }
+    ]
+  },
+  {
+    label: 'Plataforma',
+    href: '/platform',
+    icon: 'Shield',
+    roles: ['super_admin'],
+    submenu: [
+      { label: 'Negocios', href: '/businesses', roles: ['super_admin'] },
       { label: 'Agregar Admin', href: '/add-admin', roles: ['super_admin'] },
       { label: 'Cargar Datos', href: '/admin/data-load', roles: ['super_admin'] }
     ]
@@ -94,6 +103,7 @@ const iconMap: Record<string, React.ElementType> = {
   CreditCard,
   FileText,
   Settings,
+  Shield,
   TrendingDown,
   Wallet
 };
