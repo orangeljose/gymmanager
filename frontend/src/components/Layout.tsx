@@ -110,7 +110,7 @@ const iconMap: Record<string, React.ElementType> = {
 
 export const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, hasRole, selectedBusinessId, businesses, switchBusiness } = useAuth();
@@ -122,7 +122,11 @@ export const Layout: React.FC = () => {
   };
 
   const toggleMenu = (href: string) => {
-    setExpandedMenu(prev => (prev === href ? null : href));
+    setExpandedMenus(prev =>
+      prev.includes(href)
+        ? prev.filter(h => h !== href)
+        : [...prev, href]
+    );
   };
 
   const filteredNavigation = navigation.filter(item => {
@@ -155,7 +159,7 @@ export const Layout: React.FC = () => {
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:relative lg:h-full lg:flex lg:flex-col
+        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out flex flex-col lg:translate-x-0 lg:relative lg:h-full
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex items-center justify-between h-16 px-6 bg-gradient-to-br from-primary-800 via-primary-500 to-primary-500">
@@ -170,13 +174,13 @@ export const Layout: React.FC = () => {
           </button>
         </div>
 
-        <nav className="mt-6 px-3 lg:flex-1 lg:overflow-y-auto">
+        <nav className="mt-6 px-3 flex-1 min-h-0 overflow-y-auto">
           <ul className="space-y-1">
             {filteredNavigation.map((item) => {
               const Icon = iconMap[item.icon as keyof typeof iconMap];
               const active = isActiveRoute(item.href);
               const hasSubmenu = item.submenu && item.submenu.length > 0;
-              const isExpanded = expandedMenu === item.href;
+              const isExpanded = expandedMenus.includes(item.href);
               const submenuActive = hasSubmenu && isSubmenuActive(item.submenu!);
 
               return (
@@ -248,7 +252,7 @@ export const Layout: React.FC = () => {
         </nav>
 
         {/* User section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+        <div className="shrink-0 p-4 border-t border-gray-200 bg-white">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center">
