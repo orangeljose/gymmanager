@@ -9,6 +9,7 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 from google.cloud.firestore_v1.base_query import FieldFilter
+from google.api_core.exceptions import FailedPrecondition
 
 logger = logging.getLogger(__name__)
 
@@ -193,6 +194,11 @@ class FirebaseService:
             logger.info(f"Query a {collection}: {len(results)} documentos")
             return results
             
+        except FailedPrecondition:
+            # Índice compuesto faltante: NO ocultar el error (devolver [] haría
+            # parecer que no hay datos). El caller decide el fallback.
+            logger.error(f"Falta un índice compuesto para la query a {collection}")
+            raise
         except Exception as e:
             logger.error(f"Error en query a {collection}: {str(e)}")
             import traceback

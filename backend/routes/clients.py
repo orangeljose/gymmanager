@@ -4,6 +4,7 @@ Rutas de gestión de clientes para GymManager
 import logging
 from datetime import datetime, timezone, timedelta
 from flask import Blueprint, request, jsonify, g
+from google.api_core.exceptions import FailedPrecondition
 from middleware.auth_middleware import require_auth, require_role, validate_branch_access
 from services.firebase_service import FirebaseService
 from services.membership_service import MembershipService
@@ -13,6 +14,27 @@ from utils.validators import validate_pagination, validate_choice
 logger = logging.getLogger(__name__)
 
 clients_bp = Blueprint('clients', __name__, url_prefix='/api/clients')
+
+
+def _as_utc(value):
+    """Normaliza un valor de fecha (datetime, DatetimeWithNanoseconds o ISO) a UTC."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
+    return None
+
+
+def _within_window(value, start, end):
+    """True si value cae dentro de [start, end]."""
+    parsed = _as_utc(value)
+    return parsed is not None and start <= parsed <= end
 
 @clients_bp.route('', methods=['GET', 'OPTIONS'])
 @require_auth
@@ -129,10 +151,27 @@ def get_clients():
         
         # Ejecutar query (sin búsqueda por texto para evitar índices)
         firebase_service = FirebaseService()
-        all_clients = firebase_service.query_firestore(
-            'clients',
-            filters=filters
-        )
+        try:
+            all_clients = firebase_service.query_firestore(
+                'clients',
+                filters=filters
+            )
+        except FailedPrecondition:
+            # Falta el índice compuesto (businessId, membershipEnd) para
+            # expiringSoon. Fallback: consultar sin el rango y filtrar la
+            # ventana en memoria, para no devolver una lista vacía engañosa.
+            logger.warning(
+                "Falta el índice compuesto para expiringSoon en clients; "
+                "filtrando la ventana en memoria (consulta más costosa)."
+            )
+            base_filters = [f for f in filters if f.get('field') != 'membershipEnd']
+            all_clients = firebase_service.query_firestore('clients', filters=base_filters)
+            window_start = datetime.now(timezone.utc)
+            window_end = window_start + timedelta(days=7)
+            all_clients = [
+                c for c in all_clients
+                if _within_window(c.get('membershipEnd'), window_start, window_end)
+            ]
         
         # Excluir clientes eliminados (soft delete) ANTES de búsqueda/orden/paginación
         # para mantener meta.total correcto. Un cliente legacy sin el campo isDeleted

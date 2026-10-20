@@ -222,3 +222,36 @@ class TestExpiringSoonPagination:
         assert len(data['data']) == 10
         assert data['meta']['pages'] == 3
         assert data['meta']['page'] == 2
+class TestMissingIndexFallback:
+    """Si falta el indice compuesto, filtra la ventana en memoria en vez de devolver [].
+
+    Regresion: query_firestore se tragaba FailedPrecondition y devolvia [],
+    haciendo que 'Proximos 7 dias' pareciera no tener resultados.
+    """
+
+    def test_falls_back_to_python_filtering_when_index_missing(self):
+        from google.api_core.exceptions import FailedPrecondition
+
+        mock = create_mock_service(role='super_admin', business_id='biz-1')
+        now = datetime.now(timezone.utc)
+        clients = [
+            make_client('c-in', (now + timedelta(days=3)).isoformat()),
+            make_client('c-out', (now + timedelta(days=30)).isoformat()),
+            make_client('c-past', (now - timedelta(days=1)).isoformat()),
+        ]
+
+        def side_effect(collection, filters=None, **kwargs):
+            if collection != 'clients':
+                return []
+            if any(f.get('field') == 'membershipEnd' for f in (filters or [])):
+                raise FailedPrecondition('400 The query requires an index')
+            return clients
+
+        mock.query_firestore.side_effect = side_effect
+
+        response = _clients_with(mock, '/api/clients?expiringSoon=true')
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert [c['id'] for c in data['data']] == ['c-in']
+        assert data['meta']['total'] == 1
