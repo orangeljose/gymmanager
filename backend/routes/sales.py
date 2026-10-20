@@ -254,12 +254,23 @@ def create_sale():
         new_stock = {}
         new_total_cost = {}
         total_cents = 0
+        derived_business_id = None
+        derived_branch_id = None
         for product_id, qty in qty_by_product.items():
             product = firebase_service.get_document(PRODUCTS_COLLECTION, product_id)
             if not product or not _is_active_product(product):
                 return _error(400, f'Producto no encontrado: {product_id}')
             if _product_out_of_scope(product):
                 return _error(403, 'No tienes acceso a este producto')
+
+            # La venta pertenece al negocio/sede de los productos vendidos.
+            product_business_id = product.get('businessId')
+            if derived_business_id is None:
+                derived_business_id = product_business_id
+            elif product_business_id and product_business_id != derived_business_id:
+                return _error(400, 'Los productos de una venta deben pertenecer al mismo negocio')
+            if derived_branch_id is None:
+                derived_branch_id = product.get('branchId')
 
             stock_qty = int(product.get('stockQty') or 0)
             if qty > stock_qty:
@@ -287,6 +298,15 @@ def create_sale():
                 'unitPriceCents': unit_price,
                 'subtotalCents': subtotal,
             })
+
+        # Si no vino negocio/sede explícito (p. ej. super_admin sin businessId),
+        # se heredan del producto vendido para que los reportes puedan encontrarla.
+        if not business_id:
+            business_id = derived_business_id
+        if not branch_id:
+            branch_id = derived_branch_id
+        if not business_id:
+            return _error(400, 'No se pudo determinar el negocio de la venta')
 
         receipt = _generate_receipt_number(firebase_service, business_id)
         now_iso = datetime.now(timezone.utc).isoformat()

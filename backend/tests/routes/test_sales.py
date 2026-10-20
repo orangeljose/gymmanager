@@ -182,6 +182,58 @@ class TestCreateSale:
         # NINGÚN movimiento de productos: las ventas no escriben product_movements
         assert all(c[0][0] != 'product_movements' for c in mock.create_document.call_args_list)
 
+    def test_super_admin_without_business_id_inherits_from_product(self, make_client, auth_header):
+        """super_admin sin businessId en payload: la venta hereda negocio/sede del producto.
+
+        Regresión: antes quedaba con businessId=None y los reportes no la veían.
+        """
+        mock = create_mock_service(role='super_admin')
+        mock.get_document.side_effect = lambda coll, doc_id: (
+            _product(id='p1', stockQty=10, salePriceCents=2500,
+                     businessId='biz-9', branchId='branch-9')
+            if coll == 'products' else None
+        )
+        client = make_client(mock)
+
+        response = client.post(
+            '/api/sales',
+            json={'items': [{'productId': 'p1', 'qty': 1}], 'method': 'cash'},
+            headers=auth_header,
+        )
+
+        assert response.status_code == 201
+        _, record = mock.create_document.call_args[0]
+        assert record['businessId'] == 'biz-9'
+        assert record['branchId'] == 'branch-9'
+
+    def test_mixed_business_items_rejected_400(self, make_client, auth_header):
+        """No se puede vender en una sola venta productos de negocios distintos."""
+        mock = create_mock_service(role='super_admin')
+        products = {
+            'p1': _product(id='p1', businessId='biz-1'),
+            'p2': _product(id='p2', businessId='biz-2'),
+        }
+        mock.get_document.side_effect = lambda coll, doc_id: (
+            products.get(doc_id) if coll == 'products' else None
+        )
+        client = make_client(mock)
+
+        response = client.post(
+            '/api/sales',
+            json={
+                'items': [
+                    {'productId': 'p1', 'qty': 1},
+                    {'productId': 'p2', 'qty': 1},
+                ],
+                'method': 'cash',
+            },
+            headers=auth_header,
+        )
+
+        assert response.status_code == 400
+        assert 'mismo negocio' in response.get_json()['error']['message']
+        mock.create_document.assert_not_called()
+
     def test_oversell_rejects_whole_sale_400_no_writes(self, make_client, auth_header):
         mock = create_mock_service(role='cashier', business_id='biz-1')
         mock.get_document.side_effect = lambda coll, doc_id: (
