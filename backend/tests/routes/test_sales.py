@@ -178,7 +178,7 @@ class TestCreateSale:
 
         # Descuento por ítem: stockQty -= qty
         updates = {c[0][1]: c[0][2] for c in mock.update_document.call_args_list}
-        assert updates == {'p1': {'stockQty': 8}, 'p2': {'stockQty': 17}}
+        assert updates == {'p1': {'stockQty': 8, 'totalCostCents': 12000}, 'p2': {'stockQty': 17, 'totalCostCents': 25500}}
         # NINGÚN movimiento de productos: las ventas no escriben product_movements
         assert all(c[0][0] != 'product_movements' for c in mock.create_document.call_args_list)
 
@@ -276,7 +276,7 @@ class TestCreateSale:
 
         assert response.status_code == 201
         _, doc_id, update = mock.update_document.call_args[0]
-        assert update == {'stockQty': 0}
+        assert update == {'stockQty': 0, 'totalCostCents': 0}
 
     def test_missing_product_400_no_writes(self, make_client, auth_header):
         mock = create_mock_service(role='cashier', business_id='biz-1')

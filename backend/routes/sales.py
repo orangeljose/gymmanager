@@ -245,6 +245,7 @@ def create_sale():
         # Leer todos los productos UNA vez y validar existencia/activo/alcance/stock.
         items_detail = []
         new_stock = {}
+        new_total_cost = {}
         total_cents = 0
         for product_id, qty in qty_by_product.items():
             product = firebase_service.get_document(PRODUCTS_COLLECTION, product_id)
@@ -261,6 +262,17 @@ def create_sale():
             subtotal = qty * unit_price
             total_cents += subtotal
             new_stock[product_id] = stock_qty - qty
+
+            # Costo promedio ponderado: descuenta el costo proporcional de las unidades vendidas
+            # Fallback: si el producto no tiene totalCostCents (legacy), calcularlo del stock × costo
+            current_total_cost = product.get('totalCostCents')
+            if current_total_cost is None:
+                current_total_cost = stock_qty * int(product.get('costPriceCents') or 0)
+            current_total_cost = int(current_total_cost)
+            weighted_avg = current_total_cost / stock_qty if stock_qty > 0 else 0
+            cost_deduction = round(qty * weighted_avg)
+            new_total_cost[product_id] = max(0, current_total_cost - cost_deduction)
+
             items_detail.append({
                 'productId': product_id,
                 'productName': product.get('name'),
@@ -292,9 +304,13 @@ def create_sale():
         if not created:
             return _error(500, 'Error al registrar la venta')
 
-        # Descuento de stock por ítem (no-atómico, documentado).
+        # Descuento de stock y costo por ítem (no-atómico, documentado).
         for product_id, new_qty in new_stock.items():
-            updated = firebase_service.update_document(PRODUCTS_COLLECTION, product_id, {'stockQty': new_qty})
+            update_data = {
+                'stockQty': new_qty,
+                'totalCostCents': new_total_cost.get(product_id, 0),
+            }
+            updated = firebase_service.update_document(PRODUCTS_COLLECTION, product_id, update_data)
             if not updated:
                 logger.error(f"No se pudo descontar stock del producto {product_id}")
 

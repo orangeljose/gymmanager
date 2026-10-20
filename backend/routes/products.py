@@ -284,8 +284,14 @@ def products_summary():
 
         for p in active:
             stock_qty = int(p.get('stockQty') or 0)
-            cost_cents = int(p.get('costPriceCents') or 0)
-            total_stock_value += stock_qty * cost_cents
+            # Valor del stock = totalCostCents (costo real invertido). Fallback a
+            # stockQty * costPriceCents para productos legacy sin el campo.
+            total_cost = p.get('totalCostCents')
+            if total_cost is not None:
+                total_stock_value += int(total_cost)
+            else:
+                cost_cents = int(p.get('costPriceCents') or 0)
+                total_stock_value += stock_qty * cost_cents
             if stock_qty == 0:
                 out_of_stock_count += 1
             elif stock_qty <= _threshold(p):
@@ -535,6 +541,7 @@ def create_product():
             'costPriceCents': cost_cents,
             'salePriceCents': sale_cents,
             'stockQty': stock_qty,
+            'totalCostCents': stock_qty * cost_cents,
             'lowStockThreshold': threshold,
             'businessId': business_id,
             'branchId': branch_id,
@@ -839,6 +846,12 @@ def register_movement(product_id):
             return _error(400, 'unitPriceCents es requerido y debe ser un entero de centavos >= 0')
 
         product_update = {'stockQty': stock_qty + qty}
+        # Actualizar totalCostCents: sumar lo invertido en esta compra.
+        # Fallback: si el producto no tiene totalCostCents (legacy), calcularlo del stock × costo.
+        current_total_cost = product.get('totalCostCents')
+        if current_total_cost is None:
+            current_total_cost = stock_qty * int(product.get('costPriceCents') or 0)
+        product_update['totalCostCents'] = int(current_total_cost) + (qty * unit_price)
         if data.get('updateCostPrice') is True:
             product_update['costPriceCents'] = unit_price
 

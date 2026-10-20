@@ -593,7 +593,7 @@ class TestMovements:
         assert movement['unitPriceCents'] == 1500
         _, doc_id, update = mock.update_document.call_args[0]
         assert doc_id == 'p1'
-        assert update == {'stockQty': 10, 'costPriceCents': 1500}
+        assert update == {'stockQty': 10, 'costPriceCents': 1500, 'totalCostCents': 15000}
 
     def test_purchase_without_cost_update_keeps_product_cost(self, make_client, auth_header):
         mock = create_mock_service(role='admin', business_id='biz-1')
@@ -608,7 +608,7 @@ class TestMovements:
 
         assert response.status_code == 201
         _, _, update = mock.update_document.call_args[0]
-        assert update == {'stockQty': 4}
+        assert update == {'stockQty': 4, 'totalCostCents': 3600}
 
     def test_cashier_cannot_purchase_403(self, make_client, auth_header):
         mock = create_mock_service(role='cashier', business_id='biz-1')
