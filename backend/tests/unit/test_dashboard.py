@@ -98,6 +98,22 @@ def reset_singleton():
     firebase_service.FirebaseService._reset()
 
 
+# Mock activo del test en curso. Los call-sites se resuelven dinámicamente
+# para evitar que el primer test "binde" el módulo routes.reports a su mock
+# (causa de los StopIteration por orden de ejecución).
+_active_mock = {'service': None}
+
+
+@pytest.fixture(scope='module', autouse=True)
+def patch_firebase_call_sites():
+    def _get_service(*args, **kwargs):
+        return _active_mock['service']
+
+    with patch('routes.reports.FirebaseService', side_effect=_get_service), \
+         patch('middleware.auth_middleware.FirebaseService', side_effect=_get_service):
+        yield
+
+
 @pytest.fixture
 def auth_header():
     return {'Authorization': 'Bearer test-token'}
@@ -105,6 +121,7 @@ def auth_header():
 
 def _make_client(mock):
     """Crea un Flask test client con mock injectado."""
+    _active_mock['service'] = mock
     with patch('services.firebase_service.FirebaseService', return_value=mock):
         from app import create_app
         app = create_app()
@@ -370,10 +387,12 @@ class TestExpiringThisWeek:
 
     def test_counts_expiring_within_7_days(self):
         """Clientes activos con membershipEnd en [hoy, hoy+7]"""
-        now = datetime.now()
+        # El dashboard compara contra utcnow(); el test debe usar el mismo reloj.
+        # c1 lleva un pequeño offset para no caer justo en el borde (end < now).
+        now = datetime.utcnow()
         clients = [
             make_client('c1', 'Vence hoy', is_active=True,
-                       membership_end=now.isoformat()),
+                       membership_end=(now + timedelta(minutes=5)).isoformat()),
             make_client('c2', 'Vence en 3 días', is_active=True,
                        membership_end=(now + timedelta(days=3)).isoformat()),
             make_client('c3', 'Vence en 7 días', is_active=True,

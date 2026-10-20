@@ -488,24 +488,29 @@ def get_dashboard():
         deleted_client_ids = {c['id'] for c in all_clients if c.get('isDeleted', False)}
         all_clients = [c for c in all_clients if not c.get('isDeleted', False)]
 
-        active_clients = [c for c in all_clients if c.get('isActive', False)]
-        active_count = len(active_clients)
+        enabled_clients = [c for c in all_clients if c.get('isActive', False)]
         total_count = len(all_clients)
 
         overdue_count = 0
         expiring_count = 0
-        for c in active_clients:
+        for c in enabled_clients:
             membership_end = c.get('membershipEnd')
+            membership_end_dt = None
             if membership_end:
                 if isinstance(membership_end, str):
                     membership_end_dt = datetime.fromisoformat(membership_end.replace('Z', '+00:00')).replace(tzinfo=None)
                 else:
                     membership_end_dt = membership_end.replace(tzinfo=None) if hasattr(membership_end, 'replace') else membership_end
 
-                if membership_end_dt < now:
-                    overdue_count += 1
-                elif membership_end_dt <= now + timedelta(days=7):
-                    expiring_count += 1
+            if membership_end_dt is None or membership_end_dt < now:
+                overdue_count += 1
+            elif membership_end_dt <= now + timedelta(days=7):
+                expiring_count += 1
+
+        # Activos = clientes habilitados con membresía vigente (hoy o después).
+        # isActive solo indica que la cuenta no está deshabilitada; el estado
+        # real de la membresía lo dicta membershipEnd.
+        active_count = len(enabled_clients) - overdue_count
 
         # --- Payments (last 30 days) ---
         thirty_days_ago = now - timedelta(days=30)
