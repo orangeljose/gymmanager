@@ -36,6 +36,17 @@ def _within_window(value, start, end):
     parsed = _as_utc(value)
     return parsed is not None and start <= parsed <= end
 
+
+def _effective_status(membership_end, now):
+    """
+    Estado real del cliente derivado de membershipEnd (fuente de verdad).
+
+    El campo `status` almacenado puede quedar desactualizado: nada lo escribe
+    a 'expired' cuando la membresía vence. Sin membresía (None) ⇒ 'expired'.
+    """
+    end = _as_utc(membership_end)
+    return 'active' if end is not None and end >= now else 'expired'
+
 @clients_bp.route('', methods=['GET', 'OPTIONS'])
 @require_auth
 def get_clients():
@@ -123,7 +134,9 @@ def get_clients():
                 }), 403
             filters.append({'field': 'branchId', 'operator': '==', 'value': branch_id})
         
-        # Filtro por status (solo si expiringSoon no está activo — tiene precedencia)
+        # Filtro por status: se valida aquí pero se aplica en Python más abajo.
+        # El campo `status` guardado puede estar desactualizado; la fuente de
+        # verdad es membershipEnd (ver _effective_status).
         if expiring_soon is not True and status:
             valid_statuses = ['active', 'expired']
             if status not in valid_statuses:
@@ -134,7 +147,6 @@ def get_clients():
                         'message': f'Status debe ser uno de: {", ".join(valid_statuses)}'
                     }
                 }), 400
-            filters.append({'field': 'status', 'operator': '==', 'value': status})
 
         # Filtro expiringSoon: membershipEnd dentro de [now, now + 7 días] en Firestore.
         # Requiere los índices compuestos (businessId, membershipEnd) y
@@ -177,6 +189,14 @@ def get_clients():
         # para mantener meta.total correcto. Un cliente legacy sin el campo isDeleted
         # se trata como no eliminado (cubre también la búsqueda de quick-pay).
         all_clients = [c for c in all_clients if not c.get('isDeleted', False)]
+
+        # Estado efectivo (membershipEnd) — se normaliza y se usa para filtrar.
+        status_now = datetime.now(timezone.utc)
+        for c in all_clients:
+            c['status'] = _effective_status(c.get('membershipEnd'), status_now)
+
+        if expiring_soon is not True and status:
+            all_clients = [c for c in all_clients if c['status'] == status]
         
         # Filtrar por búsqueda en Python (nombre, email o teléfono)
         if search:
@@ -292,7 +312,13 @@ def get_client(client_id):
                 }), 403
         
         logger.info(f"Cliente obtenido: {client_id}")
-        
+
+        # Estado efectivo derivado de membershipEnd (el campo guardado se
+        # desactualiza cuando la membresía vence).
+        client['status'] = _effective_status(
+            client.get('membershipEnd'), datetime.now(timezone.utc)
+        )
+
         return jsonify({
             'success': True,
             'data': client

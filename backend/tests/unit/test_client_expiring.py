@@ -255,3 +255,57 @@ class TestMissingIndexFallback:
         data = json.loads(response.data)
         assert [c['id'] for c in data['data']] == ['c-in']
         assert data['meta']['total'] == 1
+
+
+class TestStatusDerivedFromMembershipEnd:
+    """El filtro de estado usa membershipEnd, no el campo `status` desactualizado.
+
+    Regresion: todos los clientes quedaban con status='active' aunque su
+    membresia ya hubiera vencido, asi que status=expired devolvia 0.
+    """
+
+    def test_expired_includes_stale_active_clients(self):
+        mock = create_mock_service(role='super_admin', business_id='biz-1')
+        now = datetime.now(timezone.utc)
+        clients = [
+            make_client('c-past', (now - timedelta(days=5)).isoformat()),
+            make_client('c-future', (now + timedelta(days=5)).isoformat()),
+        ]
+        for c in clients:
+            c['status'] = 'active'  # campo desactualizado a proposito
+        mock.query_firestore.return_value = clients
+
+        response = _clients_with(mock, '/api/clients?status=expired')
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert [c['id'] for c in data['data']] == ['c-past']
+        assert data['data'][0]['status'] == 'expired'
+        assert data['meta']['total'] == 1
+
+    def test_active_excludes_past_and_missing_membership_end(self):
+        mock = create_mock_service(role='super_admin', business_id='biz-1')
+        now = datetime.now(timezone.utc)
+        clients = [
+            make_client('c-future', (now + timedelta(days=5)).isoformat()),
+            make_client('c-past', (now - timedelta(days=1)).isoformat()),
+            make_client('c-none', None),
+        ]
+        mock.query_firestore.return_value = clients
+
+        response = _clients_with(mock, '/api/clients?status=active')
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert [c['id'] for c in data['data']] == ['c-future']
+        assert data['data'][0]['status'] == 'active'
+
+    def test_status_not_pushed_to_firestore(self):
+        mock = create_mock_service(role='super_admin', business_id='biz-1')
+        mock.query_firestore.return_value = []
+
+        response = _clients_with(mock, '/api/clients?status=expired')
+
+        assert response.status_code == 200
+        filters = _clients_call_filters(mock)
+        assert not any(f.get('field') == 'status' for f in filters)
