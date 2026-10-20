@@ -40,14 +40,8 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     href: '/clients',
     icon: 'Users'
   },
-  {
-    label: 'Asistencia',
-    href: '/attendance',
-    icon: 'UserCheck',
-    roles: ['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer']
-  },
-  {
-    label: 'Equipamiento',
+    {
+      label: 'Equipamiento',
     href: '/machines',
     icon: 'Dumbbell'
   },
@@ -69,8 +63,7 @@ const navigation: (NavItem & { submenu?: SubMenuItem[] })[] = [
     submenu: [
       { label: 'Reporte de Membresías', href: '/reports/income', roles: ['super_admin', 'admin', 'branch_admin'] },
       { label: 'Reporte de Productos', href: '/reports/products', roles: ['super_admin', 'admin', 'branch_admin'] },
-      { label: 'Reporte de Servicios', href: '/reports/services', roles: ['super_admin', 'admin', 'branch_admin'] },
-      { label: 'Reporte de Asistencias', href: '/reports/attendance', roles: ['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer'] }
+      { label: 'Reporte de Servicios', href: '/reports/services', roles: ['super_admin', 'admin', 'branch_admin'] }
     ]
   },
   {
