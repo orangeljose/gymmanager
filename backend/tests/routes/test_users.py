@@ -21,6 +21,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 # FACTORY - Crea mocks frescos
 # ============================================================================
 
+# Mock mas recientemente creado por el test en curso. Los call-sites se
+# resuelven dinamicamente para evitar que el primer test bindee los modulos
+# de rutas a su mock (causa de fallos por orden de ejecucion).
+_last_mock = {'service': None}
+
+
 def create_mock_service(role='super_admin', uid='admin-123', business_id='biz-1'):
     """Factory para crear mocks de FirebaseService"""
     user_data = {
@@ -41,6 +47,7 @@ def create_mock_service(role='super_admin', uid='admin-123', business_id='biz-1'
     mock.get_document.return_value = None
     mock.create_document.return_value = {'id': 'new-doc-id', 'isActive': True}
     mock.update_document.return_value = True
+    _last_mock['service'] = mock
     return mock
 
 
@@ -55,6 +62,17 @@ def reset_singleton():
     firebase_service.FirebaseService._reset()
     yield
     firebase_service.FirebaseService._reset()
+
+
+@pytest.fixture(scope='module', autouse=True)
+def patch_firebase_call_sites():
+    """Resuelve FirebaseService() al mock activo en cada request."""
+    def _get_service(*args, **kwargs):
+        return _last_mock['service']
+
+    with patch('routes.users.FirebaseService', side_effect=_get_service), \
+         patch('middleware.auth_middleware.FirebaseService', side_effect=_get_service):
+        yield
 
 
 @pytest.fixture

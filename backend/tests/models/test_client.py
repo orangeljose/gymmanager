@@ -110,8 +110,8 @@ class TestClientModelValidateCreateData:
         errors = exc_info.value.args[0]['errors']
         assert any("name" in e for e in errors)
 
-    def test_missing_email(self):
-        """Falta email"""
+    def test_email_optional_defaults_to_empty(self):
+        """Email es opcional: se acepta sin email y se normaliza a ''."""
         data = {
             'name': 'Juan Pérez',
             'phone': '+584141234567',
@@ -119,10 +119,8 @@ class TestClientModelValidateCreateData:
             'businessId': 'biz-1',
             'membershipPlanId': 'plan-1'
         }
-        with pytest.raises(ValueError) as exc_info:
-            ClientModel.validate_create_data(data)
-        errors = exc_info.value.args[0]['errors']
-        assert any("email" in e for e in errors)
+        result = ClientModel.validate_create_data(data)
+        assert result['email'] == ''
 
     def test_invalid_email_format(self):
         """Email con formato inválido"""
