@@ -29,7 +29,7 @@ from flask import Blueprint, request, jsonify, g
 
 from middleware.auth_middleware import require_auth, require_role
 from services.firebase_service import FirebaseService
-from utils.validators import validate_pagination, validate_date_format
+from utils.validators import validate_pagination, validate_date_format, clean_image_url
 
 logger = logging.getLogger(__name__)
 
@@ -479,12 +479,18 @@ def create_machine():
             return _error(400, 'Selecciona un negocio antes de continuar' if role == 'super_admin'
                           else 'Tu usuario no tiene un negocio asignado')
 
+        try:
+            image_url = clean_image_url(data.get('imageUrl'))
+        except ValueError as exc:
+            return _error(400, str(exc))
+
         now_iso = datetime.now(timezone.utc).isoformat()
 
         if kind == 'item':
             record = {
                 'kind': 'item',
                 'name': name,
+                'imageUrl': image_url,
                 'brand': None,
                 'model': None,
                 'category': category,
@@ -505,6 +511,7 @@ def create_machine():
             record = {
                 'kind': 'machine',
                 'name': name,
+                'imageUrl': image_url,
                 'brand': data.get('brand'),
                 'model': data.get('model'),
                 'category': category,
@@ -560,6 +567,12 @@ def update_machine(machine_id):
             return _error(400, 'Se requieren datos en el cuerpo del request')
 
         update = {}
+
+        if 'imageUrl' in data:
+            try:
+                update['imageUrl'] = clean_image_url(data.get('imageUrl'))
+            except ValueError as exc:
+                return _error(400, str(exc))
 
         if _kind(machine) == 'item':
             # Los accesorios sólo permiten editar name, category (set de ítems),

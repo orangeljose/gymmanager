@@ -3,6 +3,7 @@ import { apiService } from '@/services/api';
 import toast from 'react-hot-toast';
 import { X } from 'lucide-react';
 import type { Product, ProductCategory, ProductFormData } from '@/types';
+import { ImageUpload } from '@/components/ImageUpload';
 
 // Etiquetas de categoría de producto (tema GoatGym).
 export const PRODUCT_CATEGORY_META: Record<ProductCategory, { label: string; badge: string }> = {
@@ -43,6 +44,7 @@ interface ProductFormState {
   salePrice: string;    // dólares
   stockQty: string;     // stock inicial (solo create)
   lowStockThreshold: string;
+  imageUrl: string;
 }
 
 const emptyForm = (): ProductFormState => ({
@@ -52,6 +54,7 @@ const emptyForm = (): ProductFormState => ({
   salePrice: '',
   stockQty: '0',
   lowStockThreshold: '5',
+  imageUrl: '',
 });
 
 interface ProductFormProps {
@@ -78,6 +81,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         salePrice: (initial.salePriceCents / 100).toFixed(2),
         stockQty: String(initial.stockQty ?? 0),
         lowStockThreshold: String(initial.lowStockThreshold ?? 5),
+        imageUrl: initial.imageUrl || '',
       });
     } else {
       setForm(emptyForm());
@@ -119,6 +123,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       costPriceCents: Math.round(cost * 100),
       salePriceCents: Math.round(salePrice * 100),
       lowStockThreshold: threshold,
+      imageUrl: form.imageUrl || null,
     };
 
     if (!initial) {
@@ -161,16 +166,28 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => set('name', e.target.value)}
-              className="input"
-              placeholder="Ej: Proteína Whey 1kg"
-              required
+          <div className="flex items-start gap-4">
+            <ImageUpload
+              value={form.imageUrl}
+              onChange={(url) => set('imageUrl', url || '')}
+              folder="products"
+              businessId={businessId}
+              variant="thumb"
+              shape="square"
+              label="Foto del producto"
+              hint="Se verá en Mercancía y en el POS"
             />
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+              <input
+                type="text"
+                value={form.name}
+                onChange={(e) => set('name', e.target.value)}
+                className="input"
+                placeholder="Ej: Proteína Whey 1kg"
+                required
+              />
+            </div>
           </div>
 
           <div>

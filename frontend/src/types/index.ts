@@ -106,6 +106,7 @@ export interface Client {
   status: ClientStatus;
   registeredBy: string;
   notes?: string | null;
+  photoUrl?: string | null;
   createdAt: string;
   isDeleted?: boolean; // Soft delete flag (backend)
 }
@@ -274,6 +275,7 @@ export interface ClientFormData {
   branchId: string;
   membershipPlanId: string;
   notes?: string;
+  photoUrl?: string | null;
 }
 
 export interface PaymentFormData {
@@ -490,8 +492,9 @@ export type MachineResolvedStatus = 'operational' | 'out_of_service';
 
 export interface Machine {
   id: string;
-  kind?: MachineKind;          // ausente en docs legacy ⇒ 'machine'
+  kind?: MachineKind;          // ausente en docs legacy → 'machine'
   name: string;
+  imageUrl?: string | null;
   brand?: string | null;
   model?: string | null;
   category: MachineCategory;
@@ -543,6 +546,7 @@ export interface MachineFormData {
   nextMaintenanceDate?: string;
   quantity?: number;
   weightKg?: number | null;
+  imageUrl?: string | null;
 }
 
 export interface MachineMaintenanceFormData {
@@ -644,6 +648,7 @@ export type MovementType = 'purchase';
 export interface Product {
   id: string;
   name: string;
+  imageUrl?: string | null;
   category: ProductCategory;
   costPriceCents: number;       // centavos; el UI muestra dólares
   salePriceCents: number;       // centavos
@@ -696,6 +701,7 @@ export interface ProductFilters {
 
 export interface ProductFormData {
   name: string;
+  imageUrl?: string | null;
   category: ProductCategory;
   costPriceCents: number;
   salePriceCents: number;

@@ -10,6 +10,7 @@ import {
   Plus, Search, Dumbbell, AlertTriangle, Wrench, CircleSlash,
   CheckCircle2, CalendarClock, ChevronRight, Package,
 } from 'lucide-react';
+import { imageUrl } from '@/utils/images';
 
 const STATUS_ICON: Record<MachineStatus, React.ElementType> = {
   operational: CheckCircle2,
@@ -258,9 +259,18 @@ export const MachinesPage: React.FC = () => {
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center min-w-0">
-                    <div className="p-2 rounded-lg bg-primary-50 text-primary-600">
-                      <Dumbbell className="h-5 w-5" />
-                    </div>
+                    {machine.imageUrl ? (
+                      <img
+                        src={imageUrl(machine.imageUrl, 'thumb')}
+                        alt={machine.name}
+                        loading="lazy"
+                        className="h-10 w-10 rounded-lg object-cover ring-1 ring-gray-100"
+                      />
+                    ) : (
+                      <div className="p-2 rounded-lg bg-primary-50 text-primary-600">
+                        <Dumbbell className="h-5 w-5" />
+                      </div>
+                    )}
                     <div className="ml-3 min-w-0">
                       <h3 className="font-medium text-gray-900 truncate">{machine.name}</h3>
                       <p className="text-sm text-gray-500 truncate">

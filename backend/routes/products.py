@@ -38,7 +38,7 @@ from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_auth, require_role
 from services.firebase_service import FirebaseService
 from models.payment import PaymentModel
-from utils.validators import validate_pagination, validate_date_format
+from utils.validators import validate_pagination, validate_date_format, clean_image_url
 
 logger = logging.getLogger(__name__)
 
@@ -536,6 +536,11 @@ def create_product():
             return _error(400, 'Selecciona un negocio antes de continuar' if role == 'super_admin'
                           else 'Tu usuario no tiene un negocio asignado')
 
+        try:
+            image_url = clean_image_url(data.get('imageUrl'))
+        except ValueError as exc:
+            return _error(400, str(exc))
+
         now_iso = datetime.now(timezone.utc).isoformat()
 
         record = {
@@ -546,6 +551,7 @@ def create_product():
             'stockQty': stock_qty,
             'totalCostCents': stock_qty * cost_cents,
             'lowStockThreshold': threshold,
+            'imageUrl': image_url,
             'businessId': business_id,
             'branchId': branch_id,
             'isActive': True,
@@ -650,6 +656,12 @@ def update_product(product_id):
             if not _valid_int(threshold, 0):
                 return _error(400, 'lowStockThreshold debe ser un entero >= 0')
             update['lowStockThreshold'] = threshold
+
+        if 'imageUrl' in data:
+            try:
+                update['imageUrl'] = clean_image_url(data.get('imageUrl'))
+            except ValueError as exc:
+                return _error(400, str(exc))
 
         if not update:
             return _error(400, 'No se enviaron campos válidos para actualizar')

@@ -9,6 +9,7 @@ import {
   Search, ShoppingCart, Plus, Minus, Trash2, CheckCircle, Package, User, RotateCcw,
 } from 'lucide-react';
 import type { Client, PaymentMethod, Product, Sale, SaleCreateData } from '@/types';
+import { imageUrl } from '@/utils/images';
 
 // Métodos que requieren cuenta de destino (payment_accounts por tipo).
 const ACCOUNT_METHODS: PaymentMethod[] = ['zelle', 'pago_movil', 'binance'];
@@ -266,6 +267,14 @@ export const PointOfSalePage: React.FC = () => {
                 const out = (product.stockQty ?? 0) <= 0;
                 return (
                   <div key={product.id} className="card p-4 flex flex-col">
+                    {product.imageUrl && (
+                      <img
+                        src={imageUrl(product.imageUrl, 'card')}
+                        alt={product.name}
+                        loading="lazy"
+                        className="mb-3 h-32 w-full rounded-lg object-cover ring-1 ring-gray-100"
+                      />
+                    )}
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900">{product.name}</h3>
                       <p className="text-lg font-bold text-primary-600 mt-1">

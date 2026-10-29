@@ -7,6 +7,8 @@ import { usePlans } from '@/hooks/usePlans';
 import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
 import { apiService } from '@/services/api';
 import { invalidateDashboardCache } from '@/utils/dashboardCache';
+import { initials } from '@/utils/images';
+import { ImageUpload } from '@/components/ImageUpload';
 import type { ClientFormData, PaymentFormDataCreate, Branch } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -34,6 +36,7 @@ export const ClientFormPage: React.FC = () => {
     branchId: user?.branchId || '',
     membershipPlanId: '',
     notes: '',
+    photoUrl: '',
     businessId: effectiveBusinessId || ''
   });
 
@@ -75,7 +78,8 @@ export const ClientFormPage: React.FC = () => {
             documentId: client.documentId || '',
             branchId: client.branchId,
             membershipPlanId: client.membershipPlanId,
-            notes: client.notes || ''
+            notes: client.notes || '',
+            photoUrl: client.photoUrl || ''
           });
           setPaymentData(prev => ({
             ...prev,
@@ -227,16 +231,29 @@ export const ClientFormPage: React.FC = () => {
       {step === 1 && (
         <form onSubmit={isEdit ? handleSubmitClient : undefined} className="card">
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo *</label>
-              <input
-                type="text"
-                value={clientData.name}
-                onChange={e => setClientData(prev => ({ ...prev, name: e.target.value }))}
-                className="input"
-                placeholder="Juan Pérez"
-                required
+            <div className="flex items-start gap-4">
+              <ImageUpload
+                value={clientData.photoUrl}
+                onChange={(url) => setClientData(prev => ({ ...prev, photoUrl: url }))}
+                folder="clients"
+                businessId={effectiveBusinessId}
+                variant="avatar"
+                shape="circle"
+                label="Foto del cliente"
+                hint="Se verá como avatar en la lista"
+                fallbackInitials={initials(clientData.name)}
               />
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo *</label>
+                <input
+                  type="text"
+                  value={clientData.name}
+                  onChange={e => setClientData(prev => ({ ...prev, name: e.target.value }))}
+                  className="input"
+                  placeholder="Juan Pérez"
+                  required
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

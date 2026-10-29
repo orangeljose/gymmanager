@@ -3,6 +3,7 @@ import { apiService } from '@/services/api';
 import toast from 'react-hot-toast';
 import { X } from 'lucide-react';
 import type { Machine, MachineCategory, MachineFormData, MachineKind, MachineStatus } from '@/types';
+import { ImageUpload } from '@/components/ImageUpload';
 
 export const MACHINE_STATUS_META: Record<MachineStatus, { label: string; badge: string; dot: string }> = {
   operational: { label: 'Operativa', badge: 'bg-green-100 text-green-800', dot: 'bg-green-500' },
@@ -36,6 +37,7 @@ const emptyMachineForm = (): MachineFormData => ({
   warrantyUntil: '',
   status: 'operational',
   nextMaintenanceDate: '',
+  imageUrl: '',
 });
 
 const emptyItemForm = (): MachineFormData => ({
@@ -45,6 +47,7 @@ const emptyItemForm = (): MachineFormData => ({
   purchaseDate: '',
   quantity: 1,
   weightKg: null,
+  imageUrl: '',
 });
 
 interface MachineFormProps {
@@ -77,6 +80,7 @@ export const MachineForm: React.FC<MachineFormProps> = ({
           purchaseDate: initial.purchaseDate || '',
           quantity: initial.quantity ?? 1,
           weightKg: initial.weightKg ?? null,
+          imageUrl: initial.imageUrl || '',
         });
       } else {
         setForm({
@@ -89,6 +93,7 @@ export const MachineForm: React.FC<MachineFormProps> = ({
           warrantyUntil: initial.warrantyUntil || '',
           status: initial.status,
           nextMaintenanceDate: initial.nextMaintenanceDate || '',
+          imageUrl: initial.imageUrl || '',
         });
       }
     } else {
@@ -125,6 +130,7 @@ export const MachineForm: React.FC<MachineFormProps> = ({
           purchaseDate: form.purchaseDate || undefined,
           quantity,
           weightKg: form.weightKg ?? null,
+          imageUrl: form.imageUrl || null,
         };
       } else {
         payload = {
@@ -136,6 +142,7 @@ export const MachineForm: React.FC<MachineFormProps> = ({
           purchaseDate: form.purchaseDate || undefined,
           warrantyUntil: form.warrantyUntil || undefined,
           nextMaintenanceDate: form.nextMaintenanceDate || undefined,
+          imageUrl: form.imageUrl || null,
         };
       }
 
@@ -175,16 +182,28 @@ export const MachineForm: React.FC<MachineFormProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => set('name', e.target.value)}
-              className="input"
-              placeholder={isItem ? 'Ej: Mancuerna 10kg' : 'Ej: Cinta de correr #1'}
-              required
+          <div className="flex items-start gap-4">
+            <ImageUpload
+              value={form.imageUrl}
+              onChange={(url) => set('imageUrl', url || '')}
+              folder="machines"
+              businessId={businessId}
+              variant="thumb"
+              shape="square"
+              label="Foto del equipo"
+              hint="Ayuda a identificarlo de un vistazo"
             />
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+              <input
+                type="text"
+                value={form.name}
+                onChange={(e) => set('name', e.target.value)}
+                className="input"
+                placeholder={isItem ? 'Ej: Mancuerna 10kg' : 'Ej: Cinta de correr #1'}
+                required
+              />
+            </div>
           </div>
 
           {!isItem && (

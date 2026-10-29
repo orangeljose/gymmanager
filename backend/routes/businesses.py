@@ -5,6 +5,7 @@ import logging
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_auth, require_role
 from services.firebase_service import FirebaseService
+from utils.validators import clean_image_url
 
 logger = logging.getLogger(__name__)
 
@@ -120,15 +121,28 @@ def delete_business(business_id):
 @businesses_bp.route('/<business_id>', methods=['PUT', 'OPTIONS'])
 @require_auth
 def update_business(business_id):
-    """Actualiza un negocio (solo nombre por ahora)."""
+    """Actualiza un negocio (nombre y logo)."""
     try:
         data = request.get_json()
         if not data:
             return jsonify({'success': False, 'error': {'code': 400, 'message': 'Se requieren datos'}}), 400
 
-        name = data.get('name', '').strip()
-        if not name:
-            return jsonify({'success': False, 'error': {'code': 400, 'message': 'El nombre es requerido'}}), 400
+        update = {}
+
+        if 'name' in data:
+            name = (data.get('name') or '').strip()
+            if not name:
+                return jsonify({'success': False, 'error': {'code': 400, 'message': 'El nombre es requerido'}}), 400
+            update['name'] = name
+
+        if 'logo' in data:
+            try:
+                update['logo'] = clean_image_url(data.get('logo'))
+            except ValueError as exc:
+                return jsonify({'success': False, 'error': {'code': 400, 'message': str(exc)}}), 400
+
+        if not update:
+            return jsonify({'success': False, 'error': {'code': 400, 'message': 'No se enviaron campos válidos'}}), 400
 
         firebase_service = FirebaseService()
 
@@ -142,11 +156,11 @@ def update_business(business_id):
         if user_role != 'super_admin' and user_business_id != business_id:
             return jsonify({'success': False, 'error': {'code': 403, 'message': 'No tienes acceso a este negocio'}}), 403
 
-        success = firebase_service.update_document('businesses', business_id, {'name': name})
+        success = firebase_service.update_document('businesses', business_id, update)
 
         if success:
             logger.info(f"Negocio actualizado: {business_id}")
-            return jsonify({'success': True, 'data': {'id': business_id, 'name': name}}), 200
+            return jsonify({'success': True, 'data': {'id': business_id, **update}}), 200
 
         return jsonify({'success': False, 'error': {'code': 500, 'message': 'Error al actualizar negocio'}}), 500
 

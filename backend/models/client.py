@@ -73,7 +73,7 @@ class ClientModel:
         errors = []
         
         # Campos permitidos para actualizar
-        allowed_fields = ['name', 'email', 'phone', 'documentId', 'notes', 'status']
+        allowed_fields = ['name', 'email', 'phone', 'documentId', 'notes', 'status', 'photoUrl']
         
         # Filtrar campos no permitidos
         invalid_fields = [field for field in data.keys() if field not in allowed_fields]

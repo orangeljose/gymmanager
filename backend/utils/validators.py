@@ -205,3 +205,27 @@ def validate_pagination(page: int = None, limit: int = None) -> Dict[str, Any]:
         'limit': validated_limit,
         'offset': offset
     }
+
+
+def clean_image_url(value):
+    """
+    Normaliza una URL de imagen opcional.
+
+    - None o cadena vacia -> None (sin imagen)
+    - Debe ser http(s) y medir <= 500 caracteres
+
+    Raises:
+        ValueError: si el valor no es una URL valida.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError('La URL de imagen debe ser texto')
+    url = value.strip()
+    if not url:
+        return None
+    if not url.startswith(('https://', 'http://')):
+        raise ValueError('La URL de imagen debe empezar con http:// o https://')
+    if len(url) > 500:
+        raise ValueError('La URL de imagen es demasiado larga')
+    return url

@@ -9,6 +9,7 @@ import type { Client, ClientFilters, ClientStatus, Branch } from '@/types';
 import { apiService } from '@/services/api';
 import { invalidateDashboardCache } from '@/utils/dashboardCache';
 import { toLocalMidnight, formatDate as formatDateUtil } from '@/utils/dates';
+import { imageUrl, initials } from '@/utils/images';
 
 export const ClientsPage: React.FC = () => {
   const { user, selectedBusinessId } = useAuth();
@@ -254,15 +255,31 @@ export const ClientsPage: React.FC = () => {
                       >
                         <td className="px-4 py-3">
                           <Link to={`/clients/${client.id}`} className="block">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-900 hover:text-primary-600">{client.name}</span>
-                              {getMissingFields(client).length > 0 && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-700">
-                                  ⚠ Datos incompletos
+                            <div className="flex items-center gap-3">
+                              {client.photoUrl ? (
+                                <img
+                                  src={imageUrl(client.photoUrl, 'avatar')}
+                                  alt={client.name}
+                                  loading="lazy"
+                                  className="h-9 w-9 rounded-full object-cover ring-2 ring-gray-100"
+                                />
+                              ) : (
+                                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700">
+                                  {initials(client.name)}
                                 </span>
                               )}
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-900 hover:text-primary-600">{client.name}</span>
+                                  {getMissingFields(client).length > 0 && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-700">
+                                      ⚠ Datos incompletos
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-sm text-gray-500">{client.email || 'Sin email'}</div>
+                              </div>
                             </div>
-                            <div className="text-sm text-gray-500">{client.email || 'Sin email'}</div>
                           </Link>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700">{client.phone || '-'}</td>

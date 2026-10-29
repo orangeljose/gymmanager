@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Building, Calendar, MapPin, Shield } from 'lucide-react';
+import { ImageUpload } from '@/components/ImageUpload';
+import { imageUrl } from '@/utils/images';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import type { Business } from '@/types';
@@ -73,6 +75,20 @@ export const MyBusinessPage: React.FC = () => {
     loadBusiness();
   }, [loadBusiness]);
 
+  const handleLogoChange = async (url: string | null) => {
+    if (!business) return;
+    try {
+      const response = await apiService.updateBusiness(business.id, { logo: url });
+      if (response.success) {
+        setBusiness({ ...business, logo: url });
+      } else {
+        setError(response.error?.message || 'No se pudo actualizar el logo');
+      }
+    } catch (err: any) {
+      setError(err.message || 'No se pudo actualizar el logo');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -119,7 +135,32 @@ export const MyBusinessPage: React.FC = () => {
       {header}
 
       <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">{business.name}</h2>
+        <div className="flex items-start gap-4 mb-4">
+          {business.logo ? (
+            <img
+              src={imageUrl(business.logo, 'logo')}
+              alt={business.name}
+              className="h-20 w-20 rounded-xl object-contain bg-gray-50 ring-1 ring-gray-100"
+            />
+          ) : (
+            <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-primary-100">
+              <Building className="h-8 w-8 text-primary-600" />
+            </div>
+          )}
+          <div className="flex-1">
+            <h2 className="text-xl font-semibold text-gray-900">{business.name}</h2>
+            <ImageUpload
+              value={business.logo}
+              onChange={handleLogoChange}
+              folder="businesses"
+              businessId={businessId}
+              variant="logo"
+              shape="square"
+              label="Logo del negocio"
+              hint="PNG con fondo transparente se ve mejor"
+            />
+          </div>
+        </div>
 
         <div className="space-y-3">
           <div className="flex items-center space-x-3 text-sm">

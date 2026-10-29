@@ -13,6 +13,7 @@ import type {
 import {
   Plus, Search, Package, DollarSign, AlertTriangle, Ban, Pencil, Trash2, Eye, PackagePlus,
 } from 'lucide-react';
+import { imageUrl } from '@/utils/images';
 
 const LIMIT = 20;
 
@@ -227,9 +228,23 @@ export const ProductsPage: React.FC = () => {
                   return (
                     <tr key={product.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
-                        <Link to={`/products/${product.id}`} className="font-medium text-gray-900 hover:text-primary-600">
-                          {product.name}
-                        </Link>
+                        <div className="flex items-center gap-3">
+                          {product.imageUrl ? (
+                            <img
+                              src={imageUrl(product.imageUrl, 'thumb')}
+                              alt={product.name}
+                              loading="lazy"
+                              className="h-10 w-10 rounded-lg object-cover ring-1 ring-gray-100"
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
+                              <Package className="h-5 w-5 text-gray-400" />
+                            </div>
+                          )}
+                          <Link to={`/products/${product.id}`} className="font-medium text-gray-900 hover:text-primary-600">
+                            {product.name}
+                          </Link>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`badge ${cat.badge}`}>{cat.label}</span>

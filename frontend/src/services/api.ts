@@ -350,11 +350,48 @@ class ApiService {
     });
   }
 
-  async updateBusiness(id: string, data: { name: string }): Promise<ApiResponse<{ id: string; name: string }>> {
-    return this.requestWithAuth<{ id: string; name: string }>(`/businesses/${id}`, {
+  async updateBusiness(id: string, data: { name?: string; logo?: string | null }): Promise<ApiResponse<{ id: string; name?: string; logo?: string | null }>> {
+    return this.requestWithAuth<{ id: string; name?: string; logo?: string | null }>(`/businesses/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  }
+
+  // Uploads
+  async uploadImage(
+    file: File,
+    folder: 'clients' | 'products' | 'machines' | 'businesses',
+    businessId?: string,
+  ): Promise<{
+    success: boolean;
+    data?: { url: string; publicId: string; width?: number; height?: number };
+    error?: { code: number; message: string };
+  }> {
+    const token = await this.getAuthToken();
+    if (!token) throw new Error('No authentication token available');
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
+    if (businessId) formData.append('businessId', businessId);
+
+    const response = await fetch(`${this.baseURL}/uploads`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload?.success) {
+      return {
+        success: false,
+        error: {
+          code: response.status,
+          message: payload?.error?.message || 'No se pudo subir la imagen',
+        },
+      };
+    }
+    return payload;
   }
 
   // Branches

@@ -9,7 +9,7 @@ from middleware.auth_middleware import require_auth, require_role, validate_bran
 from services.firebase_service import FirebaseService
 from services.membership_service import MembershipService
 from models.client import ClientCreateSchema, ClientUpdateSchema, ClientModel
-from utils.validators import validate_pagination, validate_choice
+from utils.validators import validate_pagination, validate_choice, clean_image_url
 
 logger = logging.getLogger(__name__)
 
@@ -368,6 +368,14 @@ def create_client():
         # Validar datos con el schema
         schema = ClientCreateSchema(data)
         client_data = schema.to_dict()
+
+        try:
+            client_data['photoUrl'] = clean_image_url(client_data.get('photoUrl'))
+        except ValueError as exc:
+            return jsonify({
+                'success': False,
+                'error': {'code': 400, 'message': str(exc)}
+            }), 400
         
         # Validar acceso a la sede
         branch_id = client_data.get('branchId')
@@ -558,7 +566,16 @@ def update_client(client_id):
         # Validar con el schema
         schema = ClientUpdateSchema(data)
         update_data = schema.to_dict()
-        
+
+        if 'photoUrl' in update_data:
+            try:
+                update_data['photoUrl'] = clean_image_url(update_data.get('photoUrl'))
+            except ValueError as exc:
+                return jsonify({
+                    'success': False,
+                    'error': {'code': 400, 'message': str(exc)}
+                }), 400
+
         # Actualizar cliente
         success = firebase_service.update_document('clients', client_id, update_data)
         
