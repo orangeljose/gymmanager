@@ -16,6 +16,7 @@ from .machines import machines_bp
 from .expenses import expenses_bp
 from .products import products_bp
 from .sales import sales_bp
+from .uploads import uploads_bp
 
 __all__ = [
     'auth_bp',
@@ -32,5 +33,6 @@ __all__ = [
     'machines_bp',
     'expenses_bp',
     'products_bp',
-    'sales_bp'
+    'sales_bp',
+    'uploads_bp'
 ]
