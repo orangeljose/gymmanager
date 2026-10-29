@@ -2,8 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { apiService } from '@/services/api';
 import toast from 'react-hot-toast';
 import { X } from 'lucide-react';
-import type { Product, ProductCategory, ProductFormData } from '@/types';
+import type { Product, ProductCategory, ProductFormData, PaymentMethod } from '@/types';
 import { ImageUpload } from '@/components/ImageUpload';
+import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
+import {
+  PURCHASE_METHODS, ACCOUNT_REQUIRED_METHODS, PURCHASE_METHOD_LABELS,
+} from '@/constants/payments';
 
 // Etiquetas de categoría de producto (tema GoatGym).
 export const PRODUCT_CATEGORY_META: Record<ProductCategory, { label: string; badge: string }> = {
@@ -45,6 +49,8 @@ interface ProductFormState {
   stockQty: string;     // stock inicial (solo create)
   lowStockThreshold: string;
   imageUrl: string;
+  method: PaymentMethod;
+  paymentAccountId: string;
 }
 
 const emptyForm = (): ProductFormState => ({
@@ -55,6 +61,8 @@ const emptyForm = (): ProductFormState => ({
   stockQty: '0',
   lowStockThreshold: '5',
   imageUrl: '',
+  method: 'cash',
+  paymentAccountId: '',
 });
 
 interface ProductFormProps {
@@ -70,6 +78,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 }) => {
   const [form, setForm] = useState<ProductFormState>(emptyForm());
   const [saving, setSaving] = useState(false);
+  const { accounts } = usePaymentAccounts(businessId || '');
 
   useEffect(() => {
     if (!open) return;
@@ -82,6 +91,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         stockQty: String(initial.stockQty ?? 0),
         lowStockThreshold: String(initial.lowStockThreshold ?? 5),
         imageUrl: initial.imageUrl || '',
+        method: 'cash',
+        paymentAccountId: '',
       });
     } else {
       setForm(emptyForm());
@@ -98,6 +109,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
     if (!form.name.trim()) {
       toast.error('El nombre es obligatorio');
+      return;
+    }
+
+    if (!initial && ACCOUNT_REQUIRED_METHODS.includes(form.method) && !form.paymentAccountId) {
+      toast.error(`Selecciona una cuenta destino para ${PURCHASE_METHOD_LABELS[form.method]}`);
       return;
     }
 
@@ -124,6 +140,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       salePriceCents: Math.round(salePrice * 100),
       lowStockThreshold: threshold,
       imageUrl: form.imageUrl || null,
+      method: form.method,
+      paymentAccountId: form.paymentAccountId || undefined,
     };
 
     if (!initial) {
@@ -263,6 +281,49 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               />
             </div>
           </div>
+
+          {!initial && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-3">
+              <p className="text-xs font-medium text-gray-600">¿De dónde sale el dinero de esta compra?</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Método de pago</label>
+                  <select
+                    value={form.method}
+                    onChange={(e) => set('method', e.target.value as PaymentMethod)}
+                    className="input"
+                  >
+                    {PURCHASE_METHODS.map((m) => (
+                      <option key={m} value={m}>{PURCHASE_METHOD_LABELS[m]}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {ACCOUNT_REQUIRED_METHODS.includes(form.method) && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cuenta {PURCHASE_METHOD_LABELS[form.method]} *
+                    </label>
+                    <select
+                      value={form.paymentAccountId}
+                      onChange={(e) => set('paymentAccountId', e.target.value)}
+                      className={`input ${!form.paymentAccountId ? 'border-red-300' : ''}`}
+                    >
+                      <option value="">Seleccionar cuenta</option>
+                      {accounts.filter((a) => a.type === form.method).map((acc) => (
+                        <option key={acc.id} value={acc.id}>{acc.label}</option>
+                      ))}
+                    </select>
+                    {accounts.filter((a) => a.type === form.method).length === 0 && (
+                      <p className="text-xs text-red-600 mt-1">
+                        No hay cuentas de {PURCHASE_METHOD_LABELS[form.method]} registradas.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end space-x-2 pt-4 border-t">
             <button type="button" onClick={onClose} className="btn btn-outline">

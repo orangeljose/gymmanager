@@ -57,6 +57,11 @@ READ_ROLES = ['super_admin', 'admin', 'branch_admin', 'cashier', 'trainer']
 # Métodos de pago reutilizados del modelo de pagos (fuente única de verdad).
 VALID_METHODS = PaymentModel.VALID_METHODS
 
+# Compras de mercancía (egresos de dinero): mismos 4 métodos que el POS.
+PURCHASE_METHODS = ['zelle', 'cash', 'pago_movil', 'binance']
+# Estos métodos exigen una cuenta destino registrada.
+ACCOUNT_REQUIRED_METHODS = {'zelle', 'pago_movil', 'binance'}
+
 DEFAULT_LOW_STOCK_THRESHOLD = 5
 
 
@@ -541,6 +546,15 @@ def create_product():
         except ValueError as exc:
             return _error(400, str(exc))
 
+        method = str(data.get('method') or 'cash').strip() or 'cash'
+        if method not in PURCHASE_METHODS:
+            return _error(400, f'method debe ser uno de: {", ".join(PURCHASE_METHODS)}')
+        payment_account_id = data.get('paymentAccountId')
+        if payment_account_id is not None:
+            payment_account_id = str(payment_account_id).strip() or None
+        if method in ACCOUNT_REQUIRED_METHODS and not payment_account_id:
+            return _error(400, f'Debes seleccionar una cuenta destino para {method}')
+
         now_iso = datetime.now(timezone.utc).isoformat()
 
         record = {
@@ -574,7 +588,8 @@ def create_product():
                 'unitPriceCents': cost_cents,
                 'totalCents': stock_qty * cost_cents,
                 'date': _today_utc(),
-                'method': 'cash',
+                'method': method,
+                'paymentAccountId': payment_account_id,
                 'businessId': business_id,
                 'branchId': branch_id,
                 'registeredBy': g.current_user.get('uid'),
@@ -837,12 +852,14 @@ def register_movement(product_id):
             note = str(note).strip() or None
 
         method = str(data.get('method') or 'cash').strip() or 'cash'
-        if method not in VALID_METHODS:
-            return _error(400, f'method debe ser uno de: {", ".join(VALID_METHODS)}')
+        if method not in PURCHASE_METHODS:
+            return _error(400, f'method debe ser uno de: {", ".join(PURCHASE_METHODS)}')
 
         payment_account_id = data.get('paymentAccountId')
         if payment_account_id is not None:
             payment_account_id = str(payment_account_id).strip() or None
+        if method in ACCOUNT_REQUIRED_METHODS and not payment_account_id:
+            return _error(400, f'Debes seleccionar una cuenta destino para {method}')
 
         firebase_service = FirebaseService()
         product, not_found = _fetch_active_product(firebase_service, product_id)

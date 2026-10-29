@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { apiService } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { usePaymentAccounts } from '@/hooks/usePaymentAccounts';
-import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from '@/components/ExpenseForm';
+import { PURCHASE_METHODS, ACCOUNT_REQUIRED_METHODS, PURCHASE_METHOD_LABELS } from '@/constants/payments';
 import toast from 'react-hot-toast';
 import { X } from 'lucide-react';
 import type { PaymentMethod, Product, ProductMovement, ProductMovementFormData } from '@/types';
@@ -10,9 +10,6 @@ import type { PaymentMethod, Product, ProductMovement, ProductMovementFormData }
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
 const ADMIN_ROLES = ['super_admin', 'admin', 'branch_admin'];
-
-// Métodos que requieren cuenta de destino (payment_accounts por tipo).
-const ACCOUNT_METHODS: PaymentMethod[] = ['zelle', 'pago_movil', 'binance'];
 
 interface ReponerFormState {
   qty: string;
@@ -79,6 +76,11 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
     const unitPrice = Number(form.unitPrice);
     if (!Number.isFinite(unitPrice) || unitPrice < 0) {
       toast.error('El costo unitario debe ser mayor o igual a 0');
+      return;
+    }
+
+    if (ACCOUNT_REQUIRED_METHODS.includes(form.method) && !form.paymentAccountId) {
+      toast.error(`Selecciona una cuenta destino para ${PURCHASE_METHOD_LABELS[form.method]}`);
       return;
     }
 
@@ -195,16 +197,16 @@ export const ProductMovementModal: React.FC<ProductMovementModalProps> = ({
               onChange={(e) => set('method', e.target.value as PaymentMethod)}
               className="input"
             >
-              {PAYMENT_METHODS.map((m) => (
-                <option key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</option>
+              {PURCHASE_METHODS.map((m) => (
+                <option key={m} value={m}>{PURCHASE_METHOD_LABELS[m]}</option>
               ))}
             </select>
           </div>
 
-          {ACCOUNT_METHODS.includes(form.method) && (
+          {ACCOUNT_REQUIRED_METHODS.includes(form.method) && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cuenta {PAYMENT_METHOD_LABELS[form.method]} destino
+                Cuenta {PURCHASE_METHOD_LABELS[form.method]} destino
               </label>
               <select
                 value={form.paymentAccountId}

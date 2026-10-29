@@ -709,6 +709,8 @@ export interface ProductFormData {
   lowStockThreshold?: number;
   businessId?: string;          // Solo para create
   branchId?: string | null;
+  method?: PaymentMethod;       // Solo para create con stock inicial
+  paymentAccountId?: string;    // Solo para create con stock inicial
 }
 
 export interface ProductMovementFormData {

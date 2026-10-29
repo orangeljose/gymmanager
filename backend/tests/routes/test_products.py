@@ -536,15 +536,15 @@ class TestMovements:
         response = client.post(
             '/api/products/p1/movement',
             json={'type': 'purchase', 'qty': 4, 'unitPriceCents': 900,
-                  'method': 'transfer', 'paymentAccountId': 'acc-bank-1'},
+                  'method': 'zelle', 'paymentAccountId': 'acc-zelle-1'},
             headers=auth_header,
         )
 
         assert response.status_code == 201
         _, movement = mock.create_document.call_args[0]
         assert movement['type'] == 'purchase'
-        assert movement['method'] == 'transfer'
-        assert movement['paymentAccountId'] == 'acc-bank-1'
+        assert movement['method'] == 'zelle'
+        assert movement['paymentAccountId'] == 'acc-zelle-1'
 
     def test_purchase_default_method_cash(self, make_client, auth_header):
         mock = create_mock_service(role='admin', business_id='biz-1')
@@ -900,3 +900,67 @@ class TestPermissions:
         response = getattr(client, method)(path, json={})
 
         assert response.status_code == 401
+
+
+class TestPurchasePaymentMethods:
+    """Compras de mercancia: solo los 4 metodos del POS y cuenta en los 3 digitales."""
+
+    def test_create_rejects_account_method_without_account(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        client = make_client(mock)
+
+        response = client.post(
+            '/api/products',
+            json={'name': 'Proteina', 'category': 'supplement',
+                  'costPriceCents': 1000, 'salePriceCents': 2000,
+                  'stockQty': 5, 'method': 'zelle'},
+            headers=auth_header,
+        )
+
+        assert response.status_code == 400
+        assert 'cuenta destino' in response.get_json()['error']['message']
+        mock.create_document.assert_not_called()
+
+    def test_create_rejects_unsupported_method(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        client = make_client(mock)
+
+        response = client.post(
+            '/api/products',
+            json={'name': 'Proteina', 'category': 'supplement',
+                  'costPriceCents': 1000, 'salePriceCents': 2000,
+                  'stockQty': 5, 'method': 'card'},
+            headers=auth_header,
+        )
+
+        assert response.status_code == 400
+        assert 'method' in response.get_json()['error']['message']
+
+    def test_movement_rejects_legacy_method(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        mock.get_document.return_value = _product(stockQty=0)
+        client = make_client(mock)
+
+        response = client.post(
+            '/api/products/p1/movement',
+            json={'type': 'purchase', 'qty': 1, 'unitPriceCents': 900,
+                  'method': 'transfer'},
+            headers=auth_header,
+        )
+
+        assert response.status_code == 400
+
+    def test_movement_rejects_binance_without_account(self, make_client, auth_header):
+        mock = create_mock_service(role='admin', business_id='biz-1')
+        mock.get_document.return_value = _product(stockQty=0)
+        client = make_client(mock)
+
+        response = client.post(
+            '/api/products/p1/movement',
+            json={'type': 'purchase', 'qty': 1, 'unitPriceCents': 900,
+                  'method': 'binance'},
+            headers=auth_header,
+        )
+
+        assert response.status_code == 400
+        assert 'cuenta destino' in response.get_json()['error']['message']
