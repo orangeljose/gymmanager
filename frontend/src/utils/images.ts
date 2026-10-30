@@ -19,7 +19,7 @@ const TRANSFORMS: Record<ImageVariant, string> = {
   // Encabezados anchos.
   banner: 'w_800,h_400,c_fill,q_auto,f_auto',
   // Logos: sin recorte, fondo respetado.
-  logo: 'w_200,h_200,c_pad,q_auto,f_auto',
+  logo: 'w_400,h_400,c_pad,q_auto,f_auto',
 };
 
 const CLOUDINARY_MARKER = '/upload/';

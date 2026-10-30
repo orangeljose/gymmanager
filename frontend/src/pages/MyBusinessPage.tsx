@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Building, Calendar, MapPin, Shield } from 'lucide-react';
+import { Building, Calendar, MapPin, Pencil, Shield } from 'lucide-react';
 import { ImageUpload } from '@/components/ImageUpload';
+import { imageUrl } from '@/utils/images';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import type { Business } from '@/types';
@@ -37,6 +38,7 @@ export const MyBusinessPage: React.FC = () => {
   const [branchesCount, setBranchesCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingLogo, setEditingLogo] = useState(false);
 
   const loadBusiness = useCallback(async () => {
     if (!businessId) {
@@ -135,18 +137,51 @@ export const MyBusinessPage: React.FC = () => {
 
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-8 mb-6">
         <div className="flex flex-col items-center text-center mb-8">
-          <ImageUpload
-            value={business.logo}
-            onChange={handleLogoChange}
-            folder="businesses"
-            businessId={businessId}
-            variant="logo"
-            shape="square"
-            size="lg"
-            align="center"
-            label="Subir logo"
-            hint="JPG, PNG o WebP · máximo 5 MB"
-          />
+          {editingLogo ? (
+            <>
+              <ImageUpload
+                value={business.logo}
+                onChange={handleLogoChange}
+                folder="businesses"
+                businessId={businessId}
+                variant="logo"
+                shape="square"
+                size="lg"
+                align="center"
+                label="Subir logo"
+                hint="JPG, PNG o WebP · máximo 5 MB"
+              />
+              <button
+                type="button"
+                onClick={() => setEditingLogo(false)}
+                className="btn btn-ghost btn-sm mt-3"
+              >
+                Listo
+              </button>
+            </>
+          ) : (
+            <>
+              {business.logo ? (
+                <img
+                  src={imageUrl(business.logo, 'logo')}
+                  alt={business.name}
+                  className="h-40 w-40 rounded-2xl bg-gray-50 object-contain p-2 ring-1 ring-gray-100 sm:h-56 sm:w-56 lg:h-72 lg:w-72"
+                />
+              ) : (
+                <div className="flex h-40 w-40 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-50 via-white to-gray-100 ring-1 ring-gray-100 sm:h-56 sm:w-56 lg:h-72 lg:w-72">
+                  <Building className="h-14 w-14 text-primary-300 sm:h-20 sm:w-20" />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setEditingLogo(true)}
+                className="btn btn-outline btn-sm mt-4"
+              >
+                <Pencil className="h-4 w-4 mr-1" /> Editar logo
+              </button>
+            </>
+          )}
+
           <h2 className="mt-5 text-2xl font-semibold text-gray-900">{business.name}</h2>
           <p className="mt-1 text-sm text-gray-500">Logo del negocio</p>
         </div>
