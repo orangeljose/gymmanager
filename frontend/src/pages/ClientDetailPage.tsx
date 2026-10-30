@@ -10,6 +10,7 @@ import { PaymentForm } from '@/components/PaymentForm';
 import { apiService } from '@/services/api';
 import { invalidateDashboardCache } from '@/utils/dashboardCache';
 import { toLocalMidnight, formatDate as formatDateUtil } from '@/utils/dates';
+import { imageUrl, initials } from '@/utils/images';
 import type { Client, Payment } from '@/types';
 
 export const ClientDetailPage: React.FC = () => {
@@ -182,9 +183,21 @@ export const ClientDetailPage: React.FC = () => {
         <Link to="/clients" className="btn btn-ghost btn-sm mb-4">
           <ArrowLeft className="h-4 w-4 mr-1" /> Volver a clientes
         </Link>
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex items-start gap-5">
+            {client.photoUrl ? (
+              <img
+                src={imageUrl(client.photoUrl, 'avatar')}
+                alt={client.name}
+                className="h-24 w-24 shrink-0 rounded-full object-cover ring-4 ring-white shadow-md sm:h-28 sm:w-28 lg:h-32 lg:w-32"
+              />
+            ) : (
+              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-primary-100 text-2xl font-semibold text-primary-700 ring-4 ring-white shadow-sm sm:h-28 sm:w-28 sm:text-3xl lg:h-32 lg:w-32">
+                {initials(client.name)}
+              </div>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
             <div className="flex items-center gap-3 mt-2 flex-wrap">
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                 client.status === 'active' ? 'bg-green-100 text-green-800' :
@@ -204,6 +217,7 @@ export const ClientDetailPage: React.FC = () => {
               <span className="text-sm text-gray-500">
                 Registrado el {formatDate(client.createdAt)}
               </span>
+            </div>
             </div>
           </div>
           <div className="flex items-center gap-2">

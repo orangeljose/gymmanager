@@ -240,19 +240,21 @@ export const ClientFormPage: React.FC = () => {
       {step === 1 && (
         <form onSubmit={isEdit ? handleSubmitClient : undefined} className="card">
           <div className="space-y-4">
-            <div className="flex items-start gap-4">
-              <ImageUpload
-                value={clientData.photoUrl}
-                onChange={(url) => setClientData(prev => ({ ...prev, photoUrl: url }))}
-                folder="clients"
-                businessId={effectiveBusinessId}
-                variant="avatar"
-                shape="circle"
-                label="Foto del cliente"
-                hint="Se verá como avatar en la lista"
-                fallbackInitials={initials(clientData.name)}
-              />
-              <div className="flex-1">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <ImageUpload
+                  value={clientData.photoUrl}
+                  onChange={(url) => setClientData(prev => ({ ...prev, photoUrl: url }))}
+                  folder="clients"
+                  businessId={effectiveBusinessId}
+                  variant="avatar"
+                  shape="circle"
+                  label="Foto del cliente"
+                  hint="Se verá como avatar en la lista"
+                  fallbackInitials={initials(clientData.name)}
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo *</label>
                 <input
                   type="text"

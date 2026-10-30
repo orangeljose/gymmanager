@@ -9,7 +9,7 @@ export type ImageVariant = 'avatar' | 'thumb' | 'tile' | 'card' | 'banner' | 'lo
 
 const TRANSFORMS: Record<ImageVariant, string> = {
   // Clientes: recorte centrado en el rostro.
-  avatar: 'w_120,h_120,c_fill,g_face,q_auto,f_auto',
+  avatar: 'w_240,h_240,c_fill,g_face,q_auto,f_auto',
   // Listados compactos.
   thumb: 'w_160,h_160,c_pad,b_white,q_auto,f_auto',
   // Tarjetas 4:3 (equipamiento).
