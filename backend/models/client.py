@@ -73,7 +73,7 @@ class ClientModel:
         errors = []
         
         # Campos permitidos para actualizar
-        allowed_fields = ['name', 'email', 'phone', 'documentId', 'notes', 'status', 'photoUrl']
+        allowed_fields = ['name', 'email', 'phone', 'documentId', 'notes', 'status', 'photoUrl', 'branchId']
         
         # Filtrar campos no permitidos
         invalid_fields = [field for field in data.keys() if field not in allowed_fields]
@@ -85,6 +85,13 @@ class ClientModel:
             valid_statuses = ['active', 'expired']
             if data['status'] not in valid_statuses:
                 errors.append(f"Status debe ser uno de: {', '.join(valid_statuses)}")
+
+        # Validar sede (solo si está presente)
+        if 'branchId' in data:
+            if not isinstance(data['branchId'], str) or not data['branchId'].strip():
+                errors.append('branchId debe ser un texto no vacío')
+            else:
+                data['branchId'] = data['branchId'].strip()
         
         # Reutilizar validaciones de create (solo si tienen valor)
         if data.get('email'):

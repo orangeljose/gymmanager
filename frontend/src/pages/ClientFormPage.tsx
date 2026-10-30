@@ -117,6 +117,15 @@ export const ClientFormPage: React.FC = () => {
     }));
   };
 
+  /**
+   * Payload de actualización: la sede y la foto se editan en la ficha,
+   * pero el plan de membresía solo cambia registrando un pago.
+   */
+  const buildUpdatePayload = (): Partial<ClientFormData> => {
+    const { membershipPlanId, businessId, ...rest } = clientData;
+    return rest;
+  };
+
   const handleSubmitClient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientData.name || !clientData.branchId) {
@@ -127,7 +136,7 @@ export const ClientFormPage: React.FC = () => {
     try {
       setLoading(true);
       if (isEdit && id) {
-        const result = await updateClient(id, clientData);
+        const result = await updateClient(id, buildUpdatePayload());
         if (result.success) {
           invalidateDashboardCache();
           toast.success('Cliente actualizado');
@@ -168,7 +177,7 @@ export const ClientFormPage: React.FC = () => {
         clientId = result.data.id;
       } else {
         if (!id) throw new Error('Client ID is required');
-        await updateClient(id, clientData);
+        await updateClient(id, buildUpdatePayload());
         clientId = id;
       }
 

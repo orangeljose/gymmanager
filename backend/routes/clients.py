@@ -576,6 +576,28 @@ def update_client(client_id):
                     'error': {'code': 400, 'message': str(exc)}
                 }), 400
 
+        # Cambio de sede: validar alcance del usuario.
+        if 'branchId' in update_data:
+            role = g.current_user.get('role')
+            user_branch_id = g.current_user.get('branchId')
+            user_business_id = g.current_user.get('businessId')
+
+            if role != 'super_admin' and user_branch_id:
+                # Usuario acotado a sede no puede mover el cliente a otra.
+                update_data['branchId'] = user_branch_id
+            else:
+                branch = firebase_service.get_document('branches', update_data['branchId'])
+                if not branch:
+                    return jsonify({
+                        'success': False,
+                        'error': {'code': 400, 'message': 'La sede indicada no existe'}
+                    }), 400
+                if role != 'super_admin' and branch.get('businessId') != user_business_id:
+                    return jsonify({
+                        'success': False,
+                        'error': {'code': 403, 'message': 'No tienes acceso a esa sede'}
+                    }), 403
+
         # Actualizar cliente
         success = firebase_service.update_document('clients', client_id, update_data)
         
