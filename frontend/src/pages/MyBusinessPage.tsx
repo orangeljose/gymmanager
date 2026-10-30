@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Building, Calendar, MapPin, Shield } from 'lucide-react';
 import { ImageUpload } from '@/components/ImageUpload';
-import { imageUrl } from '@/utils/images';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import type { Business } from '@/types';
@@ -131,56 +130,46 @@ export const MyBusinessPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-6 max-w-4xl mx-auto">
       {header}
 
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-4">
-        <div className="flex items-start gap-4 mb-4">
-          {business.logo ? (
-            <img
-              src={imageUrl(business.logo, 'logo')}
-              alt={business.name}
-              className="h-20 w-20 rounded-xl object-contain bg-gray-50 ring-1 ring-gray-100"
-            />
-          ) : (
-            <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-primary-100">
-              <Building className="h-8 w-8 text-primary-600" />
-            </div>
-          )}
-          <div className="flex-1">
-            <h2 className="text-xl font-semibold text-gray-900">{business.name}</h2>
-            <ImageUpload
-              value={business.logo}
-              onChange={handleLogoChange}
-              folder="businesses"
-              businessId={businessId}
-              variant="logo"
-              shape="square"
-              label="Logo del negocio"
-              hint="PNG con fondo transparente se ve mejor"
-            />
-          </div>
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-8 mb-6">
+        <div className="flex flex-col items-center text-center mb-8">
+          <ImageUpload
+            value={business.logo}
+            onChange={handleLogoChange}
+            folder="businesses"
+            businessId={businessId}
+            variant="logo"
+            shape="square"
+            size="lg"
+            align="center"
+            label="Subir logo"
+            hint="JPG, PNG o WebP · máximo 5 MB"
+          />
+          <h2 className="mt-5 text-2xl font-semibold text-gray-900">{business.name}</h2>
+          <p className="mt-1 text-sm text-gray-500">Logo del negocio</p>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center space-x-3 text-sm">
-            <Calendar className="h-4 w-4 text-gray-400" />
-            <span className="text-gray-500">Creado:</span>
-            <span className="text-gray-900 font-medium">{formatDate(business.createdAt)}</span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-gray-100 pt-6">
+          <div className="rounded-xl bg-gray-50 p-4 text-center">
+            <Calendar className="mx-auto h-4 w-4 text-gray-400" />
+            <p className="mt-2 text-xs text-gray-500">Creado</p>
+            <p className="text-sm font-medium text-gray-900">{formatDate(business.createdAt)}</p>
           </div>
 
-          <div className="flex items-center space-x-3 text-sm">
-            <MapPin className="h-4 w-4 text-gray-400" />
-            <span className="text-gray-500">Sucursales:</span>
-            <span className="text-gray-900 font-medium">{branchesCount}</span>
+          <div className="rounded-xl bg-gray-50 p-4 text-center">
+            <MapPin className="mx-auto h-4 w-4 text-gray-400" />
+            <p className="mt-2 text-xs text-gray-500">Sucursales</p>
+            <p className="text-sm font-medium text-gray-900">{branchesCount}</p>
           </div>
 
-          <div className="flex items-center space-x-3 text-sm">
-            <Shield className="h-4 w-4 text-gray-400" />
-            <span className="text-gray-500">Rol:</span>
-            <span className="text-gray-900 font-medium">
+          <div className="rounded-xl bg-gray-50 p-4 text-center">
+            <Shield className="mx-auto h-4 w-4 text-gray-400" />
+            <p className="mt-2 text-xs text-gray-500">Rol</p>
+            <p className="text-sm font-medium text-gray-900">
               {ROLE_LABELS[user?.role || ''] || user?.role}
-            </span>
+            </p>
           </div>
         </div>
       </div>

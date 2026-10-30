@@ -19,6 +19,10 @@ interface ImageUploadProps {
   variant?: ImageVariant;
   /** Forma del preview. */
   shape?: 'circle' | 'square' | 'wide';
+  /** Tamaño del preview. */
+  size?: 'sm' | 'md' | 'lg';
+  /** Alineación del bloque (preview + acciones). */
+  align?: 'left' | 'center';
   /** Texto sobre el dropzone vacío. */
   label?: string;
   /** Texto de ayuda debajo. */
@@ -28,10 +32,16 @@ interface ImageUploadProps {
   fallbackInitials?: string;
 }
 
-const SHAPE_CLASSES: Record<NonNullable<ImageUploadProps['shape']>, string> = {
-  circle: 'h-24 w-24 rounded-full',
-  square: 'h-24 w-24 rounded-xl',
-  wide: 'h-32 w-full rounded-xl',
+const SHAPE_RADIUS: Record<NonNullable<ImageUploadProps['shape']>, string> = {
+  circle: 'rounded-full',
+  square: 'rounded-xl',
+  wide: 'rounded-xl',
+};
+
+const SIZE_CLASSES: Record<NonNullable<ImageUploadProps['size']>, Record<NonNullable<ImageUploadProps['shape']>, string>> = {
+  sm: { circle: 'h-20 w-20', square: 'h-20 w-20', wide: 'h-24 w-full' },
+  md: { circle: 'h-24 w-24', square: 'h-24 w-24', wide: 'h-32 w-full' },
+  lg: { circle: 'h-40 w-40', square: 'h-40 w-40', wide: 'h-48 w-full' },
 };
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -43,6 +53,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   businessId,
   variant = 'card',
   shape = 'square',
+  size = 'md',
+  align = 'left',
   label = 'Subir imagen',
   hint = 'JPG, PNG o WebP · máximo 5 MB',
   disabled = false,
@@ -53,7 +65,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   const [dragging, setDragging] = useState(false);
 
   const preview = imageUrl(value, variant);
-  const shapeClass = SHAPE_CLASSES[shape];
+  const shapeClass = `${SIZE_CLASSES[size][shape]} ${SHAPE_RADIUS[shape]}`;
+  const centered = align === 'center';
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -95,7 +108,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   return (
-    <div className={shape === 'wide' ? 'w-full' : 'inline-block'}>
+    <div className={shape === 'wide' ? 'w-full' : centered ? 'inline-flex flex-col items-center' : 'inline-block'}>
       <input
         ref={inputRef}
         type="file"
@@ -165,7 +178,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         )}
       </div>
 
-      <div className="mt-2 flex items-center gap-3">
+      <div className={`mt-2 flex items-center gap-3 ${centered ? 'justify-center' : ''}`}>
         <button
           type="button"
           onClick={openPicker}
@@ -185,7 +198,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           </button>
         )}
       </div>
-      <p className="mt-1 text-xs text-gray-400">{hint}</p>
+      <p className={`mt-1 text-xs text-gray-400 ${centered ? 'text-center' : ''}`}>{hint}</p>
     </div>
   );
 };
