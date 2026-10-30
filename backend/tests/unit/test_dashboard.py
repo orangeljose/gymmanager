@@ -691,3 +691,35 @@ class TestPaymentsQueryWindow:
         window = [f for f in filters if f['field'] == 'createdAt' and f['operator'] == '>=']
         assert len(window) == 1
         assert isinstance(window[0]['value'], datetime)
+
+
+class TestTodayIncomeBusinessTimezone:
+    """El dia del negocio es local, no UTC.
+
+    Regresion: a las 22:30 locales (02:30 UTC del dia siguiente) un pago de
+    las 10:00 locales quedaba fuera de todayIncome.
+    """
+
+    def test_payment_earlier_today_counts_even_if_utc_is_next_day(self, monkeypatch):
+        from utils.business_time import business_tz
+
+        biz = business_tz()
+        fixed_now = datetime(2026, 10, 29, 22, 30, tzinfo=biz)
+
+        monkeypatch.setattr('routes.reports.business_now', lambda: fixed_now)
+        monkeypatch.setattr('routes.reports.business_tz', lambda: biz)
+
+        # 10:00 locales del 29 (naive) -> 14:00 UTC del 29
+        morning_local = datetime(2026, 10, 29, 10, 0)
+
+        mock = create_mock_service()
+        mock.query_firestore.side_effect = [
+            [],  # clients
+            [make_payment('c1', 'Juan', 85000, created_at=morning_local)],
+        ]
+
+        client = _make_client(mock)
+        response = client.get('/api/reports/dashboard', headers={'Authorization': 'Bearer test-token'})
+
+        data = json.loads(response.data)
+        assert data['data']['todayIncome'] == 85000

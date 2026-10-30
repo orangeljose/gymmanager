@@ -8,10 +8,30 @@ from middleware.auth_middleware import require_auth, require_role, validate_bran
 from services.firebase_service import FirebaseService
 from services.membership_service import MembershipService
 from utils.validators import validate_date_format
+from utils.business_time import business_tz, business_now
 
 logger = logging.getLogger(__name__)
 
 reports_bp = Blueprint('reports', __name__, url_prefix='/api/reports')
+
+
+def _payment_created_at(value):
+    """Normaliza createdAt (str, Timestamp de Firestore o datetime) a datetime UTC aware."""
+    if not value:
+        return None
+    if isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        except ValueError:
+            return None
+    elif hasattr(value, 'to_datetime'):
+        parsed = value.to_datetime()
+    else:
+        parsed = value
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
 
 @reports_bp.route('/income/daily', methods=['GET', 'OPTIONS'])
 @require_auth
@@ -458,7 +478,12 @@ def get_dashboard():
         user_business_id = g.current_user.get('businessId')
         user_role = g.current_user.get('role')
         user_branch_id = g.current_user.get('branchId')
-        now = datetime.utcnow()
+        # "Ahora" en dos sabores:
+        # - now: UTC naive, para comparar membershipEnd (guardado en UTC).
+        # - biz_now: hora local del negocio, que define el día del negocio.
+        biz_tz = business_tz()
+        biz_now = business_now()
+        now = biz_now.astimezone(timezone.utc).replace(tzinfo=None)
 
         # Para super_admin, usar businessId del query (selector de negocio)
         if user_role == 'super_admin':
@@ -514,7 +539,9 @@ def get_dashboard():
 
         # --- Payments (last 30 days) ---
         thirty_days_ago = now - timedelta(days=30)
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        thirty_days_ago_aware = biz_now - timedelta(days=30)
+        today_start = biz_now.replace(hour=0, minute=0, second=0, microsecond=0)
+        tomorrow_start = today_start + timedelta(days=1)
 
         # Traer pagos del negocio (últimos 30 días). Los filtros businessId/branchId
         # ya existían; se agrega el bound createdAt >= now-30d para que las lecturas
@@ -546,20 +573,11 @@ def get_dashboard():
             created_at = p.get('createdAt')
             if not created_at:
                 continue
-            if isinstance(created_at, str):
-                try:
-                    created_dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                except:
-                    continue
-            elif hasattr(created_at, 'to_datetime'):
-                created_dt = created_at.to_datetime()
-            else:
-                created_dt = created_at
-            # Normalizar a naive para comparar con now (que es naive)
-            if created_dt.tzinfo is not None:
-                created_dt = created_dt.replace(tzinfo=None)
+            created_dt = _payment_created_at(created_at)
+            if created_dt is None:
+                continue
 
-            if thirty_days_ago <= created_dt <= now:
+            if thirty_days_ago_aware <= created_dt <= biz_now:
                 payments.append(p)
 
         logger.info(f"[DEBUG dashboard] after date filter: {len(payments)} payments")
@@ -567,37 +585,28 @@ def get_dashboard():
         # Ordenar por createdAt DESC (más reciente primero)
         payments.sort(key=lambda p: p.get('createdAt', ''), reverse=True)
 
-        # Today income
+        # Today income (día local del negocio)
         today_income = 0
         for p in payments:
-            created_at = p.get('createdAt')
-            if created_at:
-                if isinstance(created_at, str):
-                    created_dt = datetime.fromisoformat(created_at.replace('Z', '+00:00')).replace(tzinfo=None)
-                elif hasattr(created_at, 'replace'):
-                    created_dt = created_at.replace(tzinfo=None)
-                else:
-                    created_dt = created_at
+            created_dt = _payment_created_at(p.get('createdAt'))
+            if created_dt is None:
+                continue
+            created_local = created_dt.astimezone(biz_tz)
+            if today_start <= created_local < tomorrow_start:
+                today_income += p.get('amount', 0)
 
-                if created_dt >= today_start:
-                    today_income += p.get('amount', 0)
-
-        # Income chart (30 days grouped by date)
+        # Income chart (30 days grouped by local business day)
         daily_sums = defaultdict(int)
         for p in payments:
-            created_at = p.get('createdAt')
-            if created_at:
-                if isinstance(created_at, str):
-                    date_part = created_at.split('T')[0]
-                elif hasattr(created_at, 'strftime'):
-                    date_part = created_at.strftime('%Y-%m-%d')
-                else:
-                    date_part = str(created_at)[:10]
-                daily_sums[date_part] += p.get('amount', 0)
+            created_dt = _payment_created_at(p.get('createdAt'))
+            if created_dt is None:
+                continue
+            date_part = created_dt.astimezone(biz_tz).strftime('%Y-%m-%d')
+            daily_sums[date_part] += p.get('amount', 0)
 
         income_chart = []
         for i in range(30):
-            day = (thirty_days_ago + timedelta(days=i)).strftime('%Y-%m-%d')
+            day = (biz_now - timedelta(days=29 - i)).strftime('%Y-%m-%d')
             income_chart.append({
                 'date': day,
                 'amount': daily_sums.get(day, 0)
