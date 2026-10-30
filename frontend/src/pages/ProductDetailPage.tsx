@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
 import { ProductForm, PRODUCT_CATEGORY_META, formatDollars, stockStatus } from '@/components/ProductForm';
 import { ProductMovementModal } from '@/components/ProductMovementModal';
+import { imageUrl } from '@/utils/images';
 import toast from 'react-hot-toast';
 import type { Product, ProductMovement } from '@/types';
 import {
@@ -102,13 +103,26 @@ export const ProductDetailPage: React.FC = () => {
       </Link>
 
       {/* Ficha */}
-      <div className="card mb-6 border-l-4 border-l-primary-500">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-          <div className="flex items-start">
-            <div className="p-3 rounded-lg bg-primary-50 text-primary-600">
-              <Package className="h-7 w-7" />
-            </div>
-            <div className="ml-4">
+      <div className="mb-6 overflow-hidden rounded-xl bg-white shadow-md ring-1 ring-gray-100 border-l-4 border-l-primary-500">
+        <div className="flex flex-col md:flex-row">
+          <div className="shrink-0 md:w-80">
+            {product.imageUrl ? (
+              <img
+                src={imageUrl(product.imageUrl, 'tile')}
+                alt={product.name}
+                className="h-56 w-full object-cover md:h-full md:min-h-[17rem]"
+              />
+            ) : (
+              <div className="flex h-56 w-full items-center justify-center bg-gradient-to-br from-primary-50 via-white to-gray-100 md:h-full md:min-h-[17rem]">
+                <Package className="h-14 w-14 text-primary-300" />
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+              <div className="flex items-start">
+                <div>
               <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 <span className={`badge ${cat.badge}`}>{cat.label}</span>
@@ -163,6 +177,8 @@ export const ProductDetailPage: React.FC = () => {
               <p className="text-xs text-gray-500">Precio de venta</p>
               <p className="text-gray-900">{formatDollars(product.salePriceCents)}</p>
             </div>
+          </div>
+        </div>
           </div>
         </div>
       </div>

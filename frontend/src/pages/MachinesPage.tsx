@@ -245,7 +245,7 @@ export const MachinesPage: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {machines.map((machine) => {
             const meta = MACHINE_STATUS_META[machine.status] || MACHINE_STATUS_META.operational;
             const StatusIcon = STATUS_ICON[machine.status] || CheckCircle2;
@@ -255,65 +255,76 @@ export const MachinesPage: React.FC = () => {
               <Link
                 key={machine.id}
                 to={`/machines/${machine.id}`}
-                className="card relative hover:shadow-lg transition-shadow border-l-4 border-l-primary-500 block"
+                className="group relative flex flex-col overflow-hidden rounded-xl bg-white ring-1 ring-gray-100 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
               >
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center min-w-0">
-                    {machine.imageUrl ? (
-                      <img
-                        src={imageUrl(machine.imageUrl, 'thumb')}
-                        alt={machine.name}
-                        loading="lazy"
-                        className="h-10 w-10 rounded-lg object-cover ring-1 ring-gray-100"
-                      />
-                    ) : (
-                      <div className="p-2 rounded-lg bg-primary-50 text-primary-600">
-                        <Dumbbell className="h-5 w-5" />
-                      </div>
-                    )}
-                    <div className="ml-3 min-w-0">
-                      <h3 className="font-medium text-gray-900 truncate">{machine.name}</h3>
-                      <p className="text-sm text-gray-500 truncate">
-                        {[machine.brand, machine.model].filter(Boolean).join(' · ') || MACHINE_CATEGORY_LABELS[machine.category]}
-                      </p>
+                <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-primary-50 via-white to-gray-100">
+                  {machine.imageUrl ? (
+                    <img
+                      src={imageUrl(machine.imageUrl, 'tile')}
+                      alt={machine.name}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      {isItems ? (
+                        <Package className="h-10 w-10 text-primary-300" />
+                      ) : (
+                        <Dumbbell className="h-10 w-10 text-primary-300" />
+                      )}
                     </div>
-                  </div>
+                  )}
+
                   {!isItems && (
-                    <span className={`badge ${meta.badge} whitespace-nowrap`}>
+                    <span className={`badge ${meta.badge} absolute left-3 top-3 shadow-sm`}>
                       <span className={`mr-1.5 h-2 w-2 rounded-full ${meta.dot}`} />
                       {meta.label}
                     </span>
                   )}
-                </div>
 
-                <div className="flex items-center justify-between text-sm">
-                  {isItems ? (
-                    <>
-                      <span className="inline-flex items-center text-gray-500">
-                        <Package className="h-4 w-4 mr-1 text-gray-400" />
-                        {quantity} {quantity === 1 ? 'unidad' : 'unidades'}
-                      </span>
-                      <span className="inline-flex items-center text-gray-500">
-                        {machine.weightKg != null ? `${machine.weightKg} kg` : '—'}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="inline-flex items-center text-gray-500">
-                        <StatusIcon className="h-4 w-4 mr-1 text-gray-400" />
-                        {MACHINE_CATEGORY_LABELS[machine.category]}
-                      </span>
-                      {machine.nextMaintenanceDate && (
-                        <span className={`inline-flex items-center ${upcoming ? 'text-yellow-600 font-medium' : 'text-gray-500'}`}>
-                          <CalendarClock className="h-4 w-4 mr-1" />
-                          {machine.nextMaintenanceDate}
-                        </span>
-                      )}
-                    </>
+                  {isItems && (
+                    <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-0.5 text-xs font-semibold text-gray-700 shadow-sm">
+                      x{quantity}
+                    </span>
                   )}
                 </div>
 
-                <ChevronRight className="absolute right-3 bottom-3 h-4 w-4 text-gray-300" />
+                <div className="flex flex-1 flex-col p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="truncate font-semibold text-gray-900 transition-colors group-hover:text-primary-700">
+                      {machine.name}
+                    </h3>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-primary-500" />
+                  </div>
+                  <p className="mt-0.5 truncate text-sm text-gray-500">
+                    {[machine.brand, machine.model].filter(Boolean).join(' · ') || MACHINE_CATEGORY_LABELS[machine.category]}
+                  </p>
+
+                  <div className="mt-3 flex items-center justify-between border-t border-gray-50 pt-3 text-xs text-gray-500">
+                    {isItems ? (
+                      <>
+                        <span className="inline-flex items-center">
+                          <Package className="mr-1 h-3.5 w-3.5 text-gray-400" />
+                          {quantity} {quantity === 1 ? 'unidad' : 'unidades'}
+                        </span>
+                        <span>{machine.weightKg != null ? `${machine.weightKg} kg` : '—'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="inline-flex items-center">
+                          <StatusIcon className="mr-1 h-3.5 w-3.5 text-gray-400" />
+                          {MACHINE_CATEGORY_LABELS[machine.category]}
+                        </span>
+                        {machine.nextMaintenanceDate && (
+                          <span className={`inline-flex items-center ${upcoming ? 'text-yellow-600 font-medium' : ''}`}>
+                            <CalendarClock className="mr-1 h-3.5 w-3.5" />
+                            {machine.nextMaintenanceDate}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
               </Link>
             );
           })}

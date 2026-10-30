@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { apiService } from '@/services/api';
+import { imageUrl } from '@/utils/images';
 import { MachineForm, MACHINE_STATUS_META, MACHINE_CATEGORY_LABELS } from '@/components/MachineForm';
 import toast from 'react-hot-toast';
 import type {
@@ -170,13 +171,26 @@ export const MachineDetailPage: React.FC = () => {
       </Link>
 
       {/* Ficha */}
-      <div className="card mb-6 border-l-4 border-l-primary-500">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-          <div className="flex items-start">
-            <div className="p-3 rounded-lg bg-primary-50 text-primary-600">
-              <Dumbbell className="h-7 w-7" />
-            </div>
-            <div className="ml-4">
+      <div className="mb-6 overflow-hidden rounded-xl bg-white shadow-md ring-1 ring-gray-100 border-l-4 border-l-primary-500">
+        <div className="flex flex-col md:flex-row">
+          <div className="shrink-0 md:w-80">
+            {machine.imageUrl ? (
+              <img
+                src={imageUrl(machine.imageUrl, 'tile')}
+                alt={machine.name}
+                className="h-56 w-full object-cover md:h-full md:min-h-[17rem]"
+              />
+            ) : (
+              <div className="flex h-56 w-full items-center justify-center bg-gradient-to-br from-primary-50 via-white to-gray-100 md:h-full md:min-h-[17rem]">
+                <Dumbbell className="h-14 w-14 text-primary-300" />
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+              <div className="flex items-start">
+                <div>
               <h1 className="text-2xl font-bold text-gray-900">{machine.name}</h1>
               <p className="text-gray-500 mt-1">
                 {[machine.brand, machine.model].filter(Boolean).join(' · ') || MACHINE_CATEGORY_LABELS[machine.category]}
@@ -252,6 +266,8 @@ export const MachineDetailPage: React.FC = () => {
               </div>
             </>
           )}
+        </div>
+          </div>
         </div>
       </div>
 
