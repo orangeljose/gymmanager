@@ -198,3 +198,24 @@ class TestStorageServiceUpload:
         for key in storage_service.ENV_KEYS:
             monkeypatch.delenv(key, raising=False)
         assert storage_service.delete_image('abc') is False
+
+
+class TestPublicIdFromUrl:
+    """Deriva el public_id de una URL de Cloudinary (para borrar el asset viejo)."""
+
+    def test_base_url(self):
+        url = 'https://res.cloudinary.com/demo/image/upload/v123/gymmanager/biz-1/clients/abc.jpg'
+        assert storage_service.public_id_from_url(url) == 'gymmanager/biz-1/clients/abc'
+
+    def test_transformed_url(self):
+        url = ('https://res.cloudinary.com/demo/image/upload/'
+               'w_240,h_240,c_fill,g_face,q_auto,f_auto/v123/gymmanager/biz-1/clients/abc.jpg')
+        assert storage_service.public_id_from_url(url) == 'gymmanager/biz-1/clients/abc'
+
+    def test_foreign_tree_returns_none(self):
+        url = 'https://res.cloudinary.com/demo/image/upload/v123/other/folder/x.jpg'
+        assert storage_service.public_id_from_url(url) is None
+
+    def test_non_cloudinary_url_returns_none(self):
+        assert storage_service.public_id_from_url('https://example.com/foto.jpg') is None
+        assert storage_service.public_id_from_url('') is None

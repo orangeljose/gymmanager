@@ -7,6 +7,7 @@ from flask import Blueprint, request, jsonify, g
 from google.api_core.exceptions import FailedPrecondition
 from middleware.auth_middleware import require_auth, require_role, validate_branch_access
 from services.firebase_service import FirebaseService
+from services import storage_service
 from services.membership_service import MembershipService
 from models.client import ClientCreateSchema, ClientUpdateSchema, ClientModel
 from utils.validators import validate_pagination, validate_choice, clean_image_url
@@ -602,6 +603,11 @@ def update_client(client_id):
         success = firebase_service.update_document('clients', client_id, update_data)
         
         if success:
+            # Si cambió (o se quitó) la foto, borrar el asset anterior.
+            if 'photoUrl' in update_data:
+                previous_photo = client.get('photoUrl')
+                if previous_photo and previous_photo != update_data.get('photoUrl'):
+                    storage_service.delete_image_for_url(previous_photo)
             logger.info(f"Cliente actualizado: {client_id}")
             return jsonify({
                 'success': True,

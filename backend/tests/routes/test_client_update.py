@@ -112,3 +112,49 @@ class TestUpdateClient:
         assert response.status_code == 200
         _, _, data = mock.update_document.call_args[0]
         assert data['branchId'] == 'branch-1'
+
+
+class TestPhotoReplacementCleanup:
+    """Al reemplazar la foto se borra el asset anterior en Cloudinary."""
+
+    def test_replacing_photo_deletes_previous_asset(self):
+        mock = create_mock_service(role='admin')
+        old_url = 'https://res.cloudinary.com/demo/image/upload/v1/gymmanager/biz-1/clients/old.jpg'
+        new_url = 'https://res.cloudinary.com/demo/image/upload/v2/gymmanager/biz-1/clients/new.jpg'
+
+        # El cliente existente ya tiene una foto.
+        def _get_document(collection, doc_id):
+            if collection == 'clients':
+                return {'id': doc_id, 'name': 'Juan', 'businessId': 'biz-1',
+                        'branchId': 'branch-1', 'isDeleted': False, 'photoUrl': old_url}
+            if collection == 'branches':
+                return {'id': doc_id, 'businessId': 'biz-1', 'name': 'Sede'}
+            return None
+
+        mock.get_document.side_effect = _get_document
+
+        with patch('routes.clients.storage_service.delete_image_for_url') as cleanup:
+            response = _put(mock, {'name': 'Juan', 'photoUrl': new_url})
+
+        assert response.status_code == 200
+        cleanup.assert_called_once_with(old_url)
+
+    def test_removing_photo_deletes_previous_asset(self):
+        mock = create_mock_service(role='admin')
+        old_url = 'https://res.cloudinary.com/demo/image/upload/v1/gymmanager/biz-1/clients/old.jpg'
+
+        def _get_document(collection, doc_id):
+            if collection == 'clients':
+                return {'id': doc_id, 'name': 'Juan', 'businessId': 'biz-1',
+                        'branchId': 'branch-1', 'isDeleted': False, 'photoUrl': old_url}
+            if collection == 'branches':
+                return {'id': doc_id, 'businessId': 'biz-1', 'name': 'Sede'}
+            return None
+
+        mock.get_document.side_effect = _get_document
+
+        with patch('routes.clients.storage_service.delete_image_for_url') as cleanup:
+            response = _put(mock, {'name': 'Juan', 'photoUrl': None})
+
+        assert response.status_code == 200
+        cleanup.assert_called_once_with(old_url)

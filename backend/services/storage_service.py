@@ -11,6 +11,7 @@ Las credenciales NUNCA salen del backend: el frontend solo recibe la URL final.
 """
 import logging
 import os
+import re
 import uuid
 
 import cloudinary
@@ -135,3 +136,38 @@ def delete_image(public_id: str) -> bool:
     except Exception as exc:  # best-effort: no debe romper el flujo principal
         logger.warning('No se pudo eliminar la imagen %s: %s', public_id, exc)
         return False
+
+
+def public_id_from_url(url: str) -> str | None:
+    """
+    Extrae el public_id de una URL de Cloudinary.
+
+    Acepta tanto la URL base como cualquier variante transformada:
+      .../image/upload/v123/gymmanager/biz/clients/abc.jpg
+      .../image/upload/w_240,h_240,c_fill/v123/gymmanager/biz/clients/abc.jpg
+
+    Devuelve None si la URL no es de nuestro árbol (gymmanager/...).
+    """
+    if not url or 'res.cloudinary.com' not in url or '/image/upload/' not in url:
+        return None
+
+    tail = url.split('/image/upload/', 1)[1]
+    parts = tail.split('/')
+
+    try:
+        start = parts.index('gymmanager')
+    except ValueError:
+        return None
+
+    public_id = '/'.join(parts[start:])
+    # Cloudinary no usa la extensión en el public_id.
+    public_id = re.sub(r'\.[A-Za-z0-9]+$', '', public_id)
+    return public_id or None
+
+
+def delete_image_for_url(url: str) -> bool:
+    """Borra el asset asociado a una URL de Cloudinary (best-effort)."""
+    public_id = public_id_from_url(url)
+    if not public_id:
+        return False
+    return delete_image(public_id)

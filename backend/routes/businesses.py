@@ -5,6 +5,7 @@ import logging
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import require_auth, require_role
 from services.firebase_service import FirebaseService
+from services import storage_service
 from utils.validators import clean_image_url
 
 logger = logging.getLogger(__name__)
@@ -159,6 +160,11 @@ def update_business(business_id):
         success = firebase_service.update_document('businesses', business_id, update)
 
         if success:
+            # Si cambió (o se quitó) el logo, borrar el asset anterior.
+            if 'logo' in update:
+                previous_logo = business.get('logo')
+                if previous_logo and previous_logo != update.get('logo'):
+                    storage_service.delete_image_for_url(previous_logo)
             logger.info(f"Negocio actualizado: {business_id}")
             return jsonify({'success': True, 'data': {'id': business_id, **update}}), 200
 

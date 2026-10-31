@@ -29,6 +29,7 @@ from flask import Blueprint, request, jsonify, g
 
 from middleware.auth_middleware import require_auth, require_role
 from services.firebase_service import FirebaseService
+from services import storage_service
 from utils.validators import validate_pagination, validate_date_format, clean_image_url
 
 logger = logging.getLogger(__name__)
@@ -644,6 +645,12 @@ def update_machine(machine_id):
         success = firebase_service.update_document(MACHINES_COLLECTION, machine_id, update)
         if not success:
             return _error(500, 'Error al actualizar la máquina')
+
+        # Si cambió (o se quitó) la imagen, borrar el asset anterior.
+        if 'imageUrl' in update:
+            previous_image = machine.get('imageUrl')
+            if previous_image and previous_image != update.get('imageUrl'):
+                storage_service.delete_image_for_url(previous_image)
 
         logger.info(f"Máquina actualizada: {machine_id}")
         return jsonify({'success': True, 'data': {'id': machine_id, **update}}), 200

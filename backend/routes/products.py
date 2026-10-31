@@ -37,6 +37,7 @@ from flask import Blueprint, request, jsonify, g
 
 from middleware.auth_middleware import require_auth, require_role
 from services.firebase_service import FirebaseService
+from services import storage_service
 from models.payment import PaymentModel
 from utils.validators import validate_pagination, validate_date_format, clean_image_url
 
@@ -684,6 +685,12 @@ def update_product(product_id):
         success = firebase_service.update_document(PRODUCTS_COLLECTION, product_id, update)
         if not success:
             return _error(500, 'Error al actualizar el producto')
+
+        # Si cambió (o se quitó) la imagen, borrar el asset anterior.
+        if 'imageUrl' in update:
+            previous_image = product.get('imageUrl')
+            if previous_image and previous_image != update.get('imageUrl'):
+                storage_service.delete_image_for_url(previous_image)
 
         logger.info(f"Producto actualizado: {product_id}")
         return jsonify({'success': True, 'data': {'id': product_id, **update}}), 200
