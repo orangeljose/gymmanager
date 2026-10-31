@@ -108,6 +108,10 @@ def upload_image(file, business_id: str, folder: str) -> dict:
         overwrite=False,
         # Una sola versión acotada a 1600px de ancho; las miniaturas se piden por URL.
         transformation=[{'width': MAX_WIDTH, 'crop': 'limit'}],
+        # Borra EXIF/IPTC/XMP del asset almacenado (incluye GPS). Las
+        # transformaciones de entrega ya los quitan, pero la URL original
+        # también debe quedar limpia.
+        flags='force_strip',
     )
 
     return {

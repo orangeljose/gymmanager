@@ -191,6 +191,8 @@ class TestStorageServiceUpload:
         assert result['url'] == fake['secure_url']
         assert result['publicId'] == fake['public_id']
         assert up.call_args.kwargs['folder'] == 'gymmanager/biz-1/clients'
+        # El asset almacenado debe quedar sin EXIF/IPTC/XMP (incluye GPS).
+        assert up.call_args.kwargs['flags'] == 'force_strip'
 
     def test_delete_without_config_returns_false(self, monkeypatch):
         for key in storage_service.ENV_KEYS:
